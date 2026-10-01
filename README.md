@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://chai-ui.com"><img src=".github/social-preview.png" alt="Chai UI" width="640" /></a>
+  <a href="https://chai-ui.com"><img src=".github/social-preview.jpg" alt="Chai UI" width="640" /></a>
 </p>
 
 <p align="center">
