@@ -2,7 +2,7 @@
   "name": "chai-ui",
   "private": true,
   "version": "0.0.0",
-  "description": "Chai UI: drop-in React components for generative-AI apps.",
+  "description": "Library of smart components for generative-AI apps.",
   "license": "MIT",
   "packageManager": "pnpm@10.28.0",
   "engines": {

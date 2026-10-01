@@ -11,8 +11,8 @@
 
 # Chai UI
 
-Drop-in React components for generative-AI apps: a prompt composer, a
-media analyzer, and result cards, wired to real AI engines and styled with
+Library of smart components for generative-AI apps: a prompt composer, a
+media analyzer and result cards, wired to real AI engines and styled with
 your tokens.
 
 - **Composer:** a prompt bar with attachments, use cases, model and
