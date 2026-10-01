@@ -3,9 +3,12 @@ name: Release
 # On main, Changesets keeps a "Version Packages" pull request up to date.
 # Merging it publishes to npm with trusted publishing (OIDC): no npm token
 # is stored, and each package gets a provenance statement.
+# Manual until launch: run it from the Actions tab. At launch, add
+#   push:
+#     branches: [main]
+# so every merge to main releases automatically.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency: release-${{ github.ref }}
 
