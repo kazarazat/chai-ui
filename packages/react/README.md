@@ -180,10 +180,12 @@ function Root() {
 }
 
 function App() {
-  const { run, submit, cancel, enhance, enhancing } = useComposer({
+  const { run, runs, submit, cancel, enhance, enhancing } = useComposer({
     engine: createFalEngine({ outputKind: "image" }),
   });
-  const busy = run?.results.some((r) => r.status === "queued" || r.status === "running") ?? false;
+  // Every model's result from every use case, paged in one card.
+  const results = runs.flatMap((r) => r.results);
+  const busy = results.some((r) => r.status === "queued" || r.status === "running");
 
   return (
     <>
@@ -199,7 +201,7 @@ function App() {
       />
       {run && (
         <ResultCard
-          results={run.results}
+          results={results}
           prompt={run.request.prompt}
           onAction={(action, result) => {
             // like / dislike / retry / download / share / your "more" actions
@@ -212,13 +214,14 @@ function App() {
 ```
 
 `submit` takes `Composer`'s `ComposerSubmitPayload` directly — pass it
-straight to `onSubmit`. It turns each selection into a real the design
+straight to `onSubmit`. It turns each selection into a real
 `Request`/`Run`/`Result`: creates a `"queued"` `Result` per model up
 front, then folds each one to `"running"` → `"done"`/`"error"` as the
 engine settles it. `run` is the first `Run` (or `null` before the first
 submit); `runs` holds one per use case when `multiSelectUseCases` is on.
-`ResultCard` renders `run.results` directly, paginating when there's more
-than one.
+Pass `ResultCard` the results of every run, as above: it pages through
+them, and each page shows its own kind (image, video, audio or text).
+Passing only `run.results` would hide every use case after the first.
 
 **The server route.** `createFalEngine()` and the OpenRouter reasoning
 engine call `/api/chai/*` on your server, which adds the API keys. Add it
