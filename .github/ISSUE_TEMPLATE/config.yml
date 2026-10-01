@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Help & Support (FAQ)
+    url: https://github.com/kazarazat/chai-ui/blob/main/SUPPORT.md
+    about: Installation, usage and troubleshooting answers.
+  - name: Security vulnerability
+    url: https://github.com/kazarazat/chai-ui/security/advisories/new
+    about: Please report security problems privately.

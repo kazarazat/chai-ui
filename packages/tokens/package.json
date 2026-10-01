@@ -1,0 +1,56 @@
+{
+  "name": "@chai-ui/tokens",
+  "version": "0.1.0",
+  "description": "CHAI UI design tokens — single source of truth, built to CSS variables, TypeScript, and a Figma Tokens/Variables-plugin JSON.",
+  "license": "MIT",
+  "author": "kazarazat",
+  "homepage": "https://chai-ui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kazarazat/chai-ui.git",
+    "directory": "packages/tokens"
+  },
+  "bugs": {
+    "url": "https://github.com/kazarazat/chai-ui/issues"
+  },
+  "keywords": [
+    "ai",
+    "generative-ai",
+    "design-system",
+    "ai-ui",
+    "design-tokens",
+    "css-variables",
+    "figma-tokens"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/js/index.js",
+  "types": "./dist/js/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/js/index.d.ts",
+      "import": "./dist/js/index.js"
+    },
+    "./css": "./dist/css/tokens.css",
+    "./figma": "./dist/figma/tokens.figma.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rimraf dist && node build.mjs",
+    "dev": "node build.mjs --watch",
+    "typecheck": "echo \"(no TS source to typecheck — tokens.json + a plain build.mjs only)\"",
+    "lint": "echo \"(no lint configured yet)\"",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

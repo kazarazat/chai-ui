@@ -1,0 +1,63 @@
+{
+  "name": "@chai-ui/core",
+  "version": "0.1.0",
+  "description": "CHAI UI headless core — the Request/Run/Result data model and pluggable generation engines (Fal.ai, OpenRouter, mock). No framework, no rendering.",
+  "license": "MIT",
+  "author": "kazarazat",
+  "homepage": "https://chai-ui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kazarazat/chai-ui.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/kazarazat/chai-ui/issues"
+  },
+  "keywords": [
+    "ai",
+    "generative-ai",
+    "design-system",
+    "ai-ui",
+    "headless",
+    "ai-engine",
+    "fal",
+    "openrouter"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.*"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "echo \"(no lint configured yet)\"",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text-summary"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "3.2.7",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.7"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

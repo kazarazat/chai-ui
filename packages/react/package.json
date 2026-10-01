@@ -1,0 +1,88 @@
+{
+  "name": "@chai-ui/react",
+  "version": "0.1.0",
+  "description": "CHAI UI React components — smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, and the useComposer hook.",
+  "license": "MIT",
+  "author": "kazarazat",
+  "homepage": "https://chai-ui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kazarazat/chai-ui.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/kazarazat/chai-ui/issues"
+  },
+  "keywords": [
+    "ai",
+    "generative-ai",
+    "design-system",
+    "ai-ui",
+    "react",
+    "components",
+    "prompt",
+    "composer"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.*",
+    "!src/__tests__",
+    "DESIGN.md"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/style.css','dist/style.css')\"",
+    "dev": "tsc -p tsconfig.json --watch & node scripts/watch-css.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "node ../../scripts/lint-tokens.mjs && eslint src",
+    "clean": "rimraf dist",
+    "test": "vitest run && vitest run --config vitest.browser.config.ts",
+    "test:unit": "vitest run",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.include=src/** --coverage.reportsDirectory=coverage/unit && vitest run --config vitest.browser.config.ts --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.include=src/** --coverage.reportsDirectory=coverage/browser"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0 || ^19.0.0",
+    "react-dom": "^18.3.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@chai-ui/core": "workspace:*",
+    "@chai-ui/tokens": "workspace:*",
+    "@fontsource/roboto": "^5.3.0",
+    "@lit/react": "^1.0.8",
+    "@material/web": "^2.5.0"
+  },
+  "devDependencies": {
+    "@material-symbols/svg-400": "^0.47.5",
+    "@testing-library/react": "^16.0.1",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitest/browser": "3.2.7",
+    "@vitest/coverage-v8": "3.2.7",
+    "axe-core": "^4.13.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^25.0.1",
+    "playwright": "^1.63.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^3.2.7",
+    "vitest-browser-react": "^1.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

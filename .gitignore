@@ -1,0 +1,14 @@
+node_modules
+dist
+.turbo
+coverage
+.DS_Store
+*.log
+.env
+.env.local
+
+# The packaging smoke test installs real packed tarballs with npm; they and
+# its lockfile are regenerated every run.
+*.tgz
+sandbox/consumer-app/.tarballs
+sandbox/consumer-app/package-lock.json

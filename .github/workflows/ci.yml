@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (React ${{ matrix.react }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        react: ["18", "19"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Switch to React 19
+        if: matrix.react == '19'
+        run: pnpm --filter @chai-ui/react add -D react@19 react-dom@19 @types/react@19 @types/react-dom@19
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - name: Install Chromium for the browser tests
+        run: pnpm --filter @chai-ui/react exec playwright install --with-deps chromium
+      - run: pnpm test
+      - name: Coverage
+        if: matrix.react == '18'
+        run: pnpm --filter @chai-ui/core --filter @chai-ui/react run test:coverage
+      - name: Upload coverage to Codecov
+        if: matrix.react == '18'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: packages/core/coverage/lcov.info,packages/react/coverage/unit/lcov.info,packages/react/coverage/browser/lcov.info
+          fail_ci_if_error: false
+
+  pack-test:
+    name: Packaging smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm pack-test

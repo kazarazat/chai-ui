@@ -1,0 +1,23 @@
+name: Bug report
+description: Something in Chai UI doesn't work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A code snippet, or a link to a small repo or sandbox.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "@chai-ui/react 0.1.0, React 19.1, Next.js 15"
+    validations:
+      required: true
