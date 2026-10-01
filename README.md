@@ -99,7 +99,7 @@ along with `authorize` and `allowedModels` for production.
 ## Accessibility
 
 Chai's components are built to support WCAG 2.2 AA, tested with axe and
-automated keyboard and focus checks in a real browser. See
+automated keyboard and focus checks in a browser. See
 [DESIGN.md](./packages/react/DESIGN.md#6-accessibility).
 
 ## Help and contributing

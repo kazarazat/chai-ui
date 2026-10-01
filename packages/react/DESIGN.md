@@ -177,7 +177,7 @@ deliberately out of scope.
 - **Supports WCAG 2.2 AA.** Chai's components are built to support WCAG 2.2 AA and are tested
   against it with automated checks: axe (WCAG 2.0, 2.1 and 2.2, levels A
   and AA) on every component state in the test suite, plus keyboard and
-  focus tests in a real browser. They haven't been tested by hand with a
+  focus tests in a browser. They haven't been tested by hand with a
   screen reader, so this is support, not a certification. Compliance is
   judged for a whole app, so test yours, including with a screen reader.
 
