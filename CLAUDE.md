@@ -56,7 +56,8 @@ Browser tests need Chromium once:
 - **Plain language in docs and messages.** Builders range from beginner to
   intermediate.
 - **Changesets.** A change to a published package needs `pnpm changeset`.
-  Releases are manual (`release.yml`, workflow_dispatch) until launch.
+  Merging the "Version Packages" PR publishes to npm (trusted publishing,
+  `release.yml`).
 - **This repo is public.** Keep comments self-contained: no references to
   private documents, internal decisions or people.
 
