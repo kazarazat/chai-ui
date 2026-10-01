@@ -5,7 +5,7 @@
  * and it adds the key and forwards the request to the provider.
  *
  * Built on the web-standard `Request` → `Response`, so the same handler
- * runs in Next.js, Remix, SvelteKit, Hono, Cloudflare Workers, Bun and
+ * runs in Next.js, React Router (Remix), Hono, Cloudflare Workers, Bun and
  * Deno. `toNodeHandler` (./node.ts) adapts it for Express and plain Node.
  */
 
@@ -39,7 +39,7 @@ export interface ChaiHandlerOptions {
 export interface ChaiHandler {
   /** Handles any request under the route. */
   handle: (request: Request) => Promise<Response>;
-  /** The same function, named for frameworks that export one per method (Next.js, SvelteKit). */
+  /** The same function, named for frameworks that export one per method (Next.js). */
   GET: (request: Request) => Promise<Response>;
   POST: (request: Request) => Promise<Response>;
   /** Fal's cancel call. */

@@ -35,15 +35,17 @@ Set `FAL_KEY` and `OPENROUTER_API_KEY` in the server's environment (never
 with a `VITE_` or `NEXT_PUBLIC_` prefix). A missing key comes back as a
 clear error, e.g. "FAL_KEY isn't set on the server."
 
-**Frameworks.** `handle(request)` takes a web `Request` and returns a
-`Response`; `GET`, `POST` and `PUT` (Fal's cancel call) are the same
-function. When the browser disconnects, the provider call is aborted too.
+**Where it runs.** Chai's components are React-only, so the route lives in
+your React app's framework or on the API server behind it. Mount it at
+`/api/chai`, where the components send their requests. `handle(request)`
+takes a standard web `Request` and returns a `Response`; `GET`, `POST` and
+`PUT` (Fal's cancel call) are the same function. When the browser
+disconnects, the provider call is aborted too.
 
-| Framework | Mount at `/api/chai` |
+| Your setup | Add this |
 |---|---|
 | Next.js (App Router) | `export const { GET, POST, PUT } = createChaiHandler();` in `app/api/chai/[...path]/route.ts` |
 | Remix / React Router | `export const loader = ({ request }) => chai.handle(request); export const action = loader;` in `app/routes/api.chai.$.ts` |
-| SvelteKit | `export const GET = ({ request }) => chai.handle(request); export const POST = GET, PUT = GET;` in `src/routes/api/chai/[...path]/+server.ts` |
 | Hono | `app.all("/api/chai/*", (c) => chai.handle(c.req.raw))` |
 | Bun, Deno | route `/api/chai/*` to `chai.handle` in `Bun.serve` / `Deno.serve` |
 | Cloudflare Workers | `createChaiHandler({ falKey: env.FAL_KEY, openRouterKey: env.OPENROUTER_API_KEY }).handle(request)` |

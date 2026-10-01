@@ -83,9 +83,9 @@ import { createChaiHandler } from "@chai-ui/core/server";
 export const { GET, POST, PUT } = createChaiHandler();
 ```
 
-Then set `FAL_KEY` and `OPENROUTER_API_KEY` on your server. Remix, React
-Router, SvelteKit, Hono, Cloudflare Workers, Bun, Deno and Express are
-covered in the [`@chai-ui/core` README](./packages/core/README.md#the-server-route-chai-uicoreserver),
+Then set `FAL_KEY` and `OPENROUTER_API_KEY` on your server. React Router
+(or Remix), and API servers behind a Vite + React app (Express, Hono,
+Cloudflare Workers, Bun, Deno), are covered in the [`@chai-ui/core` README](./packages/core/README.md#the-server-route-chai-uicoreserver),
 along with `authorize` and `allowedModels` for production.
 
 ## Packages

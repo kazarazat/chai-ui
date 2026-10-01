@@ -255,3 +255,24 @@ describe("pingFal", () => {
     });
   });
 });
+
+describe("calling fetch", () => {
+  it("never calls fetch with an object as `this` (browsers throw Illegal invocation)", async () => {
+    const original = globalThis.fetch;
+    const responses = [
+      { request_id: "r1", status: "COMPLETED" },
+      { images: [{ url: "https://x/img.png" }] },
+    ];
+    // Behaves like the browser's fetch: refuses any `this` but the global object.
+    globalThis.fetch = function (this: unknown) {
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      return Promise.resolve(new Response(JSON.stringify(responses.shift())));
+    } as typeof fetch;
+    try {
+      const out = await createFalEngine({ pollIntervalMs: 0 }).generate({ prompt: "mug", attachments: [] });
+      expect(out.src).toBe("https://x/img.png");
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});

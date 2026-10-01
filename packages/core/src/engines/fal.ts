@@ -174,7 +174,9 @@ async function cancelFalJob(args: { endpoint: string; model: string; requestId: 
  */
 export function createFalEngine(options: FalEngineOptions = {}): GenerationEngine {
   const endpoint = options.endpoint ?? "/api/chai/fal";
-  const fetchImpl = options.fetchImpl ?? fetch;
+  // Called through a wrapper, never as `args.fetchImpl(...)`: browsers throw
+  // "Illegal invocation" when fetch runs with an object as `this`.
+  const fetchImpl: typeof fetch = (input, init) => (options.fetchImpl ?? fetch)(input, init);
   const outputKind = options.outputKind ?? "image";
   const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -240,7 +242,9 @@ export async function pingFal(
   options: { endpoint?: string; model?: string; fetchImpl?: typeof fetch } = {}
 ): Promise<{ ok: true; src: string } | { ok: false; error: string }> {
   const endpoint = options.endpoint ?? "/api/chai/fal";
-  const fetchImpl = options.fetchImpl ?? fetch;
+  // Called through a wrapper, never as `args.fetchImpl(...)`: browsers throw
+  // "Illegal invocation" when fetch runs with an object as `this`.
+  const fetchImpl: typeof fetch = (input, init) => (options.fetchImpl ?? fetch)(input, init);
   const model = options.model ?? DEFAULT_MODEL_BY_KIND.image!;
   try {
     const { requestId, status } = await submitFalJob({
