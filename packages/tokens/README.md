@@ -1,3 +1,15 @@
+<p align="center">
+  <a href="https://chai-ui.com"><img src="https://chai-ui.com/chai-wordmark.svg" alt="Chai UI" width="220" /></a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@chai-ui/tokens"><img src="https://img.shields.io/npm/v/@chai-ui/tokens?label=npm&color=009747" alt="npm version" /></a>
+  <a href="https://github.com/kazarazat/chai-ui/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-009747" alt="MIT license" /></a>
+  <a href="https://github.com/kazarazat/chai-ui/actions/workflows/ci.yml"><img src="https://github.com/kazarazat/chai-ui/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://codecov.io/gh/kazarazat/chai-ui"><img src="https://codecov.io/gh/kazarazat/chai-ui/graph/badge.svg" alt="Coverage" /></a>
+  <a href="https://chai-ui.com/docs/"><img src="https://img.shields.io/badge/docs-chai--ui.com-009747" alt="Docs" /></a>
+</p>
+
 # @chai-ui/tokens
 
 The single source of truth for color, space, radius, type, and motion values
