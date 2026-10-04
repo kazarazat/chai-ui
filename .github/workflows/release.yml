@@ -7,6 +7,9 @@ name: Release
 # "Version Packages" PR; merging that PR publishes. With none pending, it
 # publishes only versions missing from npm (usually nothing). The manual
 # trigger stays for re-running a release.
+#
+# Actions are pinned to exact commits (version in the comment), so a moved
+# or hijacked tag can't change what runs with publish rights.
 on:
   push:
     branches: [main]
@@ -23,9 +26,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -34,7 +37,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install Chromium for the browser tests
         run: pnpm --filter @chai-ui/react exec playwright install --with-deps chromium
-      - uses: changesets/action@v1
+      - uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           version: pnpm version-packages
           publish: pnpm release
@@ -43,3 +46,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
+      # `changeset publish` tags each released package here, but the action
+      # only pushes tags when it recognizes the publish output, which the
+      # current Changesets CLI no longer matches. Push them explicitly; with
+      # nothing published there are no new tags and this does nothing.
+      - name: Push release tags
+        run: git push origin --tags
