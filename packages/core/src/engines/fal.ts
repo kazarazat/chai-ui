@@ -93,13 +93,29 @@ export function describeFalError(json: { error?: unknown; detail?: unknown }, fa
   }
 }
 
-/** Builds the one Fal request body CHAI sends — a prompt, plus an `image_url` when an attached image is available (for image-to-video / edit-shaped models). */
+/**
+ * Fal models that take their input images as an `image_urls` list (the
+ * image being edited first) instead of a single `image_url`. Verified
+ * against Fal's catalog 2026-10-03.
+ */
+const IMAGE_LIST_MODELS = new Set(["blackforestlabs/flux-3/edit-image"]);
+
+/**
+ * Builds the one Fal request body CHAI sends: the prompt, plus the attached
+ * images. Most models take one `image_url` (for image-to-video and
+ * edit-shaped models); the models in `IMAGE_LIST_MODELS` take every image
+ * as `image_urls`.
+ */
 export function buildFalRequestBody(args: {
   prompt: string;
-  media?: DroppedMedia;
+  attachments?: DroppedMedia[];
+  model?: string;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = { prompt: args.prompt };
-  if (args.media?.kind === "image") body.image_url = args.media.src;
+  const images = (args.attachments ?? []).filter((a) => a.kind === "image").map((a) => a.src);
+  if (images.length === 0) return body;
+  if (args.model && IMAGE_LIST_MODELS.has(args.model)) body.image_urls = images;
+  else body.image_url = images[0];
   return body;
 }
 
@@ -191,7 +207,7 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
         );
       }
 
-      const body = buildFalRequestBody({ prompt, media: attachments[0] });
+      const body = buildFalRequestBody({ prompt, attachments, model });
       if (signal?.aborted) throw abortError();
 
       try {

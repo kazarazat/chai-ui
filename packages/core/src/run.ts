@@ -42,6 +42,13 @@ export interface Run {
   results: Result[];
 }
 
+/**
+ * A result's `modelId` while auto-select is still choosing the model: the
+ * run exists from the moment of submit, so a result card can show progress
+ * right away. Replaced by the real model once routing finishes.
+ */
+export const ROUTING_MODEL_ID = "routing";
+
 let idCounter = 0;
 function nextId(prefix: string): string {
   idCounter += 1;

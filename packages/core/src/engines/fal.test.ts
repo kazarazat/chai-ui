@@ -22,15 +22,29 @@ describe("buildFalRequestBody", () => {
     expect(
       buildFalRequestBody({
         prompt: "a red mug",
-        media: { src: "https://example.com/mug.png", kind: "image" },
+        attachments: [{ src: "https://example.com/mug.png", kind: "image" }],
       })
     ).toEqual({ prompt: "a red mug", image_url: "https://example.com/mug.png" });
   });
 
   it("ignores attached video/audio media — no known Fal field for either", () => {
     expect(
-      buildFalRequestBody({ prompt: "a red mug", media: { src: "x", kind: "video" } })
+      buildFalRequestBody({ prompt: "a red mug", attachments: [{ src: "x", kind: "video" }] })
     ).toEqual({ prompt: "a red mug" });
+  });
+
+  it("sends every image as image_urls to a model that takes a list, the edited image first", () => {
+    expect(
+      buildFalRequestBody({
+        prompt: "make it blue",
+        model: "blackforestlabs/flux-3/edit-image",
+        attachments: [
+          { src: "a.png", kind: "image" },
+          { src: "clip.mp4", kind: "video" },
+          { src: "b.png", kind: "image" },
+        ],
+      })
+    ).toEqual({ prompt: "make it blue", image_urls: ["a.png", "b.png"] });
   });
 });
 

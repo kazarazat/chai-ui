@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import { render } from "vitest-browser-react";
 import { MEDIA_ANALYSIS_PROMPT_LENGTHS, type MediaAnalysisPromptLength, type ModelOption, type Result } from "@chai-ui/core";
-import { Composer } from "../Composer.js";
+import { Composer, EDIT_IMAGE_USE_CASE } from "../Composer.js";
+import { EditCard } from "../EditCard.js";
 import { MediaAnalyzer, type MediaAnalyzerAttachment } from "../MediaAnalyzer.js";
 import { ResultCard } from "../ResultCard.js";
 import { wcagViolations } from "./axe.js";
@@ -99,6 +100,45 @@ describe("WCAG 2.2 AA (axe)", () => {
         ]}
         prompt="x"
         onAction={() => {}}
+      />
+    );
+    expect(await wcagViolations()).toEqual([]);
+  });
+
+  it("EditCard: regions, the open instruction field, zoomed, and an edit in progress", async () => {
+    const regions = [
+      { id: "r1", number: 1, box: { x: 0.1, y: 0.4, width: 0.3, height: 0.2 }, prompt: "make it green" },
+      { id: "r2", number: 2, box: { x: 0.5, y: 0.5, width: 0.3, height: 0.2 }, prompt: "" },
+    ];
+    const versions = [
+      { id: "original", src: svg, status: "done" as const, regions: [] },
+      { id: "e1", from: svg, status: "running" as const, regions },
+    ];
+    const screen = render(
+      <EditCard versions={versions} activeVersion={0} onActiveVersionChange={() => {}} regions={regions} onRegionsChange={() => {}} />
+    );
+    expect(await wcagViolations()).toEqual([]);
+    await screen.getByRole("button", { name: /^Region 1/ }).click();
+    expect(await wcagViolations()).toEqual([]);
+    await screen.getByRole("button", { name: "Zoom in" }).click();
+    expect(await wcagViolations()).toEqual([]);
+    screen.rerender(
+      <EditCard versions={versions} activeVersion={1} onActiveVersionChange={() => {}} regions={[]} onRegionsChange={() => {}} />
+    );
+    expect(await wcagViolations()).toEqual([]);
+  });
+
+  it("Composer editing an image, with region chips", async () => {
+    render(
+      <Composer
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        useCase={EDIT_IMAGE_USE_CASE}
+        onClearUseCase={() => {}}
+        attachments={[{ id: "a", src: svg, kind: "image" }]}
+        regions={[{ id: "r1", number: 1, box: { x: 0, y: 0, width: 0.5, height: 0.5 }, prompt: "x" }]}
+        onRegionsChange={() => {}}
       />
     );
     expect(await wcagViolations()).toEqual([]);

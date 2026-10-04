@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import type { ModelOption, Result } from "@chai-ui/core";
+import { ROUTING_MODEL_ID, type ModelOption, type Result } from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
+import { DownloadIcon, ExpandIcon, ShareIcon } from "./icons.js";
+import { downloadFilename, downloadMedia, shareMedia } from "./media-actions.js";
+import { PageSlide, usePageSlide } from "./page-slide.js";
 
 /**
  * ResultCard's complement to Composer bar, and the last stop in the
@@ -47,14 +50,6 @@ function formatAspectRatio(width: number, height: number): string | undefined {
   return `${w / divisor}:${h / divisor}`;
 }
 
-/** A real extension from the URL itself when there is one, otherwise a sensible guess by kind — used only for the downloaded file's suggested name, not anything that affects the actual bytes. */
-function guessDownloadFilename(result: Result): string {
-  const kind = result.output?.kind ?? "file";
-  const src = result.output?.src ?? "";
-  const match = /\.([a-zA-Z0-9]{2,5})(?:[?#]|$)/.exec(src);
-  const ext = match?.[1] ?? (kind === "video" ? "mp4" : kind === "audio" ? "mp3" : kind === "text" ? "txt" : "png");
-  return `${kind}-${result.id}.${ext}`;
-}
 
 // --- Public types ------------------------------------------------------------
 
@@ -201,11 +196,20 @@ export function ResultCard({
   const result = results[clampedIndex];
 
   const mediaDims = measured && measured.id === result?.id ? measured : null;
+  // Paging slides, with the last image sliding out (other kinds just slide in).
+  const { slide, endSlide } = usePageSlide(
+    result?.id,
+    clampedIndex,
+    result?.output?.kind === "image" ? result.output.src : undefined
+  );
 
   if (!result) return null;
 
   const vote = getVote?.(result) ?? null;
-  const modelLabel = models?.find((m) => m.id === result.modelId)?.label ?? result.modelId;
+  const modelLabel =
+    result.modelId === ROUTING_MODEL_ID
+      ? "Choosing model…"
+      : (models?.find((m) => m.id === result.modelId)?.label ?? result.modelId);
   const duration = formatDuration(result.durationMs);
   const cost = formatCost(result.usage?.costUsd);
   const tokens = formatTokens(result.usage?.totalTokens);
@@ -228,46 +232,13 @@ export function ResultCard({
 
   const handleDownload = async () => {
     if (result.output) {
-      // A plain `<a download href={remoteUrl}>` only forces a real download
-      // for a same-origin or `blob:`/`data:` URL — for anything else
-      // (a normal cross-origin CDN url, which is what a real generated
-      // result's `src` almost always is) browsers ignore `download` and
-      // just navigate/open it instead, which is exactly the "pops a tab"
-      // behavior this replaces. Fetching it into a blob first sidesteps
-      // that: a blob: URL is always same-origin, so `download` works
-      // reliably regardless of where the media actually lives.
-      try {
-        const response = await fetch(result.output.src);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = guessDownloadFilename(result);
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(blobUrl);
-      } catch {
-        // The one case this can't force: the source not allowing
-        // cross-origin fetches (no CORS headers) or a real network
-        // failure. Opening it directly is the best fallback available —
-        // still better than silently doing nothing.
-        window.open(result.output.src, "_blank", "noopener");
-      }
+      await downloadMedia(result.output.src, downloadFilename(result.id, result.output.kind, result.output.src));
     }
     onAction("download", result);
   };
 
   const handleShare = async () => {
-    if (result.output && navigator.share) {
-      try {
-        await navigator.share({ url: result.output.src });
-      } catch {
-        // Cancelled or unsupported for this src — fall through silently, same as a native share sheet dismissal.
-      }
-    } else if (result.output) {
-      navigator.clipboard?.writeText(result.output.src).catch(() => {});
-    }
+    if (result.output) await shareMedia(result.output.src);
     onAction("share", result);
   };
 
@@ -286,24 +257,36 @@ export function ResultCard({
       >
         <div className="chai-result-card__inner">
           <div ref={frontRef} className="chai-result-card__face chai-result-card__front" aria-hidden={flipped}>
-            <ResultMedia
-              result={result}
-              alt={altText?.(result) ?? prompt}
-              disabled={disabled}
-              mediaExpanded={mediaExpanded}
-              onDownload={handleDownload}
-              onShare={handleShare}
-              onExpand={() => setMediaExpanded(true)}
-              onDimensions={(w, h) => setMeasured({ id: result.id, width: w, height: h })}
-              videoTimeRef={videoTimeRef}
-              videoWasPlaying={videoWasPlaying}
-              onVideoPlayingChange={setVideoWasPlaying}
-            />
+            <div className="chai-result-card__media-frame">
+              <PageSlide slide={slide} onEnd={endSlide} className="chai-result-card__media-page">
+                <ResultMedia
+                  result={result}
+                  alt={altText?.(result) ?? prompt}
+                  disabled={disabled}
+                  mediaExpanded={mediaExpanded}
+                  onDownload={handleDownload}
+                  onShare={handleShare}
+                  onExpand={() => setMediaExpanded(true)}
+                  onDimensions={(w, h) => setMeasured({ id: result.id, width: w, height: h })}
+                  videoTimeRef={videoTimeRef}
+                  videoWasPlaying={videoWasPlaying}
+                  onVideoPlayingChange={setVideoWasPlaying}
+                />
+              </PageSlide>
+            </div>
 
-            <div className="chai-result-card__bar">
-              <div className="chai-result-card__bar-row">
-                <div className="chai-result-card__bar-start">
+            {/* Floating over the bottom of the media, as on the edit card: the
+                page dots above, votes and retry in one pill, details on the right. */}
+            <div className="chai-card-bottom">
+              {results.length > 1 && (
+                <div className="chai-card-pager">
+                  <Pagination count={results.length} index={clampedIndex} onChange={goTo} label="Results" disabled={disabled} />
+                </div>
+              )}
+              <div className="chai-card-actions">
+                <div className="chai-card-pill">
                   <ResultIconButton
+                    variant="pill"
                     label="Like"
                     active={vote === "like"}
                     disabled={disabled}
@@ -312,6 +295,7 @@ export function ResultCard({
                     <ThumbUpIcon />
                   </ResultIconButton>
                   <ResultIconButton
+                    variant="pill"
                     label="Dislike"
                     active={vote === "dislike"}
                     disabled={disabled}
@@ -319,11 +303,7 @@ export function ResultCard({
                   >
                     <ThumbDownIcon />
                   </ResultIconButton>
-                  <ResultIconButton
-                    label="Retry"
-                    disabled={disabled}
-                    onClick={() => onAction("retry", result)}
-                  >
+                  <ResultIconButton variant="pill" label="Retry" disabled={disabled} onClick={() => onAction("retry", result)}>
                     <RefreshIcon />
                   </ResultIconButton>
                   {moreActions && moreActions.length > 0 && (
@@ -336,25 +316,10 @@ export function ResultCard({
                     />
                   )}
                 </div>
-
-                <ResultIconButton
-                  label="Show details"
-                  disabled={disabled}
-                  onClick={() => setFlipped(true)}
-                >
+                <ResultIconButton variant="round" label="Show details" disabled={disabled} onClick={() => setFlipped(true)}>
                   <InfoIcon />
                 </ResultIconButton>
               </div>
-
-              {results.length > 1 && (
-                <Pagination
-                  count={results.length}
-                  index={clampedIndex}
-                  onChange={goTo}
-                  label="Results"
-                  disabled={disabled}
-                />
-              )}
             </div>
           </div>
 
@@ -573,15 +538,15 @@ function ResultMedia({
       )}
 
       {!mediaExpanded && !streaming && (
-      <div className="chai-result-card__media-actions">
-        <ResultIconButton label="Download" disabled={disabled} onClick={onDownload}>
+      <div className="chai-card-top chai-card-top--end">
+        <ResultIconButton variant="top" label="Download" disabled={disabled} onClick={onDownload}>
           <DownloadIcon />
         </ResultIconButton>
-        <ResultIconButton label="Share" disabled={disabled} onClick={onShare}>
+        <ResultIconButton variant="top" label="Share" disabled={disabled} onClick={onShare}>
           <ShareIcon />
         </ResultIconButton>
         {(isVideo || isImage) && (
-          <ResultIconButton label="Expand" disabled={disabled} onClick={onExpand}>
+          <ResultIconButton variant="top" label="Expand" disabled={disabled} onClick={onExpand}>
             <ExpandIcon />
           </ResultIconButton>
         )}
@@ -745,14 +710,19 @@ function ResultVideoPlayer({
 
 // --- Shared icon button (the hover circle — reference: the design note that the "like" button's hover treatment in the mock applies to every small icon button on the card) ------------------------------------------------------------
 
+const ICON_BUTTON_CLASS = { top: "chai-card-top-btn", pill: "chai-card-pill-btn", round: "chai-card-round" } as const;
+
 function ResultIconButton({
   children,
+  variant,
   label,
   active,
   disabled,
   onClick,
 }: {
   children: ReactNode;
+  /** Where it floats: in a dark group along the top, in the light pill, or the round button on the right. */
+  variant: "top" | "pill" | "round";
   label: string;
   active?: boolean;
   disabled?: boolean;
@@ -761,7 +731,7 @@ function ResultIconButton({
   return (
     <button
       type="button"
-      className={`chai-result-card__icon-btn${active ? " chai-result-card__icon-btn--active" : ""}`}
+      className={`${ICON_BUTTON_CLASS[variant]}${active ? " chai-card-pill-btn--active" : ""}`}
       aria-label={label}
       aria-pressed={active}
       title={label}
@@ -808,7 +778,7 @@ function MoreMenu({
 
   return (
     <div className="chai-result-card__more" ref={rootRef}>
-      <ResultIconButton label="More" active={open} disabled={disabled} onClick={() => onOpenChange(!open)}>
+      <ResultIconButton variant="pill" label="More" active={open} disabled={disabled} onClick={() => onOpenChange(!open)}>
         <MoreHorizIcon />
       </ResultIconButton>
       {open && (
@@ -888,28 +858,6 @@ function MoreHorizIcon() {
   );
 }
 
-function ShareIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M2.99961 16.4999V5.9999H6.74961V7.4999H4.49961V14.9999H13.4996V7.4999H11.2496V5.9999H14.9996V16.4999H2.99961ZM8.24961 11.9999V3.61865L7.04961 4.81865L5.99961 3.7499L8.99961 0.749904L11.9996 3.7499L10.9496 4.81865L9.74961 3.61865V11.9999H8.24961Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M8.99961 11.9999L5.24961 8.2499L6.29961 7.1624L8.24961 9.1124V2.9999H9.74961V9.1124L11.6996 7.1624L12.7496 8.2499L8.99961 11.9999ZM2.99961 14.9999V11.2499H4.49961V13.4999H13.4996V11.2499H14.9996V14.9999H2.99961Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 function InfoIcon() {
   return (
     <svg viewBox="0 0 22 22" fill="none" aria-hidden="true">
@@ -965,16 +913,3 @@ function PlayIcon() {
 }
 
 /** Self-drawn corner-bracket mark, not a recalled/traced icon-set glyph (the mock has no "expand" asset to trace — see this section's own header comment) — four independent strokes, deliberately simple so its geometry is obviously correct rather than a compound path that's hard to eyeball. */
-function ExpandIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}

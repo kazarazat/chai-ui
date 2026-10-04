@@ -76,7 +76,19 @@ export interface ModelOption {
    * only from a source you're actively keeping current.
    */
   pricePerMillionTokens?: { input: number; output: number };
+  /**
+   * For image-edit models: how marked regions are sent. `"flux-3-boxes"`
+   * writes each region as a box the model reads (Flux 3 Image). Absent, the
+   * regions are described in words, which any edit model accepts but
+   * places less precisely. See `buildRegionEditPrompt`.
+   */
+  regionFormat?: RegionFormat;
+  /** For image-edit models: the most regions one edit takes. `EditCard` disables "New region" at this many. */
+  maxRegions?: number;
 }
+
+/** How an edit's regions reach the model — see `ModelOption.regionFormat`. */
+export type RegionFormat = "flux-3-boxes" | "text";
 
 /**
  * A specific generation use case. These names deliberately match the
