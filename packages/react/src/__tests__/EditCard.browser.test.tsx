@@ -48,6 +48,8 @@ describe("EditCard", () => {
     await expect.element(check).toBeDisabled();
     const field = screen.getByRole("textbox", { name: "Instruction for region 1" });
     await expect.element(field).toHaveFocus();
+    // The field floats over the image, styled, next to its region.
+    expect(getComputedStyle(screen.getByRole("dialog").element()).position).toBe("absolute");
     await userEvent.type(field, "Change Manager to Boss");
     await check.click();
 

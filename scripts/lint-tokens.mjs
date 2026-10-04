@@ -13,6 +13,8 @@
 //   3. Material color role: no `var(--md-sys-color-*)`. Those are driven
 //      by Chai tokens for Material's own components; Chai CSS uses the
 //      Chai token behind them.
+//   4. Broken comment: every `/*` has its `*/`. A half-deleted comment leaves
+//      prose in the stylesheet, and browsers then drop the rule after it.
 //
 // No dependencies on purpose, same as packages/tokens/build.mjs.
 
@@ -121,8 +123,24 @@ for (const file of await walk(path.join(ROOT, "packages"), [".tsx", ".ts"])) {
 }
 
 const parsed = [];
+const brokenComments = [];
 for (const file of cssFiles) {
-  const decls = declarations(await readFile(file, "utf8"));
+  const css = await readFile(file, "utf8");
+  // Comments don't nest, so walking open/close pairs finds a missing half.
+  const markers = [...css.matchAll(/\/\*|\*\//g)];
+  let open = null;
+  for (const m of markers) {
+    const line = css.slice(0, m.index).split("\n").length;
+    if (m[0] === "/*") {
+      if (open === null) open = line;
+    } else if (open === null) {
+      brokenComments.push(`${path.relative(ROOT, file)}:${line}  "*/" with no "/*" before it`);
+    } else {
+      open = null;
+    }
+  }
+  if (open !== null) brokenComments.push(`${path.relative(ROOT, file)}:${open}  "/*" never closed`);
+  const decls = declarations(css);
   for (const d of decls) if (d.property.startsWith("--")) known.add(d.property);
   parsed.push({ file: path.relative(ROOT, file), decls });
 }
@@ -155,5 +173,10 @@ if (mdRoles.length) {
   for (const m of mdRoles) console.error(`  ${m}`);
   console.error("  See color.material in packages/tokens/src/tokens.json for the mapping.\n");
 }
-if (unknown.length || literals.length || mdRoles.length) process.exit(1);
+if (brokenComments.length) {
+  console.error("lint-tokens: broken CSS comment — browsers drop the rule after stray comment text:");
+  for (const b of brokenComments) console.error(`  ${b}`);
+  console.error("");
+}
+if (unknown.length || literals.length || mdRoles.length || brokenComments.length) process.exit(1);
 console.log(`lint-tokens: ok — ${parsed.length} CSS file(s), no color literals, all tokens known.`);
