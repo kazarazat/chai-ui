@@ -844,6 +844,38 @@
   cursor: not-allowed;
 }
 
+/* Edit regions, above the prompt field: each chip in its region's color
+   (set inline as --chai-region-color), with the numbered badge that marks
+   the same region on the image. */
+.chai-composer__regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chai-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chai-composer__chip--region {
+  gap: 6px;
+  padding-left: 6px;
+  border-color: var(--chai-region-color);
+}
+
+.chai-composer__region-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--chai-radius-full);
+  background: var(--chai-region-color);
+  color: var(--chai-color-semantic-text-on-accent);
+  font-size: var(--chai-type-size-label-small);
+  line-height: 1;
+}
+
 .chai-composer__submit {
   flex: none;
   /* Flat always, both states — the mock has no FAB shadow at all. */
@@ -1201,7 +1233,11 @@
   overflow: hidden;
 }
 
+/* The media fills the face, with the controls floating over its bottom
+   (see "Floating card controls"). `--chai-card-bottom-clear` is how much of
+   the bottom they cover, for content that must stay clear of them. */
 .chai-result-card__front {
+  --chai-card-bottom-clear: 56px;
   position: relative;
   background: var(--chai-color-semantic-control-surface);
   /* `.back` is later in DOM order and stacks above `.front` regardless of
@@ -1244,6 +1280,20 @@
  * room around a still-centered, still-unstretched image, not a fixed gray
  * box the image sits inside by default.
  */
+/* Holds the paging slide: clips the page sliding out, and passes the face's
+   column layout through so the media still sizes as before. */
+.chai-result-card__media-frame,
+.chai-result-card__media-page {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chai-result-card__media-frame {
+  overflow: hidden;
+}
+
 .chai-result-card__media {
   position: relative;
   flex: 1;
@@ -1263,6 +1313,13 @@
 .chai-result-card__media--cancelled {
   min-height: 220px;
   padding: var(--chai-space-5);
+  /* Text, audio and status messages end above the floating controls. */
+  padding-bottom: var(--chai-card-bottom-clear);
+}
+
+/* With page dots, the floating controls stand taller. */
+.chai-result-card__front:has(.chai-pagination) {
+  --chai-card-bottom-clear: 96px;
 }
 
 /* A sibling of `.chai-result-card` itself, not a descendant — see the
@@ -1432,15 +1489,6 @@
   color: var(--chai-color-semantic-danger);
 }
 
-.chai-result-card__media-actions {
-  position: absolute;
-  z-index: 1;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 2px;
-}
-
 /* Play/scrubber sit relative to their nearest positioned ancestor —
    `.chai-result-card__media` inline, `.chai-result-card__expand-frame`
    when expanded — not the `<video>` element itself. Both are exactly the
@@ -1482,7 +1530,8 @@
   z-index: 1;
   left: 12px;
   right: 12px;
-  bottom: calc(10px - (24px - var(--chai-scrubber-track)) / 2);
+  /* Above the floating controls in the card; near the bottom when expanded. */
+  bottom: calc(var(--chai-card-bottom-clear, 10px) - (24px - var(--chai-scrubber-track)) / 2);
   height: 24px;
   border-radius: 6px;
   cursor: pointer;
@@ -1545,78 +1594,6 @@
 .chai-result-card__collapse svg {
   width: 14px;
   height: 14px;
-}
-
-/* --- Bottom bar --- */
-
-/* Reference: Figma "Result Card - Image - Paginated" — an
-   11px inset around the icon row, and when there's more than one result the
-   pager drops to its own centered row beneath it (8px from the card's
-   bottom edge) rather than squeezing between the icon groups. Without a
-   pager the icon row is simply centered in a comparably roomy bar. */
-.chai-result-card__bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 11px;
-  background: var(--chai-color-semantic-control-surface-raised);
-}
-
-.chai-result-card__bar:has(.chai-pagination) {
-  padding: 11px 11px 8px;
-}
-
-.chai-result-card__bar-row {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--chai-space-2);
-}
-
-.chai-result-card__bar-start {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-/* The shared hover-circle treatment — reference: the design
-   note that the "like" button's hover state in the mock is how every
-   small icon button on the card should behave, not just that one. `
-   --active` (a persisted, not just hovered, tint) is this component's own
-   extension for like/dislike/more, since the mock only documents hover. */
-.chai-result-card__icon-btn {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--chai-color-semantic-control-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.chai-result-card__icon-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.chai-result-card__icon-btn:hover:not(:disabled) {
-  background: var(--chai-color-semantic-control-surface-hover);
-}
-
-.chai-result-card__icon-btn--active {
-  color: var(--chai-color-semantic-accent-text);
-  background: var(--chai-color-semantic-control-surface-hover);
-}
-
-.chai-result-card__icon-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* --- More menu (reference: Figma "Result Card - More menu expanded") --- */
@@ -1816,6 +1793,452 @@
   border: 0;
 }
 
+/* --- Edit card ------------------------------------------------------------
+   The result card's frame (rounded outline, white action bar) around an
+   image the person marks regions on. The viewport clips the image to the
+   card's corners at every zoom; the layer inside it holds the image and its
+   regions, so both move and scale together. */
+
+.chai-edit-card {
+  width: var(--chai-edit-card-width, 421px);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 29px;
+  border: 1px solid var(--chai-color-semantic-control-border-soft);
+  background: var(--chai-color-semantic-control-surface-raised);
+  overflow: hidden;
+  font-family: var(--chai-type-family-material);
+}
+
+.chai-edit-card__viewport {
+  position: relative;
+  overflow: hidden;
+  background: var(--chai-color-semantic-control-surface);
+  touch-action: none;
+  user-select: none;
+}
+
+.chai-edit-card__viewport--zoomed {
+  cursor: grab;
+}
+
+.chai-edit-card__viewport--zoomed:active {
+  cursor: grabbing;
+}
+
+.chai-edit-card__layer {
+  position: relative;
+  transform-origin: 0 0;
+}
+
+.chai-edit-card__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.chai-edit-card__placeholder {
+  min-height: 220px;
+}
+
+/* Region boxes. Borders, badges and handles divide by the zoom so they stay
+   the same size on screen while the image scales. A faint dark outline keeps
+   each colored border visible on light and dark images alike. */
+.chai-edit-card__region {
+  --chai-edit-line: calc(2px / var(--chai-edit-zoom, 1));
+  position: absolute;
+  box-sizing: border-box;
+  border: var(--chai-edit-line) solid var(--chai-region-color);
+  box-shadow: 0 0 0 calc(1px / var(--chai-edit-zoom, 1)) var(--chai-color-semantic-overlay);
+}
+
+.chai-edit-card__region--selected,
+.chai-edit-card__region--draft {
+  border-style: dashed;
+}
+
+/* Regions a version was made with: shown for reference, without a number
+   badge and not selectable, so they don't read as regions to send. */
+.chai-edit-card__region--applied {
+  pointer-events: none;
+}
+
+.chai-edit-card__region-body {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: move;
+}
+
+.chai-edit-card__region-body:disabled {
+  cursor: default;
+}
+
+.chai-edit-card__badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border-radius: var(--chai-radius-full);
+  background: var(--chai-region-color);
+  color: var(--chai-color-semantic-text-on-accent);
+  font-size: var(--chai-type-size-label-small);
+  font-weight: var(--chai-type-weight-material-medium);
+  line-height: 1;
+  transform: translate(-50%, -50%) scale(calc(1 / var(--chai-edit-zoom, 1)));
+  pointer-events: none;
+}
+
+.chai-edit-card__handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--chai-region-color);
+  background: var(--chai-color-semantic-on-overlay);
+  transform: translate(-50%, -50%) scale(calc(1 / var(--chai-edit-zoom, 1)));
+  touch-action: none;
+}
+
+.chai-edit-card__handle--nw { top: 0; left: 0; cursor: nwse-resize; }
+.chai-edit-card__handle--ne { top: 0; left: 100%; cursor: nesw-resize; }
+.chai-edit-card__handle--sw { top: 100%; left: 0; cursor: nesw-resize; }
+.chai-edit-card__handle--se { top: 100%; left: 100%; cursor: nwse-resize; }
+
+/* An edit in progress (or stopped, or failed) over the image it came from. */
+.chai-edit-card__status {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--chai-space-5);
+  background: var(--chai-color-semantic-overlay);
+}
+
+.chai-edit-card__spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--chai-color-semantic-control-border-faint);
+  border-top-color: var(--chai-color-semantic-accent);
+  animation: chai-spin var(--chai-motion-duration-steep) linear infinite;
+}
+
+.chai-edit-card__status-text {
+  margin: 0;
+  text-align: center;
+  font-size: var(--chai-type-size-body-medium);
+  color: var(--chai-color-semantic-on-overlay);
+}
+
+.chai-edit-card__zoom-level {
+  min-width: 34px;
+  text-align: center;
+  font-size: var(--chai-type-size-label-small);
+  font-weight: var(--chai-type-weight-material-medium);
+  letter-spacing: var(--chai-type-tracking-label-small);
+  color: var(--chai-color-semantic-on-overlay);
+}
+
+   few words instead of running past the card's edge. */
+.chai-edit-card__popover {
+  position: absolute;
+  z-index: 4;
+  width: 220px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 8px 8px;
+  border-radius: var(--chai-radius-sm);
+  background: var(--chai-color-semantic-scrim);
+  cursor: default;
+}
+
+.chai-edit-card__popover--above {
+  transform: translateY(-100%);
+}
+
+.chai-edit-card__popover-header {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.chai-edit-card__popover-title {
+  flex: 1;
+  font-size: var(--chai-type-size-label-small);
+  font-weight: var(--chai-type-weight-material-medium);
+  letter-spacing: var(--chai-type-tracking-label-small);
+  color: var(--chai-color-semantic-on-overlay);
+}
+
+.chai-edit-card__field {
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 120px;
+  padding: 4px 8px;
+  border: 1px solid var(--chai-color-semantic-on-overlay);
+  border-radius: var(--chai-radius-sm);
+  background: transparent;
+  color: var(--chai-color-semantic-on-overlay);
+  font-family: inherit;
+  font-size: var(--chai-type-size-label-small);
+  line-height: var(--chai-type-leading-label-small);
+  resize: none;
+  overflow-y: auto;
+}
+
+.chai-edit-card__field::placeholder {
+  color: var(--chai-color-semantic-on-overlay);
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chai-edit-card__spinner {
+    animation-duration: calc(var(--chai-motion-duration-steep) * 3);
+  }
+}
+
+/* --- Floating card controls -------------------------------------------------
+   Shared by the image cards (result card, edit card), whose media fills the
+   card. Controls along the top sit in dark translucent groups; controls
+   along the bottom sit on light translucent surfaces: actions on the left,
+   one round button on the right, and the page dots centered above them.
+   Each reads on any image without sampling its colors. */
+
+.chai-card-top {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--chai-radius-sm);
+  background: var(--chai-color-semantic-overlay);
+}
+
+.chai-card-top--start {
+  left: 16px;
+}
+
+.chai-card-top--end {
+  right: 16px;
+}
+
+.chai-card-top-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--chai-radius-sm);
+  background: transparent;
+  color: var(--chai-color-semantic-on-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chai-card-top-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chai-card-top-btn:hover:not(:disabled) {
+  background: var(--chai-color-semantic-overlay);
+}
+
+.chai-card-top-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* The bottom: dots above the actions, in one column so a wrapped action row
+   pushes the dots up rather than covering them. */
+.chai-card-bottom {
+  position: absolute;
+  z-index: 3;
+  left: 16px;
+  right: 16px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--chai-space-2);
+}
+
+.chai-card-pager {
+  display: flex;
+  padding: 0 4px;
+  border-radius: var(--chai-radius-full);
+  background: var(--chai-color-semantic-overlay-light);
+}
+
+/* Over an image, the unselected dots need more contrast than on white. */
+.chai-card-pager .chai-pagination__dot:not(.chai-pagination__dot--filled)::before {
+  background: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-card-actions {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--chai-space-2);
+}
+
+.chai-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chai-space-2);
+}
+
+/* A labeled action (the edit card's region chips). */
+.chai-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chai-space-2);
+  height: 32px;
+  padding: 0 12px 0 8px;
+  border: none;
+  border-radius: var(--chai-radius-sm);
+  background: var(--chai-color-semantic-overlay-light);
+  color: var(--chai-color-semantic-control-text-strong);
+  font-family: inherit;
+  font-size: var(--chai-type-size-label-large);
+  font-weight: var(--chai-type-weight-material-medium);
+  letter-spacing: var(--chai-type-tracking-label-large);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Icon-only actions in one light pill (the result card's votes and retry). */
+.chai-card-pill {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 2px;
+  border-radius: var(--chai-radius-full);
+  background: var(--chai-color-semantic-overlay-light);
+}
+
+.chai-card-pill-btn,
+.chai-card-round {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chai-color-semantic-control-text-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* The one round button on the right (show/hide regions, details). */
+.chai-card-round {
+  background: var(--chai-color-semantic-overlay-light);
+}
+
+.chai-card-chip svg,
+.chai-card-pill-btn svg,
+.chai-card-round svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chai-card-chip:hover:not(:disabled),
+.chai-card-pill-btn:hover:not(:disabled),
+.chai-card-round:hover:not(:disabled) {
+  background: var(--chai-color-semantic-control-surface-raised);
+}
+
+/* A vote that's on: green, on a solid surface. */
+.chai-card-pill-btn--active {
+  color: var(--chai-color-semantic-accent-text);
+  background: var(--chai-color-semantic-control-surface-raised);
+}
+
+.chai-card-chip:disabled,
+.chai-card-pill-btn:disabled,
+.chai-card-round:disabled {
+  color: var(--chai-color-semantic-control-text-muted);
+  cursor: not-allowed;
+}
+
+/* --- Page slide ------------------------------------------------------------
+   Shared by the paginated cards: the new page slides in from the side it was
+   paged from while the last image slides out the other way. Skipped (in
+   page-slide.tsx) for people who ask for reduced motion. */
+.chai-slide-in--left {
+  animation: chai-slide-in-left var(--chai-motion-duration-slow) var(--chai-motion-easing-standard);
+}
+
+.chai-slide-in--right {
+  animation: chai-slide-in-right var(--chai-motion-duration-slow) var(--chai-motion-easing-standard);
+}
+
+/* The outgoing image stays in the layout, holding the card's height while
+   the new page (laid over it) loads. */
+.chai-slide-out {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.chai-slide-in--over {
+  position: absolute;
+  inset: 0;
+}
+
+.chai-slide-out--left {
+  animation: chai-slide-out-left var(--chai-motion-duration-slow) var(--chai-motion-easing-standard) forwards;
+}
+
+.chai-slide-out--right {
+  animation: chai-slide-out-right var(--chai-motion-duration-slow) var(--chai-motion-easing-standard) forwards;
+}
+
+@keyframes chai-slide-in-left {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes chai-slide-in-right {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes chai-slide-out-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes chai-slide-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
 /* --- Focus rings ------------------------------------------------------------
    On by default: every CHAI control shows a visible keyboard-focus ring,
    which WCAG 2.4.7 Focus Visible requires. Buttons and menu items
@@ -1839,6 +2262,7 @@
     .chai-media-analyzer,
     .chai-result-card,
     .chai-result-card__expand-overlay,
+    .chai-edit-card,
     .chai-search-menu,
     .chai-pagination,
     .chai-switch
@@ -1853,6 +2277,7 @@
     .chai-media-analyzer,
     .chai-result-card,
     .chai-result-card__expand-overlay,
+    .chai-edit-card,
     .chai-search-menu,
     .chai-pagination
   ) :focus-visible {

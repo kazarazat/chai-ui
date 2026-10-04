@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  buildRegionEditPrompt,
   createMockEngine,
   createRun,
   deriveGenerationUseCase,
@@ -8,19 +9,25 @@ import {
   isAbortError,
   mockEngine,
   normalizeGenerationError,
+  PRECISE_EDIT_MODELS,
   resolveResult,
   routeModel,
+  ROUTING_MODEL_ID,
   startResult,
   streamResult,
+  type DroppedMedia,
+  type EditRegion,
   type GenerationEngine,
   type GenerationUseCase,
   type MediaKind,
+  type ModelOption,
   type ModelRoutingInput,
   type ModelRoutingResult,
   type Request,
   type Run,
 } from "@chai-ui/core";
-import type { ComposerSubmitPayload } from "./Composer.js";
+import type { ComposerSelection, ComposerSubmitPayload } from "./Composer.js";
+import type { EditVersion } from "./EditCard.js";
 import { reasoningModelFor, useReasoning, type Reasoning } from "./ChaiProvider.js";
 import { useLatest } from "./use-latest.js";
 
@@ -85,6 +92,15 @@ export interface UseComposerOptions {
    * a reply naming no listed model. The request still runs.
    */
   onRoutingFallback?: (result: Extract<ModelRoutingResult, { status: "fallback" }>) => void;
+  /**
+   * The image to edit, when the Composer's use case is an edit (e.g.
+   * `EDIT_IMAGE_USE_CASE`) and an image is attached. While it's set, the hook
+   * returns `edit` for an `EditCard`, and each edit's results become new
+   * versions of the image. Changing it to another image starts over.
+   */
+  editImage?: DroppedMedia | null;
+  /** Replaces how an edit's prompt and regions become the model's prompt. Defaults to `buildRegionEditPrompt` in `@chai-ui/core`, in the model's `regionFormat`. */
+  editPrompt?: (args: { prompt: string; regions: EditRegion[]; model?: ModelOption }) => string;
   onRun?: (run: Run) => void;
   onResult?: (run: Run, resultId: string) => void;
   onError?: (run: Run, resultId: string) => void;
@@ -103,6 +119,41 @@ export function useComposer(options: UseComposerOptions = {}) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [enhancing, setEnhancing] = useState(false);
   const [routing, setRouting] = useState(false);
+
+  // Edit mode. Each edit's runs are kept (not replaced by the next submit),
+  // since every result is a version of the image the person can page back to.
+  const editImage = options.editImage?.kind === "image" ? options.editImage : null;
+  const [editRuns, setEditRuns] = useState<Run[]>([]);
+  const [regions, setRegions] = useState<EditRegion[]>([]);
+  const [activeVersion, setActiveVersion] = useState(0);
+  // Another image starts over. Reset while rendering, not in an effect (the rules of React).
+  const [editSource, setEditSource] = useState<string | null>(editImage?.src ?? null);
+  if ((editImage?.src ?? null) !== editSource) {
+    setEditSource(editImage?.src ?? null);
+    setEditRuns([]);
+    setRegions([]);
+    setActiveVersion(0);
+  }
+  const versions = useMemo<EditVersion[]>(
+    () =>
+      editImage
+        ? [
+            { id: "original", src: editImage.src, status: "done", regions: [] },
+            ...editRuns.flatMap((run) =>
+              run.results.map((r) => ({
+                id: r.id,
+                src: r.output?.src,
+                from: run.request.attachments[0]?.src,
+                status: r.status,
+                regions: (run.request.params.regions as EditRegion[] | undefined) ?? [],
+                error: r.error?.message,
+              }))
+            ),
+          ]
+        : [],
+    [editImage, editRuns]
+  );
+  const editRef = useLatest({ versions, activeVersion, editRuns });
   // Each submit gets an id, so routing that settles after a newer submit is dropped.
   const submitId = useRef(0);
   // Aborts the current submit's engine calls: on `cancel()`, and when a newer
@@ -129,44 +180,90 @@ export function useComposer(options: UseComposerOptions = {}) {
   );
   const reasoningRef = useLatest(reasoning);
 
-  const start = useCallback((payload: ComposerSubmitPayload, signal: AbortSignal) => {
-    const opts = optionsRef.current;
-    const reasoning = reasoningRef.current;
-    const newRuns = payload.selections.map((selection) => {
+  // One request per selection. An edit runs on the image version showing
+  // in the EditCard (the original until an edit lands) and carries its regions.
+  const buildRequest = useCallback(
+    (payload: ComposerSubmitPayload, selection: ComposerSelection): { request: Request; engine: GenerationEngine; isEdit: boolean } => {
+      const opts = optionsRef.current;
+      const reasoning = reasoningRef.current;
       const isText = selection.useCase.kind === "text";
+      const isEdit = Boolean(selection.useCase.edit && opts.editImage?.kind === "image");
+      const { versions, activeVersion } = editRef.current;
+      const shown = versions[activeVersion];
+      const editFrom = shown?.status === "done" && shown.src ? shown.src : opts.editImage?.src;
+      const attachments: DroppedMedia[] = isEdit && editFrom ? [{ src: editFrom, kind: "image" }] : payload.attachments;
       // Nothing picked: text uses the builder's text model when there is
       // one; otherwise the engine runs its own default. Never a silent no-op.
-      const fallback = isText ? (opts.textModel ?? (reasoning && reasoningModelFor(reasoning, payload.attachments))) : undefined;
+      const fallback = isText ? (opts.textModel ?? (reasoning && reasoningModelFor(reasoning, attachments))) : undefined;
+      const params: Record<string, unknown> = payload.aspectRatio && !isEdit ? { aspectRatio: payload.aspectRatio } : {};
+      if (isEdit) params.regions = payload.regions ?? [];
       const request: Request = {
-        mode: deriveGenerationUseCase(selection.useCase, payload.attachments),
+        mode: deriveGenerationUseCase(selection.useCase, attachments),
         prompt: payload.value,
-        attachments: payload.attachments,
+        attachments,
         modelIds: selection.modelIds.length > 0 ? selection.modelIds : [fallback ?? DEFAULT_MODEL_ID],
-        params: payload.aspectRatio ? { aspectRatio: payload.aspectRatio } : {},
+        params,
       };
       const engine = isText
         ? (opts.textEngine ?? reasoning?.engine ?? mockTextEngine)
         : (opts.engineByKind?.[selection.useCase.kind] ?? opts.engine ?? mockEngine);
-      return { run: createRun(request), engine };
+      return { request, engine, isEdit };
+    },
+    [optionsRef, reasoningRef, editRef]
+  );
+
+  // Edit placeholders from routing waits, dropped from the history when the
+  // next real runs start (including ones a newer submit abandoned).
+  const placeholderIds = useRef(new Set<string>());
+
+  const start = useCallback((payload: ComposerSubmitPayload, signal: AbortSignal) => {
+    const opts = optionsRef.current;
+    const newRuns = payload.selections.map((selection) => {
+      const { request, engine, isEdit } = buildRequest(payload, selection);
+      return { run: createRun(request), engine, isEdit, models: selection.models ?? [] };
     });
 
     setRuns(newRuns.map((r) => r.run));
+    const newEditRuns = newRuns.filter((r) => r.isEdit).map((r) => r.run);
+    const placeholders = placeholderIds.current;
+    const kept = editRef.current.editRuns.filter((r) => !placeholders.has(r.id));
+    if (newEditRuns.length > 0) {
+      // Show the first new version, and start the next edit with no regions:
+      // these ones now belong to the versions they made.
+      setEditRuns([...kept, ...newEditRuns]);
+      setActiveVersion(1 + kept.reduce((n, r) => n + r.results.length, 0));
+      setRegions([]);
+    } else if (placeholders.size > 0) {
+      setEditRuns(kept);
+    }
+    placeholderIds.current = new Set();
 
     // Results settle independently and out of order — each update only
     // ever touches its own run, and only if that run is still current. A
     // run from an earlier submit is no longer in state (and its calls were
     // aborted), so a late result can't clobber the newer ones.
-    const update = (runId: string, fn: (run: Run) => Run) =>
-      setRuns((prev) => (prev.some((r) => r.id === runId) ? prev.map((r) => (r.id === runId ? fn(r) : r)) : prev));
+    const update = (runId: string, fn: (run: Run) => Run) => {
+      const apply = (prev: Run[]) => (prev.some((r) => r.id === runId) ? prev.map((r) => (r.id === runId ? fn(r) : r)) : prev);
+      setRuns(apply);
+      setEditRuns(apply);
+    };
 
-    for (const { run: newRun, engine } of newRuns) {
+    for (const { run: newRun, engine, isEdit, models } of newRuns) {
       opts.onRun?.(newRun);
       for (const result of newRun.results) {
         update(newRun.id, (r) => startResult(r, result.id));
+        // An edit's prompt depends on the model: one with box support gets
+        // boxes, any other gets the regions described in words.
+        const regions = (newRun.request.params.regions as EditRegion[] | undefined) ?? [];
+        const model =
+          models.find((m) => m.id === result.modelId) ?? PRECISE_EDIT_MODELS.find((m) => m.id === result.modelId);
+        const prompt = isEdit
+          ? (opts.editPrompt ?? defaultEditPrompt)({ prompt: newRun.request.prompt, regions, model })
+          : newRun.request.prompt;
         void engine
           .generate({
             modelId: result.modelId === DEFAULT_MODEL_ID ? undefined : result.modelId,
-            prompt: newRun.request.prompt,
+            prompt,
             attachments: newRun.request.attachments,
             // Text engines that stream fill `output` in while still "running".
             onText: (text) => update(newRun.id, (r) => streamResult(r, result.id, text)),
@@ -185,7 +282,7 @@ export function useComposer(options: UseComposerOptions = {}) {
           );
       }
     }
-  }, [optionsRef, reasoningRef]);
+  }, [optionsRef, buildRequest, editRef]);
 
   const submit = useCallback(
     (payload: ComposerSubmitPayload) => {
@@ -203,6 +300,21 @@ export function useComposer(options: UseComposerOptions = {}) {
       const reasoning = reasoningRef.current;
       if (!reasoning) warnNoReasoningOnce();
       setRouting(true);
+      // Runs exist from the moment of submit, so a result card shows progress
+      // while the reasoning model chooses. Their results read "Choosing model".
+      const placeholders = payload.selections.map((sel) => {
+        const { request, isEdit } = buildRequest(payload, sel);
+        const modelIds = sel.models.length > 0 ? [ROUTING_MODEL_ID] : request.modelIds;
+        return { run: createRun({ ...request, modelIds }), isEdit };
+      });
+      setRuns(placeholders.map((p) => p.run));
+      const editPlaceholders = placeholders.filter((p) => p.isEdit).map((p) => p.run);
+      if (editPlaceholders.length > 0) {
+        const editRuns = editRef.current.editRuns.filter((r) => !placeholderIds.current.has(r.id));
+        for (const r of editPlaceholders) placeholderIds.current.add(r.id);
+        setEditRuns([...editRuns, ...editPlaceholders]);
+        setActiveVersion(1 + editRuns.reduce((n, r) => n + r.results.length, 0));
+      }
       void Promise.all(
         payload.selections.map((sel) =>
           sel.models.length === 0
@@ -237,7 +349,7 @@ export function useComposer(options: UseComposerOptions = {}) {
         }, signal);
       });
     },
-    [start, optionsRef, reasoningRef]
+    [start, buildRequest, optionsRef, reasoningRef, editRef]
   );
 
   /**
@@ -251,7 +363,9 @@ export function useComposer(options: UseComposerOptions = {}) {
     controller.current?.abort();
     controller.current = null;
     setRouting(false);
-    setRuns((prev) => prev.map((run) => run.results.reduce((acc, r) => cancelResult(acc, r.id), run)));
+    const cancelAll = (prev: Run[]) => prev.map((run) => run.results.reduce((acc, r) => cancelResult(acc, r.id), run));
+    setRuns(cancelAll);
+    setEditRuns(cancelAll);
   }, []);
 
   const run = runs[0] ?? null;
@@ -274,7 +388,22 @@ export function useComposer(options: UseComposerOptions = {}) {
     };
   }, [reasoning, options.enhancePrompt, run?.request.mode]);
 
-  return { run, runs, submit, cancel, enhance, enhancing, routing };
+  /** Props for an `EditCard` (spread them in), and `regions` for `Composer`. `null` when there's no `editImage`. */
+  const edit = editImage
+    ? {
+        versions,
+        activeVersion: Math.min(activeVersion, versions.length - 1),
+        onActiveVersionChange: setActiveVersion,
+        regions,
+        onRegionsChange: setRegions,
+      }
+    : null;
+
+  return { run, runs, submit, cancel, enhance, enhancing, routing, edit };
+}
+
+function defaultEditPrompt({ prompt, regions, model }: { prompt: string; regions: EditRegion[]; model?: ModelOption }): string {
+  return buildRegionEditPrompt({ prompt, regions, format: model?.regionFormat });
 }
 
 export type UseComposerReturn = ReturnType<typeof useComposer>;

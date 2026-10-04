@@ -1,9 +1,17 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { GenerationError, type GenerationEngine, type ModelOption } from "@chai-ui/core";
+import {
+  GenerationError,
+  PRECISE_EDIT_MODELS,
+  ROUTING_MODEL_ID,
+  type DroppedMedia,
+  type EditRegion,
+  type GenerationEngine,
+  type ModelOption,
+} from "@chai-ui/core";
 import { DEFAULT_MODEL_ID, useComposer } from "./useComposer.js";
-import { TEXT_USE_CASE } from "./Composer.js";
+import { EDIT_IMAGE_USE_CASE, TEXT_USE_CASE } from "./Composer.js";
 import type { ComposerSubmitPayload } from "./Composer.js";
 import {
   ChaiProvider,
@@ -468,3 +476,144 @@ describe("useComposer", () => {
     });
   });
 });
+
+describe("useComposer while auto-select routes", () => {
+  it("creates the run at submit, so a result card shows progress while the model is chosen", async () => {
+    let answer!: (v: { src: string; kind: "text" }) => void;
+    const reason = vi.fn(() => new Promise<{ src: string; kind: "text" }>((resolve) => (answer = resolve)));
+    const media = vi.fn().mockResolvedValue({ src: "https://x/img.png", kind: "image" });
+    // Two models, so there's a real choice to wait for.
+    const roster: ModelOption[] = [
+      { id: "fal/fast", label: "Fast", provider: "fal", speed: "fast" },
+      { id: "fal/pro", label: "Pro", provider: "fal", speed: "standard" },
+    ];
+    const { result } = renderHook(() => useComposer({ engine: fakeEngine(media) }), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ChaiProvider reasoningEngine={fakeEngine(reason)}>{children}</ChaiProvider>
+      ),
+    });
+
+    act(() =>
+      result.current.submit(payload({ modelId: null, autoSelectModel: true, selections: [{ useCase: IMAGE, modelIds: [], models: roster }] }))
+    );
+    expect(result.current.run?.results[0]).toMatchObject({ status: "queued", modelId: ROUTING_MODEL_ID });
+
+    await waitFor(() => expect(reason).toHaveBeenCalled());
+    await act(async () => answer({ src: "fal/fast", kind: "text" }));
+    await waitFor(() => expect(result.current.run?.results[0]!.status).toBe("done"));
+    expect(result.current.run?.results[0]!.modelId).toBe("fal/fast");
+  });
+
+  it("cancelling while routing stops the placeholder", async () => {
+    const reason = vi.fn(() => new Promise<never>(() => {}));
+    const roster: ModelOption[] = [{ id: "fal/fast", label: "Fast", provider: "fal", speed: "fast" }];
+    const { result } = renderHook(() => useComposer({ engine: fakeEngine(vi.fn()) }), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ChaiProvider reasoningEngine={fakeEngine(reason)}>{children}</ChaiProvider>
+      ),
+    });
+    act(() =>
+      result.current.submit(payload({ modelId: null, autoSelectModel: true, selections: [{ useCase: IMAGE, modelIds: [], models: roster }] }))
+    );
+    act(() => result.current.cancel());
+    expect(result.current.run?.results[0]!.status).toBe("cancelled");
+    expect(result.current.routing).toBe(false);
+  });
+});
+
+describe("useComposer editing an image", () => {
+  const photo: DroppedMedia = { src: "data:image/png;base64,AAA", kind: "image" };
+  const region = (number: number, prompt: string): EditRegion => ({
+    id: `r${number}`,
+    number,
+    box: { x: 0.5, y: 0.25, width: 0.25, height: 0.1 },
+    prompt,
+  });
+  const flux = PRECISE_EDIT_MODELS[0]!;
+  const editPayload = (overrides: Partial<ComposerSubmitPayload> = {}) =>
+    payload({
+      value: "",
+      attachments: [{ ...photo, id: "a1" }],
+      useCase: EDIT_IMAGE_USE_CASE,
+      modelId: flux.id,
+      selections: [{ useCase: EDIT_IMAGE_USE_CASE, modelIds: [flux.id], models: PRECISE_EDIT_MODELS }],
+      ...overrides,
+    });
+
+  it("returns no edit without an image to edit", () => {
+    const { result } = renderHook(() => useComposer());
+    expect(result.current.edit).toBeNull();
+  });
+
+  it("starts with the original as the only version and no regions", () => {
+    const { result } = renderHook(() => useComposer({ editImage: photo }));
+    expect(result.current.edit).toMatchObject({ activeVersion: 0, regions: [] });
+    expect(result.current.edit?.versions).toEqual([{ id: "original", src: photo.src, status: "done", regions: [] }]);
+  });
+
+  it("sends the regions as Flux 3 boxes, then shows the edit as a new version and clears the regions", async () => {
+    const generate = vi.fn().mockResolvedValue({ src: "https://x/edited.png", kind: "image" as const });
+    const { result } = renderHook(() => useComposer({ engine: fakeEngine(generate), editImage: photo }));
+    const regions = [region(1, "Change Manager to Boss")];
+    act(() => result.current.edit!.onRegionsChange(regions));
+
+    act(() => result.current.submit(editPayload({ regions })));
+    expect(result.current.edit?.activeVersion).toBe(1);
+    expect(result.current.edit?.regions).toEqual([]);
+    await waitFor(() => expect(result.current.edit?.versions[1]?.status).toBe("done"));
+
+    const call = generate.mock.calls[0]![0];
+    expect(call.attachments).toEqual([photo]);
+    expect(call.prompt).toContain("<region_1>: Change Manager to Boss");
+    expect(call.prompt).toContain('"tgt_bbox":[250,500,350,750]');
+    expect(result.current.edit?.versions[1]).toMatchObject({ src: "https://x/edited.png", from: photo.src, regions });
+  });
+
+  it("edits the version showing, so edits build on each other", async () => {
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce({ src: "https://x/one.png", kind: "image" as const })
+      .mockResolvedValueOnce({ src: "https://x/two.png", kind: "image" as const });
+    const { result } = renderHook(() => useComposer({ engine: fakeEngine(generate), editImage: photo }));
+
+    act(() => result.current.submit(editPayload({ value: "make it night" })));
+    await waitFor(() => expect(result.current.edit?.versions[1]?.status).toBe("done"));
+    act(() => result.current.submit(editPayload({ value: "add stars" })));
+    await waitFor(() => expect(result.current.edit?.versions[2]?.status).toBe("done"));
+
+    expect(generate.mock.calls[1]![0].attachments).toEqual([{ src: "https://x/one.png", kind: "image" }]);
+    expect(generate.mock.calls[1]![0].prompt).toBe("add stars");
+    expect(result.current.edit?.activeVersion).toBe(2);
+  });
+
+  it("describes regions in words for a model without box support", async () => {
+    const generate = vi.fn().mockResolvedValue({ src: "https://x/e.png", kind: "image" as const });
+    const plain: ModelOption = { id: "fal/other-edit", label: "Other", provider: "fal", speed: "fast" };
+    const { result } = renderHook(() => useComposer({ engine: fakeEngine(generate), editImage: photo }));
+    act(() =>
+      result.current.submit(
+        editPayload({
+          regions: [region(2, "remove the logo")],
+          modelId: plain.id,
+          selections: [{ useCase: EDIT_IMAGE_USE_CASE, modelIds: [plain.id], models: [plain] }],
+        })
+      )
+    );
+    await waitFor(() => expect(generate).toHaveBeenCalled());
+    expect(generate.mock.calls[0]![0].prompt).toContain("Region 2 (from 50% to 75% across and 25% to 35% down): remove the logo.");
+  });
+
+  it("starts over when the image changes", async () => {
+    const generate = vi.fn().mockResolvedValue({ src: "https://x/e.png", kind: "image" as const });
+    const { result, rerender } = renderHook(({ image }) => useComposer({ engine: fakeEngine(generate), editImage: image }), {
+      initialProps: { image: photo },
+    });
+    act(() => result.current.submit(editPayload({ value: "x" })));
+    await waitFor(() => expect(result.current.edit?.versions).toHaveLength(2));
+
+    rerender({ image: { src: "data:image/png;base64,BBB", kind: "image" } });
+    expect(result.current.edit?.versions).toHaveLength(1);
+    expect(result.current.edit?.activeVersion).toBe(0);
+  });
+});
+

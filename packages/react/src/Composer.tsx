@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
-import type { DroppedMedia, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
+import type { DroppedMedia, EditRegion, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
+import { regionColor } from "./regions.js";
 
 /** See primitives/Toggle.tsx for why `createComponent` is used instead of raw JSX on custom-element tags. */
 const MdFabElement = createComponent({
@@ -60,10 +61,19 @@ export type ComposerAttachMenuAction = "add-media" | "create-image" | "create-vi
 export interface ComposerUseCase {
   kind: MediaKind;
   label: string;
+  /**
+   * An edit of the attached image rather than a new one: no aspect ratio,
+   * region chips when `regions` is set, and a submit needs only an image and
+   * either a prompt or a region. Images only for now.
+   */
+  edit?: boolean;
 }
 
 /** A plain text request — what a submit means when no use case is picked, unless the builder sets `defaultUseCase`. */
 export const TEXT_USE_CASE: ComposerUseCase = { kind: "text", label: "Text" };
+
+/** Editing the attached image, the attach menu's "Edit image". Pair it with `useComposer`'s `editImage` and an `EditCard`. */
+export const EDIT_IMAGE_USE_CASE: ComposerUseCase = { kind: "image", label: "Edit image", edit: true };
 
 /** One use case to run and the models picked for it. Empty `modelIds` means the engine's default model. */
 export interface ComposerSelection {
@@ -95,12 +105,15 @@ export interface ComposerSubmitPayload {
   selections: ComposerSelection[];
   /** When true, the model is chosen at submit (`useComposer` routes among each selection's `models`), not by the picks. */
   autoSelectModel: boolean;
+  /** An edit's marked regions, each with its own instruction. Empty unless the use case is an edit. */
+  regions?: EditRegion[];
 }
 
 export interface ComposerProps {
   /** The prompt text. Controlled — Composer owns no text state of its own. */
   value: string;
   onChange: (value: string) => void;
+  /** Defaults to "Describe media to create", or edit wording when the use case is an edit. */
   placeholder?: string;
   /** The prompt field's accessible name, read by screen readers. Defaults to `placeholder`, which disappears once the person types. */
   promptLabel?: string;
@@ -202,6 +215,12 @@ export interface ComposerProps {
   /** Fires when the stop icon is clicked while `submitting` is true. See `submitting`'s own doc comment for why this — not `submitting` alone — is what actually shows the stop icon. */
   onAbort?: () => void;
   onAttachMenuSelect?: (action: ComposerAttachMenuAction) => void;
+  /**
+   * An edit's regions (from `useComposer`'s `edit`), shown as colored chips
+   * while the use case is an edit. Removing a chip removes its region.
+   */
+  regions?: EditRegion[];
+  onRegionsChange?: (next: EditRegion[]) => void;
   disabled?: boolean;
 }
 
@@ -218,7 +237,7 @@ export interface ComposerProps {
 export function Composer({
   value,
   onChange,
-  placeholder = "Describe media to create",
+  placeholder,
   promptLabel,
   attachments = [],
   onAttachmentsChange,
@@ -250,21 +269,35 @@ export function Composer({
   submitting = false,
   onAbort,
   onAttachMenuSelect,
+  regions = [],
+  onRegionsChange,
   disabled = false,
 }: ComposerProps) {
-  const hasContent = value.trim().length > 0 || attachments.length > 0;
-  const isSubmitDisabled = submitError ? disabled : (submitDisabled ?? (disabled || !hasContent));
-  // The stop icon only appears with somewhere for its click to go — without
-  // `onAbort`, `submitting` just disables the FAB instead (below), same as
-  // it would with no opt-in wired at all.
-  const showStop = submitting && Boolean(onAbort);
-  const selectedAspect = aspectRatios?.find((o) => o.value === aspectRatio) ?? null;
-
   // What the person picked, and what actually runs: with nothing picked,
   // the builder's default use case (a text request unless they chose
   // otherwise), so a typed prompt always goes somewhere.
   const pickedUseCases = multiSelectUseCases ? useCases : useCase ? [useCase] : [];
   const activeUseCases = pickedUseCases.length > 0 ? pickedUseCases : [defaultUseCase];
+  // An edit needs an image, then a change: a prompt for the whole image, a
+  // region with its own instruction, or both.
+  const editing = activeUseCases.some((u) => u.edit);
+  const hasImage = attachments.some((a) => a.kind === "image");
+  const hasContent = editing
+    ? hasImage && (value.trim().length > 0 || regions.length > 0)
+    : value.trim().length > 0 || attachments.length > 0;
+  const isSubmitDisabled = submitError ? disabled : (submitDisabled ?? (disabled || !hasContent));
+  const effectivePlaceholder =
+    placeholder ??
+    (editing
+      ? hasImage
+        ? "Describe a change across the whole image, or leave this empty"
+        : "Attach an image to edit"
+      : "Describe media to create");
+  // The stop icon only appears with somewhere for its click to go — without
+  // `onAbort`, `submitting` just disables the FAB instead (below), same as
+  // it would with no opt-in wired at all.
+  const showStop = submitting && Boolean(onAbort);
+  const selectedAspect = aspectRatios?.find((o) => o.value === aspectRatio) ?? null;
   const multiModel = multiSelectModels || multiSelectUseCases;
   const pickedModelIds = multiModel ? modelIds : modelId ? [modelId] : [];
   // One menu section per use case with multi-use-case select; otherwise one flat roster.
@@ -279,7 +312,8 @@ export function Composer({
     pickedModels.length > 1
       ? `${pickedModels.length} models`
       : pickedModels[0]?.label ?? (autoSelectModel ? "Auto-select" : "Select models");
-  const showAspectRatio = activeUseCases.some((u) => u.kind === "image" || u.kind === "video");
+  // An edit keeps the source image's shape.
+  const showAspectRatio = activeUseCases.some((u) => !u.edit && (u.kind === "image" || u.kind === "video"));
 
   function toggleModel(id: string) {
     if (!multiModel) return onModelChange?.(id);
@@ -424,14 +458,28 @@ export function Composer({
         </div>
       )}
 
+      {editing && regions.length > 0 && (
+        <ul className="chai-composer__regions" aria-label="Edit regions">
+          {regions.map((r) => (
+            <li key={r.id}>
+              <RegionChip
+                region={r}
+                onRemove={onRegionsChange ? () => onRegionsChange(regions.filter((x) => x.id !== r.id)) : undefined}
+                disabled={disabled}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="chai-composer__field">
         <textarea
           ref={textareaRef}
           className={`chai-composer__input chai-composer__type${animating ? " chai-composer__input--revealing" : ""}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          aria-label={promptLabel ?? placeholder}
+          placeholder={effectivePlaceholder}
+          aria-label={promptLabel ?? effectivePlaceholder}
           rows={1}
           disabled={disabled || animating}
         />
@@ -607,6 +655,7 @@ export function Composer({
                 aspectRatio,
                 selections,
                 autoSelectModel,
+                regions: editing ? regions : [],
               });
             }
           }}
@@ -630,7 +679,7 @@ const ATTACH_MENU_ITEMS: {
   { action: "add-media", label: "Add media", icon: <AttachFileIcon />, divider: true },
   { action: "create-image", label: "Create image", icon: <ImageIcon /> },
   { action: "create-video", label: "Create video", icon: <VideocamIcon /> },
-  { action: "edit-media", label: "Edit media", icon: <ContentCutIcon /> },
+  { action: "edit-media", label: "Edit image", icon: <ContentCutIcon /> },
 ];
 
 /**
@@ -770,6 +819,45 @@ function UseCaseChip({
           onClick={onRemove}
           disabled={disabled}
           aria-label={`Remove ${useCase.label}`}
+        >
+          <CloseIcon />
+        </button>
+      )}
+    </span>
+  );
+}
+
+/**
+ * One edit region, in its region color: a numbered badge matching the box on
+ * the image, its name, and the same hover-revealed remove as the use-case
+ * chip. The instruction itself lives on the image, not here.
+ */
+function RegionChip({
+  region,
+  onRemove,
+  disabled,
+}: {
+  region: EditRegion;
+  onRemove?: () => void;
+  disabled?: boolean;
+}) {
+  const name = `Region ${region.number}`;
+  return (
+    <span
+      className="chai-composer__chip chai-composer__chip--region"
+      style={{ "--chai-region-color": regionColor(region.number) } as React.CSSProperties}
+    >
+      <span className="chai-composer__region-badge" aria-hidden="true">
+        {region.number}
+      </span>
+      {name}
+      {onRemove && (
+        <button
+          type="button"
+          className="chai-composer__chip-remove"
+          onClick={onRemove}
+          disabled={disabled}
+          aria-label={`Remove ${name}`}
         >
           <CloseIcon />
         </button>

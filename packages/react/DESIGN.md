@@ -16,6 +16,7 @@ mismatch.
 | A prompt box with attach, model and aspect-ratio pickers, submit | `Composer` | A hand-built textarea + button row |
 | Media (image, video, audio) in, a generation-ready prompt out | `MediaAnalyzer` + `useMediaAnalyzer` | A file input plus your own model call |
 | One prompt's generated output (image, video, audio, text) | `ResultCard` | A custom media card |
+| Editing an image: marked regions, each with its own instruction | `EditCard` + `EDIT_IMAGE_USE_CASE` + `useComposer`'s `editImage` | A canvas or box-drawing library of your own |
 | Submit → engine → result state, wired together | `useComposer` | Your own fetch/loading/error state |
 | One reasoning model shared by every component | `ChaiProvider`, `useReasoning` | A text model picked per component |
 | A switch, an option menu, a pager | `Toggle`, `SearchMenu`, `Pagination` | Another UI kit's versions inside a CHAI surface |
@@ -135,6 +136,8 @@ Rules:
 | Long text answer | `ResultCard` keeps line breaks, scrolls past 400px with a visible scrollbar, and follows streaming text unless the person scrolls up | Change the height with `textMaxHeight` if needed |
 | Text streaming in | `ResultCard` renders partial text with a caret, marked `aria-busy` | Use an engine that calls `onText` (OpenRouter does, and so does the mock text engine). `useComposer` wires it. |
 | Result failed | `ResultCard` shows the error message in place | Nothing |
+| Image edit in progress | `EditCard` shows a spinner over the image being edited, then the edit as a new version | Nothing. `useComposer` adds the version. |
+| Edit model's region limit | `EditCard` disables "New region" at `maxRegions` | Pass the chosen model's `maxRegions` |
 | Try again | `ResultCard`'s retry fires `onAction("retry", result)` | Re-run the **same** model call, not a different one |
 | Feedback | Like/dislike fire `onAction`, and the displayed vote comes from `getVote` | Store votes yourself |
 | Details | The flip side shows prompt, model, tokens, cost and duration | Supply `models` so ids resolve to labels |
@@ -142,7 +145,9 @@ Rules:
 
 `ResultCard` is where a run ends. Don't add a "use as input" action that
 feeds a result back into a `Composer`. Chaining steps like that is
-deliberately out of scope.
+deliberately out of scope. The one exception is `EditCard`: an edit's result
+is a new version of the same image, and the next edit applies to the version
+showing.
 
 ## 6. Accessibility
 

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import { render } from "vitest-browser-react";
-import type { ModelOption } from "@chai-ui/core";
-import { Composer, TEXT_USE_CASE, type ComposerProps } from "../Composer.js";
+import type { EditRegion, ModelOption } from "@chai-ui/core";
+import { Composer, EDIT_IMAGE_USE_CASE, TEXT_USE_CASE, type ComposerProps } from "../Composer.js";
 
 const IMAGE = { kind: "image" as const, label: "Image" };
 const MODELS: ModelOption[] = [
@@ -92,3 +92,63 @@ describe("Composer", () => {
     expect(onAbort).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Composer editing an image", () => {
+  const photo = { id: "a1", src: "data:image/png;base64,AAA", kind: "image" as const };
+  const region = (number: number): EditRegion => ({
+    id: `r${number}`,
+    number,
+    box: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
+    prompt: `change ${number}`,
+  });
+
+  it("asks for an image first, and won't submit without one", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(<Harness useCase={EDIT_IMAGE_USE_CASE} initialValue="make it night" onSubmit={onSubmit} />);
+    await expect.element(screen.getByRole("textbox", { name: "Attach an image to edit" })).toBeInTheDocument();
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits regions without a whole-image prompt, and hides aspect ratio", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(
+      <Harness
+        useCase={EDIT_IMAGE_USE_CASE}
+        attachments={[photo]}
+        regions={[region(1)]}
+        aspectRatios={[{ value: "1:1", label: "1:1" }]}
+        onSubmit={onSubmit}
+      />
+    );
+    await expect.element(screen.getByRole("textbox", { name: /whole image/ })).toBeInTheDocument();
+    await expect.element(screen.getByText("Aspect ratio")).not.toBeInTheDocument();
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit.mock.calls[0]![0].regions).toEqual([region(1)]);
+  });
+
+  it("needs a prompt or a region", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(<Harness useCase={EDIT_IMAGE_USE_CASE} attachments={[photo]} onSubmit={onSubmit} />);
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("shows a chip per region and removes a region from its chip", async () => {
+    const onRegionsChange = vi.fn();
+    const screen = render(
+      <Harness useCase={EDIT_IMAGE_USE_CASE} attachments={[photo]} regions={[region(1), region(2)]} onRegionsChange={onRegionsChange} />
+    );
+    await expect.element(screen.getByText("Region 2")).toBeVisible();
+    // The remove button appears on hover, as with the use-case chip.
+    await screen.getByText("Region 1").hover();
+    await screen.getByRole("button", { name: "Remove Region 1" }).click();
+    expect(onRegionsChange).toHaveBeenCalledWith([region(2)]);
+  });
+
+  it("shows no region chips outside an edit", async () => {
+    const screen = render(<Harness useCase={IMAGE} regions={[region(1)]} />);
+    await expect.element(screen.getByText("Region 1")).not.toBeInTheDocument();
+  });
+});
+

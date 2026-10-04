@@ -6,6 +6,8 @@ interface PaginationProps {
   onChange: (index: number) => void;
   /** Accessible name for the nav landmark, e.g. "Results". */
   label: string;
+  /** What one page is, for each dot's name ("Result 2 of 3"). Defaults to "Result". */
+  itemLabel?: string;
   disabled?: boolean;
 }
 
@@ -17,7 +19,7 @@ interface PaginationProps {
  * any one component, so every paginated surface renders the same pager
  * rather than each growing its own.
  */
-export function Pagination({ count, index, onChange, label, disabled }: PaginationProps) {
+export function Pagination({ count, index, onChange, label, itemLabel = "Result", disabled }: PaginationProps) {
   return (
     <nav
       className="chai-pagination"
@@ -31,7 +33,7 @@ export function Pagination({ count, index, onChange, label, disabled }: Paginati
           type="button"
           className={`chai-pagination__dot${i <= index ? " chai-pagination__dot--filled" : ""}`}
           aria-current={i === index}
-          aria-label={`Result ${i + 1} of ${count}`}
+          aria-label={`${itemLabel} ${i + 1} of ${count}`}
           disabled={disabled}
           onClick={() => onChange(i)}
         />

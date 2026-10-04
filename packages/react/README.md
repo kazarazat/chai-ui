@@ -167,6 +167,9 @@ unlisted reply), the request runs on the first listed model and
   "more" menu, pagination across multiple results, and an info flip showing
   the prompt and model metadata. Live example:
   [chai-ui.com/docs/components/result-card](https://chai-ui.com/docs/components/result-card).
+- **`EditCard`** — edit an attached image by marking regions on it, each
+  with its own instruction, then page through the edits as versions. See
+  "Editing an image" below.
 - **Primitives** (`src/primitives/`) — `Toggle` (an MD3 switch),
   `SearchMenu` (the model/option menu behind every picker — Chai's own rather than Material's `<md-menu>`; DESIGN.md §3 says why), and
   `Pagination` (a progress-style pager any paginated surface can reuse).
@@ -278,3 +281,48 @@ OpenRouter stops a *streaming* request, and its billing, only for
 providers that support it (not Google); a non-streaming request keeps
 running. A custom engine receives `signal` in `generate()`: cancel at the
 provider if it can, then reject with an `AbortError` (`abortError()`).
+
+## Editing an image: `EditCard`
+
+The attach menu's "Edit image" puts `Composer` in edit mode. Set the use case
+to `EDIT_IMAGE_USE_CASE`, pass the attached image to `useComposer` as
+`editImage`, and drop in the card:
+
+```tsx
+import { Composer, EditCard, EDIT_IMAGE_USE_CASE, PRECISE_EDIT_MODELS, useComposer } from "@chai-ui/react";
+
+const editImage = useCase?.edit ? (attachments.find((a) => a.kind === "image") ?? null) : null;
+const { run, submit, edit } = useComposer({ engine: createFalEngine({ outputKind: "image" }), editImage });
+const model = PRECISE_EDIT_MODELS.find((m) => m.id === modelId);
+
+{edit && <EditCard {...edit} maxRegions={model?.maxRegions} />}
+{!edit && run && <ResultCard results={run.results} prompt={run.request.prompt} onAction={…} />}
+<Composer
+  // ...your other Composer props
+  useCase={useCase}
+  onAttachMenuSelect={(action) => {
+    if (action === "edit-media") setUseCase(EDIT_IMAGE_USE_CASE);
+  }}
+  models={useCase?.edit ? PRECISE_EDIT_MODELS : models}
+  regions={edit?.regions}
+  onRegionsChange={edit?.onRegionsChange}
+  onSubmit={submit}
+/>
+```
+
+- **Regions.** "New region" adds a box with an instruction field. The check
+  adds it to the prompt (a colored chip in the Composer); trash removes it.
+  Drag to move, drag a corner to resize; by keyboard, arrows move and Shift
+  + arrows resize. Zoom keeps the image inside the card; drag to pan.
+- **Submitting.** An edit needs the image plus a whole-image prompt, a
+  region, or both. Regions carry their own instructions, so the prompt can
+  stay empty.
+- **Models.** `PRECISE_EDIT_MODELS` is a suggested list: Flux 3 Image on
+  Fal, which reads each region as a box. Offer any edit model you like; one
+  without a `regionFormat` gets its regions described in words, which is
+  less precise. Change how the prompt is built with `useComposer`'s
+  `editPrompt`.
+- **Versions.** Each edit's result is a new version, shown in the card with
+  dots to page back. The next edit applies to the version showing.
+- **Images only** for now.
+

@@ -2,6 +2,7 @@ export * from "./primitives/index.js";
 export * from "./Composer.js";
 export * from "./MediaAnalyzer.js";
 export * from "./ResultCard.js";
+export * from "./EditCard.js";
 export * from "./useComposer.js";
 export * from "./ChaiProvider.js";
 export * from "./useMediaAnalyzer.js";
@@ -13,6 +14,10 @@ export {
   createOpenRouterEngine,
   createMockEngine,
   mockEngine,
+  buildRegionEditPrompt,
+  DEFAULT_MAX_REGIONS,
+  PRECISE_EDIT_MODELS,
+  ROUTING_MODEL_ID,
   GenerationError,
   DEFAULT_MEDIA_ANALYSIS_PROMPT_LENGTH,
   MEDIA_ANALYSIS_PROMPTS,
@@ -20,6 +25,7 @@ export {
 } from "@chai-ui/core";
 export type {
   DroppedMedia,
+  EditRegion,
   Evaluation,
   GenerationEngine,
   GenerationUseCase,
@@ -28,6 +34,8 @@ export type {
   MediaKind,
   ModelOption,
   ParameterOption,
+  RegionBox,
+  RegionFormat,
   Request,
   Result,
   ResultStatus,
