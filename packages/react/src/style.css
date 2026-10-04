@@ -1954,6 +1954,7 @@
   color: var(--chai-color-semantic-on-overlay);
 }
 
+/* The region's instruction field. A fixed width, so the text wraps after a
    few words instead of running past the card's edge. */
 .chai-edit-card__popover {
   position: absolute;
