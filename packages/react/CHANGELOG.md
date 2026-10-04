@@ -1,5 +1,13 @@
 # @chai-ui/react
 
+## 0.2.1
+
+### Patch Changes
+
+- fd3250f: Fix the edit card's region instruction field, which lost its styles in 0.2.0 (it showed as plain text along the bottom of the card instead of floating by its region). A broken stylesheet comment hid the rule; the token lint now fails on unbalanced CSS comments.
+- @chai-ui/core@0.2.1
+  - @chai-ui/tokens@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
