@@ -70,3 +70,50 @@ describe("MediaAnalyzer", () => {
     await expect.element(screen.getByText("Auto-select model")).toBeVisible();
   });
 });
+
+describe("MediaAnalyzer drop zone", () => {
+  const dropzone = () => document.querySelector(".chai-media-analyzer__dropzone")!;
+  function dragEvent(type: string, files: File[] = []) {
+    const data = new DataTransfer();
+    for (const f of files) data.items.add(f);
+    return new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data });
+  }
+
+  it("highlights while a file is dragged over, and attaches what's dropped", async () => {
+    const screen = render(<Harness />);
+    dropzone().dispatchEvent(dragEvent("dragenter"));
+    await expect.poll(() => dropzone().classList.contains("chai-media-analyzer__dropzone--drag-active")).toBe(true);
+    dropzone().dispatchEvent(dragEvent("dragover"));
+    dropzone().dispatchEvent(dragEvent("dragleave"));
+    await expect.poll(() => dropzone().classList.contains("chai-media-analyzer__dropzone--drag-active")).toBe(false);
+
+    dropzone().dispatchEvent(dragEvent("drop", [file("photo.png", "image/png")]));
+    await expect.element(screen.getByRole("button", { name: "Remove photo.png" })).toBeInTheDocument();
+  });
+
+  it("ignores a drop while disabled", async () => {
+    const onAttachmentsChange = vi.fn();
+    render(<Harness disabled onAttachmentsChange={onAttachmentsChange} />);
+    dropzone().dispatchEvent(dragEvent("drop", [file("photo.png", "image/png")]));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(onAttachmentsChange).not.toHaveBeenCalled();
+  });
+
+  it("a second video replaces the first, and an attachment can be removed", async () => {
+    const screen = render(<Harness />);
+    await userEvent.upload(fileInput(), file("one.mp4", "video/mp4"));
+    await expect.element(screen.getByRole("button", { name: "Remove one.mp4" })).toBeInTheDocument();
+    await userEvent.upload(fileInput(), file("two.mp4", "video/mp4"));
+    await expect.element(screen.getByRole("button", { name: "Remove two.mp4" })).toBeInTheDocument();
+    await expect.element(screen.getByRole("button", { name: "Remove one.mp4" })).not.toBeInTheDocument();
+
+    await screen.getByRole("button", { name: "Remove two.mp4" }).click();
+    await expect.element(screen.getByRole("button", { name: "Remove two.mp4" })).not.toBeInTheDocument();
+  });
+
+  it("shows a failed analysis's message", async () => {
+    const screen = render(<Harness submitError="The analysis model timed out." />);
+    await expect.element(screen.getByRole("alert")).toHaveTextContent("The analysis model timed out.");
+  });
+});
+
