@@ -472,7 +472,7 @@ function ResultMedia({
   if ((result.status === "queued" || result.status === "running") && !streaming) {
     return (
       <div className="chai-result-card__media chai-result-card__media--pending">
-        <span className="chai-result-card__spinner" aria-label={result.status === "running" ? "Running" : "Queued"} />
+        <span className="chai-result-card__spinner" role="img" aria-label={result.status === "running" ? "Running" : "Queued"} />
       </div>
     );
   }

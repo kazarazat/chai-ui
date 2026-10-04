@@ -84,7 +84,7 @@ describe("WCAG 2.2 AA (axe)", () => {
     expect(await wcagViolations()).toEqual([]);
   });
 
-  it("ResultCard: paginated image, flipped, text, error and stopped", async () => {
+  it("ResultCard: paginated image, flipped, loading, text, error and stopped", async () => {
     const screen = render(<ResultCard results={[result("r1"), result("r2"), result("r3")]} prompt="a mug" onAction={() => {}} />);
     expect(await wcagViolations()).toEqual([]);
     await screen.getByRole("button", { name: "Show details" }).click();
@@ -94,6 +94,7 @@ describe("WCAG 2.2 AA (axe)", () => {
     render(
       <ResultCard
         results={[
+          result("q", { status: "running", output: undefined }),
           result("t", { output: { src: "A long answer.", kind: "text" } }),
           result("e", { status: "error", output: undefined, error: { message: "Timed out." } }),
           result("c", { status: "cancelled", output: undefined }),
