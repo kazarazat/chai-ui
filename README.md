@@ -13,8 +13,8 @@
 # Chai UI
 
 **A design system for AI model interactions.** Every component comes with
-its use case instructions built in, takes its look from your design tokens
-(Material Design 3 included), and runs on Fal.ai, OpenRouter or your own
+its use case instructions built in, is built on Material Design 3 and
+styled by your design tokens, and runs on Fal.ai, OpenRouter or your own
 engine.
 
 Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
