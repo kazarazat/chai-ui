@@ -55,4 +55,8 @@ describe("PRECISE_EDIT_MODELS", () => {
   it("suggests Flux 3 Image with box support", () => {
     expect(PRECISE_EDIT_MODELS[0]).toMatchObject({ id: "blackforestlabs/flux-3/edit-image", regionFormat: "flux-3-boxes" });
   });
+
+  it("uses short labels, with no parentheses", () => {
+    for (const model of PRECISE_EDIT_MODELS) expect(model.label).not.toMatch(/[()]/);
+  });
 });

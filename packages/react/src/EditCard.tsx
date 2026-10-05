@@ -35,7 +35,7 @@ export interface EditVersion {
 }
 
 export interface EditCardProps {
-  /** The original image first, then each edit. Paged with the dots under the card. */
+  /** The original image first, then each edit. Paged with the dots in the card's bottom row. */
   versions: EditVersion[];
   activeVersion: number;
   onActiveVersionChange: (index: number) => void;
@@ -138,6 +138,8 @@ export function EditCard({
   const index = clamp(activeVersion, 0, Math.max(0, versions.length - 1));
   const version = versions[index];
   const ready = version?.status === "done" && Boolean(version.src);
+  const paginated = versions.length > 1;
+  const hasImage = Boolean(version?.src || version?.from);
 
   // A region being drawn, not yet checked into the Composer.
   const [draft, setDraft] = useState<EditRegion | null>(null);
@@ -484,15 +486,10 @@ export function EditCard({
             </button>
           </div>
 
-          {/* Over the bottom of the image (it fills the card): the version dots
-              once there's an edit, and under them the region actions. Stacked
-              in one column so wrapped chips push the dots up, never under. */}
+          {paginated && hasImage && <div className="chai-card-fade" />}
+
+          {/* Over the bottom of the image (it fills the card): the region actions. */}
           <div className="chai-card-bottom" onPointerDown={(e) => e.stopPropagation()}>
-            {versions.length > 1 && (
-              <div className="chai-card-pager">
-                <Pagination count={versions.length} index={index} onChange={onActiveVersionChange} label="Versions" itemLabel="Version" disabled={disabled} />
-              </div>
-            )}
             <div className="chai-card-actions">
               <div className="chai-card-chips">
                 <button
@@ -573,6 +570,12 @@ export function EditCard({
           )}
         </div>
 
+        {/* The version dots are the card's last row, under the image. */}
+        {paginated && (
+          <div className={`chai-card-pager-bar${hasImage ? " chai-card-pager-bar--over-media" : ""}`}>
+            <Pagination count={versions.length} index={index} onChange={onActiveVersionChange} label="Versions" itemLabel="Version" disabled={disabled} />
+          </div>
+        )}
       </div>
 
       {/* The expanded view reuses the result card's dialog, outside the card for the same reason. */}

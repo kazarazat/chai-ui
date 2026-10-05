@@ -82,7 +82,7 @@ export interface ResultCardProps {
   prompt: string;
   /** Alt text for a generated image. Defaults to `prompt`, which describes what was asked for. */
   altText?: (result: Result) => string;
-  /** Resolves `Result.modelId` to a human-readable label (reference: "GPT-4o Image Pro", not a raw id) — falls back to the raw id when not found. */
+  /** Resolves `Result.modelId` to a human-readable label (reference: "GPT-4o Image Pro", not a raw id) — falls back to the raw id when not found. Shown on the info side, and beside the page dots when there are several results. */
   models?: ModelOption[];
   /**
    * Resolves a result's vote, if any — controlled, not tracked by
@@ -243,6 +243,10 @@ export function ResultCard({
   };
 
   const isVideo = result.output?.kind === "video";
+  const paginated = results.length > 1;
+  // An image or video runs under a dark fade into the bar; text, audio and
+  // status pages keep the plain surface.
+  const overMedia = result.output?.kind === "image" || isVideo;
 
   return (
     <>
@@ -256,7 +260,11 @@ export function ResultCard({
         }
       >
         <div className="chai-result-card__inner">
-          <div ref={frontRef} className="chai-result-card__face chai-result-card__front" aria-hidden={flipped}>
+          <div
+            ref={frontRef}
+            className={`chai-result-card__face chai-result-card__front${paginated ? " chai-result-card__front--paginated" : ""}`}
+            aria-hidden={flipped}
+          >
             <div className="chai-result-card__media-frame">
               <PageSlide slide={slide} onEnd={endSlide} className="chai-result-card__media-page">
                 <ResultMedia
@@ -273,16 +281,21 @@ export function ResultCard({
                   onVideoPlayingChange={setVideoWasPlaying}
                 />
               </PageSlide>
+              {paginated && overMedia && <div className="chai-card-fade" />}
             </div>
 
-            {/* Floating over the bottom of the media, as on the edit card: the
-                page dots above, votes and retry in one pill, details on the right. */}
+            {/* With several results, the page dots are the card's last row,
+                centred, with the model that made this page on the left. */}
+            {paginated && (
+              <div className={`chai-card-pager-bar${overMedia ? " chai-card-pager-bar--over-media" : ""}`}>
+                <span className="chai-card-pager-label">{modelLabel}</span>
+                <Pagination count={results.length} index={clampedIndex} onChange={goTo} label="Results" disabled={disabled} />
+              </div>
+            )}
+
+            {/* Floating over the bottom of the media: votes and retry in one
+                pill, details on the right. */}
             <div className="chai-card-bottom">
-              {results.length > 1 && (
-                <div className="chai-card-pager">
-                  <Pagination count={results.length} index={clampedIndex} onChange={goTo} label="Results" disabled={disabled} />
-                </div>
-              )}
               <div className="chai-card-actions">
                 <div className="chai-card-pill">
                   <ResultIconButton
