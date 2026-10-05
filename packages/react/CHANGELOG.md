@@ -1,5 +1,14 @@
 # @chai-ui/react
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [892c9e9]
+- Updated dependencies [5b3d2a9]
+  - @chai-ui/tokens@0.3.1
+  - @chai-ui/core@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

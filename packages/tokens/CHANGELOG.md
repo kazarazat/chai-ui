@@ -1,5 +1,12 @@
 # @chai-ui/tokens
 
+## 0.3.1
+
+### Patch Changes
+
+- 892c9e9: `gradient.media-fade` is now built from `color.semantic.media-backdrop`, so setting `--chai-color-semantic-media-backdrop` on `:root` recolors the fade and the bar under paginated media together, with no seam. It looks the same with the default black. Override `--chai-gradient-media-fade` to replace the fade entirely.
+- 5b3d2a9: A softer fade at the bottom of paginated media (`gradient.media-fade`): it stays light most of the way down and turns fully black only where it meets the dark bar, so `ResultCard` and `EditCard` images look less darkened, with no seam.
+
 ## 0.3.0
 
 ### Minor Changes
