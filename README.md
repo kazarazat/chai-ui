@@ -7,13 +7,20 @@
   <a href="https://codecov.io/gh/kazarazat/chai-ui"><img src="https://codecov.io/gh/kazarazat/chai-ui/graph/badge.svg" alt="Coverage" /></a>
   <a href="https://www.npmjs.com/package/@chai-ui/react"><img src="https://img.shields.io/npm/v/@chai-ui/react?label=npm" alt="npm version" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-009747" alt="MIT license" /></a>
+  <a href="#install"><img src="https://img.shields.io/badge/React-18.3%20%7C%2019-61DAFB?logo=react&logoColor=white" alt="React 18.3 | 19" /></a>
 </p>
 
 # Chai UI
 
-Library of smart components for generative-AI apps: a prompt composer, a
-media analyzer and result cards, wired to real AI engines and styled with
-your tokens.
+**A design system for AI model interactions.** Every component comes with
+its use case instructions built in, takes its look from your design tokens
+(Material Design 3 included), and runs on Fal.ai, OpenRouter or your own
+engine.
+
+Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
+
+<details>
+<summary><strong>Features</strong></summary>
 
 - **Composer:** a prompt bar with attachments, use cases, model and
   aspect-ratio menus, prompt optimization, auto-select model routing, and
@@ -22,10 +29,12 @@ your tokens.
   generation-ready prompt back.
 - **ResultCard:** one prompt's results (image, video, audio or text), with
   like, retry, download, share, a details flip, and streaming text.
+- **EditCard:** edit an image by marking regions on it, each with its own
+  instruction, then page through the edits as versions.
 - **Engines:** Fal.ai for media generation, OpenRouter for reasoning, or
   your own. API keys stay on your server.
 
-Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
+</details>
 
 ## Install
 
