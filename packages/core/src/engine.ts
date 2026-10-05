@@ -21,6 +21,8 @@ export interface GenerationEngine {
     modelId?: string;
     prompt: string;
     attachments: DroppedMedia[];
+    /** The output aspect ratio the person picked, e.g. `"16:9"`. Only set for a model that lists it in `ModelOption.aspectRatios`. */
+    aspectRatio?: string;
     /**
      * Optional streaming hook for text output. An engine that can stream
      * calls this with the full text received so far (not a delta) each time

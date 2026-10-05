@@ -91,6 +91,14 @@ export interface ModelOption {
   regionFormat?: RegionFormat;
   /** For image-edit models: the most regions one edit takes. `EditCard` disables "New region" at this many. */
   maxRegions?: number;
+  /**
+   * The output aspect ratios the model takes, e.g. `["1:1", "16:9", "9:16"]`.
+   * Composer's Aspect ratio menu offers only ratios the selected models
+   * share, and the engine sends the pick in the model's own format. Leave
+   * it out for a model that sets the shape itself (image-to-video follows
+   * the input image): no menu shows.
+   */
+  aspectRatios?: string[];
 }
 
 /** How an edit's regions reach the model — see `ModelOption.regionFormat`. */

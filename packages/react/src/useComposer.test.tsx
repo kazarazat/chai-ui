@@ -55,6 +55,15 @@ describe("useComposer", () => {
     expect(generate.mock.calls[0]![0].modelId).toBeUndefined();
   });
 
+  it("passes the picked aspect ratio to the engine", async () => {
+    const generate = vi.fn().mockResolvedValue({ src: "https://x/img.png", kind: "image" as const });
+    const { result } = renderHook(() => useComposer({ engine: fakeEngine(generate) }));
+
+    act(() => result.current.submit(payload({ aspectRatio: "16:9" })));
+    await waitFor(() => expect(result.current.run?.results[0]!.status).toBe("done"));
+    expect(generate.mock.calls[0]![0].aspectRatio).toBe("16:9");
+  });
+
   it("sends a text request (no use case picked) to the text engine with the builder's text model", async () => {
     const media = vi.fn();
     const text = vi.fn().mockResolvedValue({ src: "Hello!", kind: "text" as const });

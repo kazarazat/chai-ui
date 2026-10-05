@@ -178,22 +178,51 @@ describe("Composer model and option menus", () => {
     ]);
   });
 
-  it("picks an aspect ratio", async () => {
+  const SQUARE_WIDE: ModelOption = { id: "fal/sw", label: "Square and wide", provider: "fal", speed: "fast", aspectRatios: ["1:1", "16:9"] };
+  const WIDE_TALL: ModelOption = { id: "fal/wt", label: "Wide and tall", provider: "fal", speed: "fast", aspectRatios: ["16:9", "9:16"] };
+  const OWN_SHAPE: ModelOption = { id: "fal/own", label: "Own shape", provider: "fal", speed: "fast" };
+
+  it("offers the picked model's aspect ratios", async () => {
     const onAspectRatioChange = vi.fn();
+    const screen = render(
+      <Harness useCase={IMAGE} models={[SQUARE_WIDE, WIDE_TALL]} modelId="fal/sw" onAspectRatioChange={onAspectRatioChange} />
+    );
+    await screen.getByText("Aspect ratio").click();
+    await expect.element(screen.getByRole("button", { name: "1:1" })).toBeInTheDocument();
+    await expect.element(screen.getByRole("button", { name: "9:16" })).not.toBeInTheDocument();
+    await screen.getByRole("button", { name: "16:9" }).click();
+    expect(onAspectRatioChange).toHaveBeenCalledWith("16:9");
+  });
+
+  it("with no model picked, offers only ratios every model takes, with the builder's labels", async () => {
     const screen = render(
       <Harness
         useCase={IMAGE}
+        models={[SQUARE_WIDE, WIDE_TALL]}
         aspectRatios={[
           { value: "1:1", label: "Square" },
           { value: "16:9", label: "Wide" },
         ]}
-        aspectRatio={null}
-        onAspectRatioChange={onAspectRatioChange}
       />
     );
     await screen.getByText("Aspect ratio").click();
-    await screen.getByRole("button", { name: "Wide" }).click();
-    expect(onAspectRatioChange).toHaveBeenCalledWith("16:9");
+    await expect.element(screen.getByRole("button", { name: "Wide" })).toBeInTheDocument();
+    await expect.element(screen.getByRole("button", { name: "Square" })).not.toBeInTheDocument();
+  });
+
+  it("hides the menu for a model that sets its own shape", async () => {
+    const screen = render(<Harness useCase={IMAGE} models={[OWN_SHAPE]} modelId="fal/own" aspectRatios={[{ value: "1:1", label: "1:1" }]} />);
+    await expect.element(screen.getByText("Own shape")).toBeInTheDocument();
+    await expect.element(screen.getByText("Aspect ratio")).not.toBeInTheDocument();
+  });
+
+  it("never submits a ratio the picked model doesn't take", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(
+      <Harness initialValue="a mug" useCase={IMAGE} models={[SQUARE_WIDE]} modelId="fal/sw" aspectRatio="9:16" onSubmit={onSubmit} />
+    );
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ aspectRatio: null });
   });
 });
 
