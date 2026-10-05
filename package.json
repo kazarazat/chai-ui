@@ -2,7 +2,7 @@
   "name": "chai-ui",
   "private": true,
   "version": "0.0.0",
-  "description": "Library of smart components for generative-AI apps.",
+  "description": "A design system for AI model interactions. Components come with use case instructions built in, are built on Material Design 3 and styled by your design tokens, and run on Fal.ai, OpenRouter or your own engine.",
   "license": "MIT",
   "packageManager": "pnpm@10.28.0",
   "engines": {
