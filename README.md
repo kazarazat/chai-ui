@@ -22,9 +22,11 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
 <details>
 <summary><strong>Features</strong></summary>
 
-- **Composer:** a prompt bar with attachments, use cases, model and
-  aspect-ratio menus, prompt optimization, auto-select model routing, and
-  a stop button.
+- **Composer:** a prompt bar with attachments, use cases, a model menu,
+  prompt optimization, auto-select model routing, and a stop button. The
+  aspect-ratio menu offers only what the selected model takes, and the
+  pick reaches the model in its own format, so you never write a ratio
+  list.
 - **MediaAnalyzer:** drop in an image, video or audio clip and get a
   generation-ready prompt back.
 - **ResultCard:** one prompt's results (image, video, audio or text), with
