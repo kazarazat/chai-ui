@@ -100,6 +100,22 @@ export function describeFalError(json: { error?: unknown; detail?: unknown }, fa
  */
 const IMAGE_LIST_MODELS = new Set(["blackforestlabs/flux-3/edit-image"]);
 
+/** FLUX's `image_size` names for the ratios it takes (fal.ai/models/fal-ai/flux/schnell/api). */
+const FLUX_IMAGE_SIZES: Record<string, string> = {
+  "1:1": "square_hd",
+  "4:3": "landscape_4_3",
+  "16:9": "landscape_16_9",
+  "3:4": "portrait_4_3",
+  "9:16": "portrait_16_9",
+};
+
+/** GPT Image's `image_size` pixel sizes for the ratios it takes (fal.ai/models/fal-ai/gpt-image-1/text-to-image/api). */
+const GPT_IMAGE_SIZES: Record<string, string> = {
+  "1:1": "1024x1024",
+  "3:2": "1536x1024",
+  "2:3": "1024x1536",
+};
+
 /**
  * Builds the one Fal request body CHAI sends: the prompt, plus the attached
  * images. Most models take one `image_url` (for image-to-video and
@@ -110,8 +126,24 @@ export function buildFalRequestBody(args: {
   prompt: string;
   attachments?: DroppedMedia[];
   model?: string;
+  aspectRatio?: string;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = { prompt: args.prompt };
+  if (args.aspectRatio) {
+    // FLUX takes a named size and GPT Image a pixel size; the others take
+    // the ratio itself.
+    const sizes = args.model?.startsWith("fal-ai/flux/")
+      ? FLUX_IMAGE_SIZES
+      : args.model?.startsWith("fal-ai/gpt-image")
+        ? GPT_IMAGE_SIZES
+        : null;
+    if (sizes) {
+      const size = sizes[args.aspectRatio];
+      if (size) body.image_size = size;
+    } else {
+      body.aspect_ratio = args.aspectRatio;
+    }
+  }
   const images = (args.attachments ?? []).filter((a) => a.kind === "image").map((a) => a.src);
   if (images.length === 0) return body;
   if (args.model && IMAGE_LIST_MODELS.has(args.model)) body.image_urls = images;
@@ -198,7 +230,7 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
-    async generate({ modelId, prompt, attachments, signal }) {
+    async generate({ modelId, prompt, attachments, aspectRatio, signal }) {
       const model =
         modelId ?? options.modelByKind?.[outputKind] ?? options.model ?? DEFAULT_MODEL_BY_KIND[outputKind];
       if (!model) {
@@ -207,7 +239,7 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
         );
       }
 
-      const body = buildFalRequestBody({ prompt, attachments, model });
+      const body = buildFalRequestBody({ prompt, attachments, model, aspectRatio });
       if (signal?.aborted) throw abortError();
 
       try {

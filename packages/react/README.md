@@ -89,7 +89,9 @@ capability beyond the default file picker. Every other control is additive:
   autoSelectModel={autoSelectModel}
   showAutoSelectToggle
   onAutoSelectModelChange={setAutoSelectModel}
-  aspectRatios={aspectRatios}
+  // The Aspect ratio menu offers what the selected models take: give each
+  // model its `aspectRatios`, e.g. ["1:1", "16:9", "9:16"]. A model without
+  // them (image-to-video follows the input image) shows no menu.
   aspectRatio={aspectRatio}
   onAspectRatioChange={setAspectRatio}
   // Omit onEnhance entirely to hide the "optimize prompt" button — e.g.

@@ -18,6 +18,29 @@ describe("buildFalRequestBody", () => {
     expect(buildFalRequestBody({ prompt: "a red mug" })).toEqual({ prompt: "a red mug" });
   });
 
+  it("sends the aspect ratio as aspect_ratio", () => {
+    expect(buildFalRequestBody({ prompt: "a red mug", model: "fal-ai/nano-banana-pro", aspectRatio: "16:9" })).toEqual({
+      prompt: "a red mug",
+      aspect_ratio: "16:9",
+    });
+  });
+
+  it("sends FLUX models a named image_size, leaving out a ratio FLUX has no size for", () => {
+    expect(buildFalRequestBody({ prompt: "a red mug", model: "fal-ai/flux/schnell", aspectRatio: "9:16" })).toEqual({
+      prompt: "a red mug",
+      image_size: "portrait_16_9",
+    });
+    expect(buildFalRequestBody({ prompt: "a red mug", model: "fal-ai/flux/schnell", aspectRatio: "21:9" })).toEqual({
+      prompt: "a red mug",
+    });
+  });
+
+  it("sends GPT Image models a pixel image_size", () => {
+    expect(
+      buildFalRequestBody({ prompt: "a red mug", model: "fal-ai/gpt-image-1/text-to-image", aspectRatio: "3:2" })
+    ).toEqual({ prompt: "a red mug", image_size: "1536x1024" });
+  });
+
   it("adds image_url for attached image media", () => {
     expect(
       buildFalRequestBody({

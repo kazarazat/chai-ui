@@ -167,6 +167,11 @@ export interface ComposerProps {
   showAutoSelectToggle?: boolean;
   /** Fires when the end user toggles the switch — only reachable when `showAutoSelectToggle` is true. */
   onAutoSelectModelChange?: (value: boolean) => void;
+  /**
+   * Optional. The Aspect ratio menu comes from the selected models'
+   * `ModelOption.aspectRatios`; pass this only for your own labels or a
+   * shorter list. Ratios the models don't take are left out either way.
+   */
   aspectRatios?: ParameterOption<string>[];
   aspectRatio?: string | null;
   onAspectRatioChange?: (value: string) => void;
@@ -297,7 +302,6 @@ export function Composer({
   // `onAbort`, `submitting` just disables the FAB instead (below), same as
   // it would with no opt-in wired at all.
   const showStop = submitting && Boolean(onAbort);
-  const selectedAspect = aspectRatios?.find((o) => o.value === aspectRatio) ?? null;
   const multiModel = multiSelectModels || multiSelectUseCases;
   const pickedModelIds = multiModel ? modelIds : modelId ? [modelId] : [];
   // One menu section per use case with multi-use-case select; otherwise one flat roster.
@@ -314,6 +318,21 @@ export function Composer({
       : pickedModels[0]?.label ?? (autoSelectModel ? "Auto-select" : "Select models");
   // An edit keeps the source image's shape.
   const showAspectRatio = activeUseCases.some((u) => !u.edit && (u.kind === "image" || u.kind === "video"));
+  // Only ratios every model that might run takes: the picked ones, or with
+  // none picked (or auto-select on) the whole list, so whichever runs can
+  // honor it. A model with no `aspectRatios` sets its own shape: no menu.
+  const ratioModels = pickedModels.length > 0 && !autoSelectModel ? pickedModels : allModels;
+  const sharedRatios =
+    ratioModels.reduce<string[] | null>(
+      (shared, m) => (shared ?? m.aspectRatios ?? []).filter((r) => m.aspectRatios?.includes(r)),
+      null
+    ) ?? [];
+  const aspectOptions = aspectRatios
+    ? aspectRatios.filter((o) => sharedRatios.includes(o.value))
+    : sharedRatios.map((r) => ({ value: r, label: r }));
+  // A pick the current models don't take is shown as unpicked and never sent.
+  const offeredAspect = showAspectRatio && aspectOptions.some((o) => o.value === aspectRatio) ? aspectRatio : null;
+  const selectedAspect = aspectOptions.find((o) => o.value === offeredAspect) ?? null;
 
   function toggleModel(id: string) {
     if (!multiModel) return onModelChange?.(id);
@@ -576,10 +595,10 @@ export function Composer({
             />
           )}
 
-          {showAspectRatio && aspectRatios && aspectRatios.length > 0 && (
+          {showAspectRatio && aspectOptions.length > 0 && (
             <SearchMenu
-              options={aspectRatios.map((o) => ({ id: o.value, label: o.label }))}
-              value={aspectRatio}
+              options={aspectOptions.map((o) => ({ id: o.value, label: o.label }))}
+              value={offeredAspect}
               triggerLabel={selectedAspect?.label ?? "Aspect ratio"}
               menuLabel="Aspect ratio"
               onSelect={(opt) => onAspectRatioChange?.(opt.id)}
@@ -652,7 +671,7 @@ export function Composer({
                 attachments,
                 useCase: activeUseCases[0]!,
                 modelId: pickedModelIds[0] ?? null,
-                aspectRatio,
+                aspectRatio: offeredAspect,
                 selections,
                 autoSelectModel,
                 regions: editing ? regions : [],

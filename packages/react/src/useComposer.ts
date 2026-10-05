@@ -265,6 +265,7 @@ export function useComposer(options: UseComposerOptions = {}) {
             modelId: result.modelId === DEFAULT_MODEL_ID ? undefined : result.modelId,
             prompt,
             attachments: newRun.request.attachments,
+            aspectRatio: newRun.request.params.aspectRatio as string | undefined,
             // Text engines that stream fill `output` in while still "running".
             onText: (text) => update(newRun.id, (r) => streamResult(r, result.id, text)),
             signal,
