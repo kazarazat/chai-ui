@@ -25,4 +25,15 @@ describe("SearchMenu", () => {
     await screen.getByText("Apple").click();
     expect(onSelect).toHaveBeenCalledWith(options[0]);
   });
+
+  it("shifts its panel left to stay on screen near the right edge", async () => {
+    const screen = render(
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <SearchMenu options={options} value={null} triggerLabel="Pick" menuLabel="Fruit" onSelect={() => {}} />
+      </div>
+    );
+    await screen.getByText("Pick").click();
+    const panel = document.querySelector<HTMLElement>(".chai-search-menu__panel")!;
+    expect(panel.getBoundingClientRect().right).toBeLessThanOrEqual(document.documentElement.clientWidth - 16);
+  });
 });

@@ -45,6 +45,9 @@ describe("Pagination", () => {
     await expect.element(slider).toHaveAttribute("aria-valuenow", "4");
     await userEvent.keyboard("{Home}{ArrowLeft}");
     await expect.element(slider).toHaveAttribute("aria-valuenow", "1");
+    // Other keys leave it alone.
+    await userEvent.keyboard("a");
+    await expect.element(slider).toHaveAttribute("aria-valuenow", "1");
   });
 
   it("ignores input when disabled", async () => {
