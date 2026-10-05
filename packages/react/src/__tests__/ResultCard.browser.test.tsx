@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { userEvent } from "@vitest/browser/context";
 import { render } from "vitest-browser-react";
 import type { Result } from "@chai-ui/core";
 import { ResultCard } from "../ResultCard.js";
@@ -20,9 +21,29 @@ describe("ResultCard", () => {
     const results = [result("r1"), result("r2"), result("r3")];
     const screen = render(<ResultCard results={results} prompt="a mug" onAction={onAction} />);
 
-    await screen.getByRole("button", { name: "Result 2" }).click();
+    // The second of three 16px dots.
+    await screen.getByRole("slider", { name: "Results" }).click({ position: { x: 24, y: 12 } });
     await screen.getByRole("button", { name: "Like" }).first().click();
     expect(onAction).toHaveBeenCalledWith("like", results[1]);
+  });
+
+  it("names each page's model beside the dots, only when paginated", async () => {
+    const models = [
+      { id: "fal/fast", label: "Fast", provider: "fal", speed: "fast" as const },
+      { id: "fal/slow", label: "Slow", provider: "fal", speed: "slow" as const },
+    ];
+    const results = [result("r1"), result("r2", { modelId: "fal/slow" })];
+    const screen = render(<ResultCard results={results} models={models} prompt="a mug" onAction={() => {}} />);
+    const label = () => screen.container.querySelector(".chai-card-pager-label");
+
+    expect(label()?.textContent).toBe("Fast");
+    await userEvent.click(screen.getByRole("slider", { name: "Results" }));
+    await userEvent.keyboard("{End}");
+    expect(label()?.textContent).toBe("Slow");
+    screen.unmount();
+
+    const single = render(<ResultCard results={[result("r1")]} models={models} prompt="a mug" onAction={() => {}} />);
+    expect(single.container.querySelector(".chai-card-pager-label")).toBeNull();
   });
 
   it("flips to show the prompt", async () => {

@@ -1,6 +1,6 @@
 import { createComponent } from "@lit/react";
 import * as React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MdOutlinedTextField } from "@material/web/textfield/outlined-text-field.js";
 import { MdCheckbox } from "@material/web/checkbox/checkbox.js";
 import { Toggle } from "./Toggle.js";
@@ -129,6 +129,19 @@ export function SearchMenu<T extends SearchMenuOption>({
     setSearch("");
   }, []);
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // The panel opens from the trigger's left edge. On a narrow screen that
+  // can run past the right edge, so it shifts left to fit, keeping a 16px
+  // margin on both sides.
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) return;
+    panel.style.left = "";
+    const rect = panel.getBoundingClientRect();
+    const over = rect.right - (document.documentElement.clientWidth - 16);
+    if (over > 0) panel.style.left = `${-Math.min(over, Math.max(0, rect.left - 16))}px`;
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -192,6 +205,7 @@ export function SearchMenu<T extends SearchMenuOption>({
 
       {open && (
         <div
+          ref={panelRef}
           className="chai-search-menu__panel"
           role="group"
           aria-label={menuLabel}

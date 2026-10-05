@@ -64,6 +64,12 @@ export interface ParameterOption<T> {
 /** A model a component can offer or route to. */
 export interface ModelOption {
   id: string;
+  /**
+   * The model's short display name, as menus and result cards show it:
+   * "Nano Banana Pro", not "Nano Banana Pro (Gemini 3 Pro Image)". No
+   * parentheses, even when the provider's own name has them; the
+   * Composer's use case already says what the model is for.
+   */
   label: string;
   provider: string;
   /** Rough cost/latency signal, for future cost/latency-aware routing. */

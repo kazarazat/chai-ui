@@ -165,7 +165,8 @@ describe("EditCard", () => {
     );
     await expect.element(screen.getByLabelText("Editing")).toBeInTheDocument();
     await expect.element(screen.getByRole("button", { name: "New region" })).toBeDisabled();
-    await screen.getByRole("button", { name: "Version 1 of 2" }).click();
+    await expect.element(screen.getByRole("slider", { name: "Versions" })).toHaveAttribute("aria-valuetext", "Version 2 of 2");
+    await screen.getByRole("slider", { name: "Versions" }).click({ position: { x: 4, y: 12 } });
     expect(onChange).toHaveBeenCalledWith(0);
   });
 });

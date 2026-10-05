@@ -190,7 +190,9 @@ showing.
   (`Composer`'s `promptLabel`, `Toggle`'s `ariaLabel`), alt text for
   generated images (`ResultCard`'s `altText`, default the prompt), 24px
   targets, and keyboard use: video play/pause (Tab to the video, Space)
-  and seeking (a slider: arrow keys, Home, End), the turned-away side of a
+  and seeking (a slider: arrow keys, Home, End), paging (`Pagination` is
+  one slider rather than a button per dot, so the dots can sit 16px apart:
+  arrow keys, Home, End), the turned-away side of a
   flipped card is `inert` and focus follows the flip, and the expanded
   view is a dialog (focus inside, Escape closes, focus returns to Expand).
 
