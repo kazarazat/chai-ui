@@ -46,9 +46,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
-      # `changeset publish` tags each released package here, but the action
-      # only pushes tags when it recognizes the publish output, which the
-      # current Changesets CLI no longer matches. Push them explicitly; with
-      # nothing published there are no new tags and this does nothing.
+      # `changeset publish` tags each released package here. Depending on the
+      # Changesets version, the action pushes those tags itself or doesn't
+      # (it only does when it recognizes the publish output). Push whichever
+      # aren't on GitHub yet; tags the action already pushed are skipped, so
+      # this never fails over a tag that exists, and with nothing published
+      # it does nothing.
       - name: Push release tags
-        run: git push origin --tags
+        run: |
+          for tag in $(git tag --points-at HEAD); do
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+              echo "$tag is already on GitHub"
+            else
+              git push origin "refs/tags/$tag"
+            fi
+          done
