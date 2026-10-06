@@ -221,6 +221,12 @@ export interface ComposerProps {
   onAbort?: () => void;
   onAttachMenuSelect?: (action: ComposerAttachMenuAction) => void;
   /**
+   * Which `+` menu items to show. Defaults to all of them. Either way, an
+   * item only shows when it can work: "Add media" needs
+   * `onAttachmentsChange`, and the use-case items need `onAttachMenuSelect`.
+   */
+  attachMenuActions?: ComposerAttachMenuAction[];
+  /**
    * An edit's regions (from `useComposer`'s `edit`), shown as colored chips
    * while the use case is an edit. Removing a chip removes its region.
    */
@@ -274,6 +280,7 @@ export function Composer({
   submitting = false,
   onAbort,
   onAttachMenuSelect,
+  attachMenuActions,
   regions = [],
   onRegionsChange,
   disabled = false,
@@ -303,7 +310,7 @@ export function Composer({
   // it would with no opt-in wired at all.
   const showStop = submitting && Boolean(onAbort);
   const multiModel = multiSelectModels || multiSelectUseCases;
-  const pickedModelIds = multiModel ? modelIds : modelId ? [modelId] : [];
+  const rawPickedIds = multiModel ? modelIds : modelId ? [modelId] : [];
   // One menu section per use case with multi-use-case select; otherwise one flat roster.
   const modelSections = multiSelectUseCases
     ? activeUseCases
@@ -311,6 +318,11 @@ export function Composer({
         .filter((s) => s.options.length > 0)
     : [{ label: "", kind: activeUseCases[0]!.kind, options: models ?? [] }].filter((s) => s.options.length > 0);
   const allModels = modelSections.flatMap((s) => s.options);
+  // A pick that isn't in the current list (e.g. the edit model after leaving
+  // edit mode) is shown as unpicked and never submitted. With no list at
+  // all, the app's pick is passed through as given.
+  const pickedModelIds =
+    allModels.length > 0 ? rawPickedIds.filter((id) => allModels.some((m) => m.id === id)) : rawPickedIds;
   const pickedModels = allModels.filter((m) => pickedModelIds.includes(m.id));
   const modelTriggerLabel =
     pickedModels.length > 1
@@ -437,6 +449,20 @@ export function Composer({
 
   function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || !onAttachmentsChange) return;
+    // Edit mode works on one image: a new one replaces it, and the edit starts over.
+    if (editing) {
+      const image = Array.from(fileList).find((f) => detectKind(f) === "image");
+      if (!image) {
+        Array.from(fileList).forEach((f) => onUnsupportedFile?.(f.name));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () =>
+        onAttachmentsChange([{ id: nextAttachmentId(), src: String(reader.result), kind: "image", name: image.name, size: image.size }]);
+      reader.onerror = () => onUnsupportedFile?.(image.name);
+      reader.readAsDataURL(image);
+      return;
+    }
     const next = [...attachments];
     let pending = fileList.length;
     const settle = () => {
@@ -463,6 +489,13 @@ export function Composer({
     });
   }
 
+  // Only items that can work: no menu item that silently does nothing.
+  const menuItems = ATTACH_MENU_ITEMS.filter(
+    (item) =>
+      (attachMenuActions ?? ATTACH_MENU_ITEMS.map((i) => i.action)).includes(item.action) &&
+      (item.action === "add-media" ? Boolean(onAttachmentsChange) : Boolean(onAttachMenuSelect))
+  );
+
   function handleRemoveAttachment(id: string) {
     onAttachmentsChange?.(attachments.filter((a) => a.id !== id));
   }
@@ -472,7 +505,11 @@ export function Composer({
       {attachments.length > 0 && (
         <div className="chai-composer__thumbnails">
           {attachments.map((a) => (
-            <ComposerThumbnail key={a.id} attachment={a} onRemove={() => handleRemoveAttachment(a.id)} />
+            <ComposerThumbnail
+              key={a.id}
+              attachment={a}
+              onRemove={onAttachmentsChange ? () => handleRemoveAttachment(a.id) : undefined}
+            />
           ))}
         </div>
       )}
@@ -544,11 +581,15 @@ export function Composer({
 
       <div className="chai-composer__controls">
         <div className="chai-composer__controls-start">
-          <ComposerAttachMenu
-            onSelect={onAttachMenuSelect}
-            onAddMediaFiles={handleFilesSelected}
-            disabled={disabled}
-          />
+          {menuItems.length > 0 && (
+            <ComposerAttachMenu
+              items={menuItems}
+              onSelect={onAttachMenuSelect}
+              onAddMediaFiles={handleFilesSelected}
+              imagesOnly={editing}
+              disabled={disabled}
+            />
+          )}
 
           {pickedUseCases.map((u) => (
             <UseCaseChip
@@ -556,7 +597,7 @@ export function Composer({
               useCase={u}
               onRemove={
                 multiSelectUseCases
-                  ? () => onUseCasesChange?.(useCases.filter((x) => x.kind !== u.kind))
+                  ? onUseCasesChange && (() => onUseCasesChange(useCases.filter((x) => x.kind !== u.kind)))
                   : onClearUseCase
               }
               disabled={disabled}
@@ -709,12 +750,17 @@ const ATTACH_MENU_ITEMS: {
  * not `<md-menu>`'s corner-anchored popover model).
  */
 function ComposerAttachMenu({
+  items,
   onSelect,
   onAddMediaFiles,
+  imagesOnly,
   disabled,
 }: {
+  items: typeof ATTACH_MENU_ITEMS;
   onSelect?: (action: ComposerAttachMenuAction) => void;
   onAddMediaFiles: (files: FileList | null) => void;
+  /** Edit mode: one image file at a time. */
+  imagesOnly?: boolean;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -759,7 +805,7 @@ function ComposerAttachMenu({
 
       {open && (
         <ul className="chai-composer__attach-menu" role="menu">
-          {ATTACH_MENU_ITEMS.map((item) => (
+          {items.map((item, i) => (
             <li key={item.action} role="none">
               <button
                 type="button"
@@ -770,7 +816,7 @@ function ComposerAttachMenu({
                 <span className="chai-composer__attach-menu-icon">{item.icon}</span>
                 {item.label}
               </button>
-              {item.divider && <hr className="chai-composer__attach-menu-divider" role="separator" />}
+              {item.divider && i < items.length - 1 && <hr className="chai-composer__attach-menu-divider" role="separator" />}
             </li>
           ))}
         </ul>
@@ -779,8 +825,8 @@ function ComposerAttachMenu({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,video/*,audio/*"
-        multiple
+        accept={imagesOnly ? "image/*" : "image/*,video/*,audio/*"}
+        multiple={!imagesOnly}
         hidden
         disabled={disabled}
         onChange={(e: ChangeEvent<HTMLInputElement>) => {
@@ -792,7 +838,7 @@ function ComposerAttachMenu({
   );
 }
 
-function ComposerThumbnail({ attachment, onRemove }: { attachment: ComposerAttachment; onRemove: () => void }) {
+function ComposerThumbnail({ attachment, onRemove }: { attachment: ComposerAttachment; onRemove?: () => void }) {
   return (
     <div className="chai-composer__thumb">
       {attachment.kind === "image" ? (
@@ -800,9 +846,11 @@ function ComposerThumbnail({ attachment, onRemove }: { attachment: ComposerAttac
       ) : (
         <span className="chai-composer__thumb-icon">{kindIcon(attachment.kind)}</span>
       )}
-      <button type="button" className="chai-composer__thumb-remove" onClick={onRemove} aria-label="Remove attachment">
-        <CloseIcon />
-      </button>
+      {onRemove && (
+        <button type="button" className="chai-composer__thumb-remove" onClick={onRemove} aria-label="Remove attachment">
+          <CloseIcon />
+        </button>
+      )}
     </div>
   );
 }

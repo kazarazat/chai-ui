@@ -128,8 +128,12 @@ export function useComposer(options: UseComposerOptions = {}) {
   const [activeVersion, setActiveVersion] = useState(0);
   // Another image starts over. Reset while rendering, not in an effect (the rules of React).
   const [editSource, setEditSource] = useState<string | null>(editImage?.src ?? null);
+  // Numbers each image, so its original version has its own id and EditCard
+  // starts it clean (no half-drawn region from the last image).
+  const [editImageCount, setEditImageCount] = useState(0);
   if ((editImage?.src ?? null) !== editSource) {
     setEditSource(editImage?.src ?? null);
+    setEditImageCount((n) => n + 1);
     setEditRuns([]);
     setRegions([]);
     setActiveVersion(0);
@@ -138,7 +142,7 @@ export function useComposer(options: UseComposerOptions = {}) {
     () =>
       editImage
         ? [
-            { id: "original", src: editImage.src, status: "done", regions: [] },
+            { id: `original-${editImageCount}`, src: editImage.src, status: "done", regions: [] },
             ...editRuns.flatMap((run) =>
               run.results.map((r) => ({
                 id: r.id,
@@ -151,7 +155,7 @@ export function useComposer(options: UseComposerOptions = {}) {
             ),
           ]
         : [],
-    [editImage, editRuns]
+    [editImage, editRuns, editImageCount]
   );
   const editRef = useLatest({ versions, activeVersion, editRuns });
   // Each submit gets an id, so routing that settles after a newer submit is dropped.
