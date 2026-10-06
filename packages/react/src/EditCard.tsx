@@ -168,6 +168,7 @@ export function EditCard({
   // until the next version's image loads, so the card doesn't jump between.
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const drag = useRef<Drag | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
@@ -371,7 +372,11 @@ export function EditCard({
 
   const handleShare = async () => {
     if (!version?.src) return;
-    await shareMedia(version.src);
+    // With no share sheet the link is copied; say so, or the click looks like nothing happened.
+    if ((await shareMedia(version.src)) === "copied") {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    }
     onAction?.("share", version);
   };
 
@@ -509,8 +514,15 @@ export function EditCard({
             <button type="button" className="chai-card-top-btn" aria-label="Download" title="Download" disabled={disabled || !ready} onClick={handleDownload}>
               <DownloadIcon />
             </button>
-            <button type="button" className="chai-card-top-btn" aria-label="Share" title="Share" disabled={disabled || !ready} onClick={handleShare}>
-              <ShareIcon />
+            <button
+              type="button"
+              className="chai-card-top-btn"
+              aria-label={linkCopied ? "Link copied" : "Share"}
+              title={linkCopied ? "Link copied" : "Share"}
+              disabled={disabled || !ready}
+              onClick={handleShare}
+            >
+              {linkCopied ? <CheckSymbolIcon /> : <ShareIcon />}
             </button>
             <button type="button" className="chai-card-top-btn" aria-label="Expand" title="Expand" disabled={!ready} onClick={() => setExpanded(true)}>
               <ExpandIcon />

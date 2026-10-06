@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ROUTING_MODEL_ID, type ModelOption, type Result } from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
-import { DownloadIcon, ExpandIcon, ShareIcon } from "./icons.js";
+import { CheckSymbolIcon, DownloadIcon, ExpandIcon, ShareIcon } from "./icons.js";
 import { downloadFilename, downloadMedia, shareMedia } from "./media-actions.js";
 import { PageSlide, usePageSlide } from "./page-slide.js";
 
@@ -125,6 +125,7 @@ export function ResultCard({
   const [flipped, setFlipped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [mediaExpanded, setMediaExpanded] = useState(false);
   // Not part of `Result` (no engine reports generated-media dimensions
   // today) — measured client-side off the loaded `<img>`/`<video>` itself
@@ -238,7 +239,11 @@ export function ResultCard({
   };
 
   const handleShare = async () => {
-    if (result.output) await shareMedia(result.output.src);
+    // With no share sheet the link is copied; say so, or the click looks like nothing happened.
+    if (result.output && (await shareMedia(result.output.src)) === "copied") {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    }
     onAction("share", result);
   };
 
@@ -274,6 +279,7 @@ export function ResultCard({
                   mediaExpanded={mediaExpanded}
                   onDownload={handleDownload}
                   onShare={handleShare}
+                  linkCopied={linkCopied}
                   onExpand={() => setMediaExpanded(true)}
                   onDimensions={(w, h) => setMeasured({ id: result.id, width: w, height: h })}
                   videoTimeRef={videoTimeRef}
@@ -458,6 +464,7 @@ function ResultMedia({
   mediaExpanded,
   onDownload,
   onShare,
+  linkCopied,
   onExpand,
   onDimensions,
   videoTimeRef,
@@ -470,6 +477,7 @@ function ResultMedia({
   mediaExpanded: boolean;
   onDownload: () => void;
   onShare: () => void;
+  linkCopied: boolean;
   onExpand: () => void;
   onDimensions: (width: number, height: number) => void;
   videoTimeRef: React.MutableRefObject<number>;
@@ -555,8 +563,8 @@ function ResultMedia({
         <ResultIconButton variant="top" label="Download" disabled={disabled} onClick={onDownload}>
           <DownloadIcon />
         </ResultIconButton>
-        <ResultIconButton variant="top" label="Share" disabled={disabled} onClick={onShare}>
-          <ShareIcon />
+        <ResultIconButton variant="top" label={linkCopied ? "Link copied" : "Share"} disabled={disabled} onClick={onShare}>
+          {linkCopied ? <CheckSymbolIcon /> : <ShareIcon />}
         </ResultIconButton>
         {(isVideo || isImage) && (
           <ResultIconButton variant="top" label="Expand" disabled={disabled} onClick={onExpand}>

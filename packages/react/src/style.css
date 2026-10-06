@@ -1178,9 +1178,24 @@
   --md-fab-secondary-icon-color: var(--chai-media-analyzer-text);
 }
 
+/* While analyzing, with `onAbort`: submit becomes stop, same as the Composer's.
+   Before `[data-error]`, so an error still wins. */
+.chai-media-analyzer__submit[data-stop] {
+  --md-fab-secondary-container-color: var(--chai-color-semantic-warning-subtle);
+  --md-fab-secondary-icon-color: var(--chai-color-semantic-warning);
+}
+
 .chai-media-analyzer__submit[data-error] {
   --md-fab-secondary-container-color: var(--chai-color-semantic-danger-subtle);
   --md-fab-secondary-icon-color: var(--chai-color-semantic-danger);
+}
+
+/* What the last attach replaced (one kind per analysis). */
+.chai-media-analyzer__note {
+  margin: 0;
+  padding: 2px 2px 0;
+  color: var(--chai-media-analyzer-text);
+  font-size: var(--chai-type-size-label-large);
 }
 
 .chai-media-analyzer__error {

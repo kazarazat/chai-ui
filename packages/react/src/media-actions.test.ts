@@ -39,15 +39,20 @@ describe("shareMedia", () => {
     expect(share).toHaveBeenCalledWith({ url: "https://cdn.example/a.png" });
   });
 
-  it("treats a dismissed share sheet as done", async () => {
+  it("treats a dismissed share sheet as done, and reports it", async () => {
     vi.stubGlobal("navigator", { share: vi.fn().mockRejectedValue(new DOMException("x", "AbortError")) });
-    await expect(shareMedia("https://cdn.example/a.png")).resolves.toBeUndefined();
+    await expect(shareMedia("https://cdn.example/a.png")).resolves.toBe("none");
+  });
+
+  it("reports a completed share", async () => {
+    vi.stubGlobal("navigator", { share: vi.fn().mockResolvedValue(undefined) });
+    await expect(shareMedia("https://cdn.example/a.png")).resolves.toBe("shared");
   });
 
   it("copies the link where there's no share sheet", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
-    await shareMedia("https://cdn.example/a.png");
+    await expect(shareMedia("https://cdn.example/a.png")).resolves.toBe("copied");
     expect(writeText).toHaveBeenCalledWith("https://cdn.example/a.png");
   });
 });

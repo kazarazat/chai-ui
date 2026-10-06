@@ -113,3 +113,17 @@ export function CloseSymbolIcon() {
     </svg>
   );
 }
+
+// Real Material Symbols "stop" glyph, the filled variant specifically
+// (`stop-fill`, not the base `stop` — that one traces a hollow square-
+// outline shape even filled with `currentColor`, which read as a thin
+// frame rather than a real stop icon at 24px; design review caught
+// this live). Viewbox `0 -960 960 960` — the submit FAB's in-flight state,
+// its own doc comment above where it's rendered.
+export function StopIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" aria-hidden="true">
+      <path d="M240-240v-480h480v480H240Z" fill="currentColor" />
+    </svg>
+  );
+}
