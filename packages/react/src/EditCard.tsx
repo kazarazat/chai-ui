@@ -44,7 +44,7 @@ export interface EditCardProps {
   onRegionsChange: (next: EditRegion[]) => void;
   /** The most regions the chosen model takes (`ModelOption.maxRegions`). "New region" is disabled at this many. Defaults to 6. */
   maxRegions?: number;
-  /** Width in px. Defaults to 421. The height follows the image. With `scale`, used until the first image loads. Fitted within `maxWidth` and `maxHeight`. */
+  /** A fixed starting width in px, fitted within `maxWidth` and `maxHeight`. Without it (and without `scale`), the card is as large as fits in that box. */
   width?: number;
   /**
    * Sizes the card from the image's own pixel width: `0.3` makes it 30% as
@@ -54,7 +54,7 @@ export interface EditCardProps {
    * back a different size.
    */
   scale?: number;
-  /** The widest the card gets, in px. Defaults to 630. Applied after `width` or `scale`, keeping the image's shape. */
+  /** The widest the card gets, in px. Defaults to 630. With no `width` or `scale`, the card fills `maxWidth` × `maxHeight`, keeping the image's shape. */
   maxWidth?: number;
   /** The tallest the card gets, in px. Defaults to 630. A tall image narrows the card to fit, keeping its shape. */
   maxHeight?: number;
@@ -66,7 +66,6 @@ export interface EditCardProps {
 }
 
 const ZOOM_STEPS = [1, 1.25, 1.5, 2, 3, 4];
-const DEFAULT_WIDTH = 421;
 const MIN_SIZE = 0.03;
 const KEY_STEP = 0.01;
 const KEY_STEP_LARGE = 0.05;
@@ -400,7 +399,8 @@ export function EditCard({
 
   // The starting width (from `scale`, else `width`), then fitted inside
   // maxWidth × maxHeight with the image's shape kept.
-  const baseWidth = scale != null && natural ? natural.width * scale : (width ?? DEFAULT_WIDTH);
+  // With neither, the card fills the box.
+  const baseWidth = scale != null && natural ? natural.width * scale : (width ?? maxWidth);
   const heightCap = natural && natural.height > 0 ? (maxHeight * natural.width) / natural.height : Infinity;
   const cardWidth = Math.round(Math.min(baseWidth, maxWidth, heightCap));
 

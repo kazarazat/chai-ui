@@ -1825,7 +1825,7 @@
    regions, so both move and scale together. */
 
 .chai-edit-card {
-  width: var(--chai-edit-card-width, 421px);
+  width: var(--chai-edit-card-width, 630px);
   max-width: 100%;
   display: flex;
   flex-direction: column;
