@@ -1,5 +1,18 @@
 # @chai-ui/react
 
+## 0.6.0
+
+### Minor Changes
+
+- a8a5273: `MediaAnalyzer` gets a stop button: new `onAbort` (wire it to `useMediaAnalyzer`'s `cancel`) turns submit into stop while analyzing, like `Composer`. When an attach replaces what's there (one kind per analysis, or video and audio's single slot), it now says so: "Replaced 2 images with clip.wav." `ResultCard` and `EditCard` confirm Share with a check and "Link copied" when there's no share sheet and the link was copied instead. `shareMedia` now reports `"shared"`, `"copied"` or `"none"`.
+- a770467: Suggested model lists, so builders don't have to write any. New in core: `SUGGESTED_IMAGE_MODELS`, `SUGGESTED_TEXT_TO_VIDEO_MODELS`, `SUGGESTED_IMAGE_TO_VIDEO_MODELS`, `SUGGESTED_EDIT_MODELS` (Fal) and `SUGGESTED_ANALYSIS_MODELS` (OpenRouter, per media kind), plus `suggestedModels(useCase)`, each model checked against its provider's catalog with its aspect ratios. `Composer` uses them when no `models` is passed, with the first model picked until the person picks another; `MediaAnalyzer`'s `models` and `modelsByKind` are now optional, defaulting to the analysis lists. Passing your own list still replaces them. Following 0.5.0's "no control that does nothing" rule, the Model menu now shows only with `onModelChange` (or `onModelIdsChange` for multi-select) and the Aspect ratio menu only with `onAspectRatioChange`; without them the default pick still runs. New `ModelOption.falInput` says how a Fal model takes its image and aspect ratio, and the Fal engine now sends each suggested model exactly that, which fixes image-to-video on Kling (`start_image_url`) and the Nano Banana Pro and GPT Image 2 edits (`image_urls`). New `checkSuggestedModels()` checks the lists against Fal and OpenRouter as they are today, with no key and no model run, for builders to run while setting up their engine.
+
+### Patch Changes
+
+- Updated dependencies [a770467]
+  - @chai-ui/core@0.6.0
+  - @chai-ui/tokens@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
