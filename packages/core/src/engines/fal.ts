@@ -23,6 +23,7 @@
 
 import { abortError, abortableSleep, isAbortError, readEvaluations, type GenerationEngine } from "../engine.js";
 import type { DroppedMedia, MediaKind } from "../types.js";
+import { SUGGESTED_FAL_MODELS } from "../suggested-models.js";
 
 /** Output kinds this engine can produce — text goes through a reasoning engine instead (see file doc comment). */
 type FalOutputKind = Exclude<MediaKind, "text">;
@@ -94,14 +95,14 @@ export function describeFalError(json: { error?: unknown; detail?: unknown }, fa
 }
 
 /**
- * Fal models that take their input images as an `image_urls` list (the
- * image being edited first) instead of a single `image_url`. Verified
- * against Fal's catalog 2026-10-03.
+ * Fal models outside the suggested lists that take their input images as an
+ * `image_urls` list (the image being edited first). Suggested models say
+ * so themselves (`ModelOption.falInput`).
  */
 const IMAGE_LIST_MODELS = new Set(["blackforestlabs/flux-3/edit-image"]);
 
-/** FLUX's `image_size` names for the ratios it takes (fal.ai/models/fal-ai/flux/schnell/api). */
-const FLUX_IMAGE_SIZES: Record<string, string> = {
+/** Fal's named `image_size` values for the ratios they cover (FLUX.1, GPT Image 2). */
+export const FAL_NAMED_IMAGE_SIZES: Record<string, string> = {
   "1:1": "square_hd",
   "4:3": "landscape_4_3",
   "16:9": "landscape_16_9",
@@ -109,18 +110,18 @@ const FLUX_IMAGE_SIZES: Record<string, string> = {
   "9:16": "portrait_16_9",
 };
 
-/** GPT Image's `image_size` pixel sizes for the ratios it takes (fal.ai/models/fal-ai/gpt-image-1/text-to-image/api). */
-const GPT_IMAGE_SIZES: Record<string, string> = {
+/** GPT Image 1's `image_size` pixel sizes for the ratios it takes (fal.ai/models/fal-ai/gpt-image-1/text-to-image/api). */
+const GPT_IMAGE_1_SIZES: Record<string, string> = {
   "1:1": "1024x1024",
   "3:2": "1536x1024",
   "2:3": "1024x1536",
 };
 
 /**
- * Builds the one Fal request body CHAI sends: the prompt, plus the attached
- * images. Most models take one `image_url` (for image-to-video and
- * edit-shaped models); the models in `IMAGE_LIST_MODELS` take every image
- * as `image_urls`.
+ * Builds the one Fal request body CHAI sends: the prompt, the aspect ratio
+ * and the attached images, each in the field the model expects. A
+ * suggested model says which (`ModelOption.falInput`, from its Fal
+ * schema); for any other model the field is guessed from its id.
  */
 export function buildFalRequestBody(args: {
   prompt: string;
@@ -129,13 +130,12 @@ export function buildFalRequestBody(args: {
   aspectRatio?: string;
 }): Record<string, unknown> {
   const body: Record<string, unknown> = { prompt: args.prompt };
+  const known = args.model ? SUGGESTED_FAL_MODELS.get(args.model)?.falInput : undefined;
   if (args.aspectRatio) {
-    // FLUX takes a named size and GPT Image a pixel size; the others take
-    // the ratio itself.
-    const sizes = args.model?.startsWith("fal-ai/flux/")
-      ? FLUX_IMAGE_SIZES
-      : args.model?.startsWith("fal-ai/gpt-image")
-        ? GPT_IMAGE_SIZES
+    const sizes = args.model?.startsWith("fal-ai/gpt-image")
+      ? GPT_IMAGE_1_SIZES
+      : (known?.aspectRatio ?? (args.model?.startsWith("fal-ai/flux/") ? "image_size" : "aspect_ratio")) === "image_size"
+        ? FAL_NAMED_IMAGE_SIZES
         : null;
     if (sizes) {
       const size = sizes[args.aspectRatio];
@@ -146,8 +146,9 @@ export function buildFalRequestBody(args: {
   }
   const images = (args.attachments ?? []).filter((a) => a.kind === "image").map((a) => a.src);
   if (images.length === 0) return body;
-  if (args.model && IMAGE_LIST_MODELS.has(args.model)) body.image_urls = images;
-  else body.image_url = images[0];
+  const field = known?.image ?? (args.model && IMAGE_LIST_MODELS.has(args.model) ? "image_urls" : "image_url");
+  if (field === "image_urls") body.image_urls = images;
+  else body[field] = images[0];
   return body;
 }
 

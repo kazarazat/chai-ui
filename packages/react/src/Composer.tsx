@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
+import { deriveGenerationUseCase, suggestedModels } from "@chai-ui/core";
 import type { DroppedMedia, EditRegion, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
 import { regionColor } from "./regions.js";
@@ -135,7 +136,7 @@ export interface ComposerProps {
   multiSelectUseCases?: boolean;
   useCases?: ComposerUseCase[];
   onUseCasesChange?: (next: ComposerUseCase[]) => void;
-  /** Models per use-case kind, for `multiSelectUseCases`. */
+  /** Models per use-case kind, for `multiSelectUseCases`. A kind left out gets Chai's suggested models (see `models`). */
   modelsByKind?: Partial<Record<MediaKind, ModelOption[]>>;
   /**
    * Builder opt-in, off by default: the end user can pick several models,
@@ -146,7 +147,12 @@ export interface ComposerProps {
   multiSelectModels?: boolean;
   modelIds?: string[];
   onModelIdsChange?: (ids: string[]) => void;
-  /** Models valid for the current use case. The Model menu only renders when this is non-empty. */
+  /**
+   * Models for the current use case. Leave it out and Composer offers Chai's
+   * suggested Fal models for the use case (`suggestedModels`), with the
+   * first one picked until the person picks another. Pass a list to use
+   * your own; pass `[]` for no Model menu.
+   */
   models?: ModelOption[];
   modelId?: string | null;
   /** `null` clears the pick: Composer does this when auto-select turns on, until routing picks a model. */
@@ -312,19 +318,31 @@ export function Composer({
   const showStop = submitting && Boolean(onAbort);
   const multiModel = multiSelectModels || multiSelectUseCases;
   const rawPickedIds = multiModel ? modelIds : modelId ? [modelId] : [];
+  // The app's list for a use case, or Chai's suggested models when it gave none.
+  const rosterFor = (u: ComposerUseCase): { options: ModelOption[]; suggested: boolean } => {
+    const given = multiSelectUseCases ? modelsByKind?.[u.kind] : models;
+    if (given) return { options: given, suggested: false };
+    return { options: suggestedModels(u.edit ? "image-edit" : deriveGenerationUseCase(u, attachments)), suggested: true };
+  };
   // One menu section per use case with multi-use-case select; otherwise one flat roster.
-  const modelSections = multiSelectUseCases
-    ? activeUseCases
-        .map((u) => ({ label: u.label, kind: u.kind, options: modelsByKind?.[u.kind] ?? [] }))
-        .filter((s) => s.options.length > 0)
-    : [{ label: "", kind: activeUseCases[0]!.kind, options: models ?? [] }].filter((s) => s.options.length > 0);
+  const modelSections = (multiSelectUseCases ? activeUseCases : activeUseCases.slice(0, 1))
+    .map((u) => ({ label: multiSelectUseCases ? u.label : "", kind: u.kind, ...rosterFor(u) }))
+    .filter((s) => s.options.length > 0);
   const allModels = modelSections.flatMap((s) => s.options);
   // A pick that isn't in the current list (e.g. the edit model after leaving
   // edit mode) is shown as unpicked and never submitted. With no list at
-  // all, the app's pick is passed through as given.
-  const pickedModelIds =
+  // all, the app's pick is passed through as given. With nothing picked
+  // from a suggested list (and auto-select off), its first model is the pick.
+  const validPicks =
     allModels.length > 0 ? rawPickedIds.filter((id) => allModels.some((m) => m.id === id)) : rawPickedIds;
+  const pickedModelIds =
+    validPicks.length > 0 || autoSelectModel
+      ? validPicks
+      : modelSections.filter((s) => s.suggested).map((s) => s.options[0]!.id);
   const pickedModels = allModels.filter((m) => pickedModelIds.includes(m.id));
+  // No menu that can't change anything: without its handler, the Model menu
+  // hides (the default pick still runs).
+  const canPickModel = multiModel ? Boolean(onModelIdsChange) : Boolean(onModelChange);
   const modelTriggerLabel =
     pickedModels.length > 1
       ? `${pickedModels.length} models`
@@ -355,9 +373,9 @@ export function Composer({
   function buildSelections(): ComposerSelection[] {
     return activeUseCases.map((u) => ({
       useCase: u,
-      models: multiSelectUseCases ? (modelsByKind?.[u.kind] ?? []) : (models ?? []),
+      models: rosterFor(u).options,
       modelIds: multiSelectUseCases
-        ? pickedModelIds.filter((id) => modelsByKind?.[u.kind]?.some((m) => m.id === id))
+        ? pickedModelIds.filter((id) => rosterFor(u).options.some((m) => m.id === id))
         : pickedModelIds,
     }));
   }
@@ -611,7 +629,7 @@ export function Composer({
               trigger stays enabled whenever the switch is shown — it's the
               only way back to the switch. Rows are disabled by `SearchMenu`
               itself while auto-select is on. */}
-          {modelSections.length > 0 && (
+          {modelSections.length > 0 && canPickModel && (
             <SearchMenu
               {...(multiSelectUseCases
                 ? { sections: modelSections.map((s) => ({ label: s.label, options: s.options })) }
@@ -637,7 +655,7 @@ export function Composer({
             />
           )}
 
-          {showAspectRatio && aspectOptions.length > 0 && (
+          {showAspectRatio && aspectOptions.length > 0 && onAspectRatioChange && (
             <SearchMenu
               options={aspectOptions.map((o) => ({ id: o.value, label: o.label }))}
               value={offeredAspect}

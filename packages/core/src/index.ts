@@ -6,3 +6,5 @@ export * from "./engines/openrouter.js";
 export * from "./engines/fal.js";
 export * from "./model-routing.js";
 export * from "./region-edit.js";
+export * from "./suggested-models.js";
+export * from "./check-suggested-models.js";

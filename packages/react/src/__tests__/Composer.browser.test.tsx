@@ -15,7 +15,18 @@ const MODELS: ModelOption[] = [
 function Harness(props: Partial<ComposerProps> & { initialValue?: string }) {
   const { initialValue = "", ...rest } = props;
   const [value, setValue] = useState(initialValue);
-  return <Composer value={value} onChange={setValue} onSubmit={() => {}} {...rest} />;
+  // Pickers only show with somewhere for a pick to go.
+  return (
+    <Composer
+      value={value}
+      onChange={setValue}
+      onSubmit={() => {}}
+      onModelChange={() => {}}
+      onModelIdsChange={() => {}}
+      onAspectRatioChange={() => {}}
+      {...rest}
+    />
+  );
 }
 
 describe("Composer", () => {

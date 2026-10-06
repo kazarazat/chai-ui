@@ -26,8 +26,34 @@ binding would depend on this package the same way.
 - `engines/fal.ts` — `createFalEngine`, media generation through Fal.ai (the default).
 - `engines/openrouter.ts` — `createOpenRouterEngine`, text/reasoning through OpenRouter (prompt enhancement, media analysis).
 - `media-analysis-prompts.ts` — the instruction text `MediaAnalyzer` sends, per media kind × prompt length.
+- `suggested-models.ts` — the suggested model lists per use case (Fal for generation, OpenRouter for analysis), each model with its verified aspect ratios and Fal input format; `suggestedModels(useCase)`.
+- `check-suggested-models.ts` — `checkSuggestedModels()`: checks those lists against Fal's and OpenRouter's catalogs as they are today. No key, no model run.
 - `model-routing.ts` — auto-select: `buildModelRoutingPrompt`, `parseModelRoutingReply`, and `routeModel`, which falls back to the first listed model instead of throwing.
 - `server/` — `createChaiHandler` and `toNodeHandler`, exported from `@chai-ui/core/server` (server-only).
+
+## Suggested models, and checking them
+
+The components fill their Model menus from the suggested lists when a
+builder passes none (see `@chai-ui/react`'s README). Each Fal model in them
+carries `falInput`, read from its Fal schema: where the image goes
+(`image_url`, `image_urls` or `start_image_url`) and how the aspect ratio
+is sent (`aspect_ratio`, or a named `image_size`). `buildFalRequestBody`
+uses it; for a model outside the lists it falls back to guessing from the
+id.
+
+The lists change only through package releases. `checkSuggestedModels()`
+compares them with the providers right now, from a browser or Node, with
+no key:
+
+```ts
+const { ok, checked, problems } = await checkSuggestedModels();
+```
+
+It reports a model that's gone or no longer active, a Fal model that no
+longer takes an aspect ratio or image field Chai sends or now requires a
+field Chai doesn't send, and an OpenRouter model that no longer accepts its
+media kind. Fal's catalog is read 10 models a page (`api.fal.ai/v1/models`),
+OpenRouter's from `openrouter.ai/api/v1/models`.
 
 ## The server route: `@chai-ui/core/server`
 

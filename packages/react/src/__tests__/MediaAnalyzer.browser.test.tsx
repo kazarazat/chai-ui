@@ -99,6 +99,13 @@ describe("MediaAnalyzer drop zone", () => {
     expect(onAttachmentsChange).not.toHaveBeenCalled();
   });
 
+  it("offers Chai's suggested analysis models when the app passes none", async () => {
+    const screen = render(<Harness modelsByKind={undefined} />);
+    await userEvent.upload(fileInput(), file("clip.wav", "audio/wav"));
+    await screen.getByText("Select model").click();
+    await expect.element(screen.getByRole("button", { name: "GPT Audio" })).toBeInTheDocument();
+  });
+
   it("says what an attach of another kind replaced", async () => {
     const screen = render(<Harness />);
     await userEvent.upload(fileInput(), [file("a.png", "image/png"), file("b.png", "image/png")]);

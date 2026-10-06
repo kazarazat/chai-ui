@@ -15,7 +15,18 @@ const MODELS: ModelOption[] = [
 function Harness(props: Partial<ComposerProps> & { initialValue?: string }) {
   const { initialValue = "", ...rest } = props;
   const [value, setValue] = useState(initialValue);
-  return <Composer value={value} onChange={setValue} onSubmit={() => {}} {...rest} />;
+  // Pickers only show with somewhere for a pick to go.
+  return (
+    <Composer
+      value={value}
+      onChange={setValue}
+      onSubmit={() => {}}
+      onModelChange={() => {}}
+      onModelIdsChange={() => {}}
+      onAspectRatioChange={() => {}}
+      {...rest}
+    />
+  );
 }
 
 const fileInput = () => document.querySelector<HTMLInputElement>('.chai-composer input[type="file"]')!;
@@ -267,6 +278,36 @@ describe("Composer model and option menus", () => {
     const screen = render(<Harness useCase={IMAGE} models={[OWN_SHAPE]} modelId="fal/own" aspectRatios={[{ value: "1:1", label: "1:1" }]} />);
     await expect.element(screen.getByText("Own shape")).toBeInTheDocument();
     await expect.element(screen.getByText("Aspect ratio")).not.toBeInTheDocument();
+  });
+
+  it("offers Chai's suggested models when the app passes none, with the first picked", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(<Harness initialValue="a mug" useCase={IMAGE} onSubmit={onSubmit} />);
+    await expect.element(screen.getByText("Nano Banana Pro")).toBeInTheDocument();
+    // The first model's aspect ratios fill the menu.
+    await expect.element(screen.getByText("Aspect ratio")).toBeInTheDocument();
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: "fal-ai/nano-banana-pro" });
+    expect(onSubmit.mock.calls[0]![0].selections[0].models.length).toBeGreaterThan(1);
+  });
+
+  it("suggests edit models in edit mode, and none for a text request", async () => {
+    const edit = render(<Harness useCase={{ kind: "image", label: "Edit image", edit: true }} />);
+    await expect.element(edit.getByText("Flux 3 Image")).toBeInTheDocument();
+    edit.unmount();
+    const text = render(<Harness />);
+    await expect.element(text.getByText("Select models")).not.toBeInTheDocument();
+  });
+
+  it("hides the Model and Aspect ratio menus with nowhere for a pick to go, and still runs the first suggested model", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(
+      <Composer value="a mug" onChange={() => {}} useCase={IMAGE} onSubmit={onSubmit} />
+    );
+    await expect.element(screen.getByText("Nano Banana Pro")).not.toBeInTheDocument();
+    await expect.element(screen.getByText("Aspect ratio")).not.toBeInTheDocument();
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: "fal-ai/nano-banana-pro" });
   });
 
   it("never submits a model that isn't in the current list", async () => {
