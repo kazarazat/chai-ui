@@ -50,7 +50,12 @@ use these names: `Results`, `Compare`, `ModelPicker`,
    Claude Opus 5 for text and images, Gemini 3.8 Flash for video and
    audio, on OpenRouter. They're suggestions; respect a builder's own
    `reasoningModel`, `reasoningModelByKind` and `reasoningEngine`.
-7. **Only show what's real.** Show cost only when the engine reports it.
+7. **Suggest models, never require them.** With no `models`, Composer and
+   MediaAnalyzer use the suggested lists (`suggestedModels`,
+   `SUGGESTED_ANALYSIS_MODELS`), each model carrying its verified aspect
+   ratios and Fal input format. A builder's own list always wins. Don't
+   make a builder write a model list to get a working Model menu.
+8. **Only show what's real.** Show cost only when the engine reports it.
    Don't show model rankings or leaderboard positions you can't keep up to
    date. Don't show a control the selected model can't honor.
 

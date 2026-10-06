@@ -2,6 +2,7 @@ import { createComponent } from "@lit/react";
 import * as React from "react";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { MdFab } from "@material/web/fab/fab.js";
+import { SUGGESTED_ANALYSIS_MODELS } from "@chai-ui/core";
 import type { DroppedMedia, ModelOption, MediaKind } from "@chai-ui/core";
 import type { MediaAnalysisPromptLength } from "@chai-ui/core";
 import { SearchMenu, type SearchMenuSection } from "./primitives/SearchMenu.js";
@@ -114,10 +115,15 @@ export interface MediaAnalyzerProps {
   onAttachmentsChange: (next: MediaAnalyzerAttachment[]) => void;
   onUnsupportedFile?: (fileName: string) => void;
   maxAttachmentsByKind?: Record<MediaKind, number>;
-  /** Flat fallback roster, shown (ungrouped) before any media's kind is known. */
-  models: ModelOption[];
-  /** Per-kind rosters — once a kind is known, only that kind's models show. Before that, all three show as separate sections (reference: Figma "06 Composer from Media Analysis"). */
-  modelsByKind: Partial<Record<MediaKind, ModelOption[]>>;
+  /** Fallback roster for a kind `modelsByKind` doesn't list. Optional. */
+  models?: ModelOption[];
+  /**
+   * Per-kind rosters — once a kind is known, only that kind's models show.
+   * Before that, all three show as separate sections (reference: Figma "06
+   * Composer from Media Analysis"). Defaults to Chai's suggested OpenRouter
+   * models (`SUGGESTED_ANALYSIS_MODELS`); pass your own to replace them.
+   */
+  modelsByKind?: Partial<Record<MediaKind, ModelOption[]>>;
   /**
    * The picked model. While `autoSelectModel` is on it's `null` until a
    * submit routes, then the routed model, shown by name on the trigger.
@@ -178,8 +184,8 @@ export function MediaAnalyzer({
   onAttachmentsChange,
   onUnsupportedFile,
   maxAttachmentsByKind = DEFAULT_MAX_ATTACHMENTS_BY_KIND,
-  models,
-  modelsByKind,
+  models = [],
+  modelsByKind = SUGGESTED_ANALYSIS_MODELS,
   modelId,
   onModelChange,
   autoSelectModel,

@@ -80,7 +80,9 @@ capability beyond the default file picker. Every other control is additive:
   onAttachMenuSelect={(action) => {
     if (action === "create-image") setUseCase({ kind: "image", label: "Image" });
   }}
-  models={models}
+  // The Model menu lists Chai's suggested models for the use case, with the
+  // first picked, unless you pass your own `models` (see "Suggested models").
+  // It shows only with `onModelChange`; without it the first model still runs.
   modelId={modelId}
   onModelChange={setModelId}
   // An "Auto-select model" switch appears at the top of the model menu so
@@ -89,9 +91,10 @@ capability beyond the default file picker. Every other control is additive:
   autoSelectModel={autoSelectModel}
   showAutoSelectToggle
   onAutoSelectModelChange={setAutoSelectModel}
-  // The Aspect ratio menu offers what the selected models take: give each
-  // model its `aspectRatios`, e.g. ["1:1", "16:9", "9:16"]. A model without
-  // them (image-to-video follows the input image) shows no menu.
+  // The Aspect ratio menu offers what the selected models take. Suggested
+  // models carry their `aspectRatios`; give your own models theirs, e.g.
+  // ["1:1", "16:9", "9:16"]. A model without them (image-to-video follows
+  // the input image) shows no menu.
   aspectRatio={aspectRatio}
   onAspectRatioChange={setAspectRatio}
   // Omit onEnhance entirely to hide the "optimize prompt" button — e.g.
@@ -113,9 +116,30 @@ for a live example with every opt-in feature.
 ### No use case picked: a text request
 
 A prompt typed with no use case picked is a text request
-(`TEXT_USE_CASE`): it gets a text reply rather than doing nothing. For an
-app that's mostly about images, set the default instead; it's never shown
-as a chip:
+(`TEXT_USE_CASE`): it gets a text reply rather than doing nothing. That's
+how to use the Composer as a plain chat bar for an LLM:
+
+- **The model:** `useComposer` sends it to `textEngine` with `textModel`
+  when you set them, otherwise to `ChaiProvider`'s reasoning model
+  (default Claude Opus 5 on OpenRouter). Without a `ChaiProvider` or a
+  `textEngine`, a mock text engine answers, so wrap your app in
+  `<ChaiProvider>` for real replies.
+- **No Model menu:** the suggested lists cover image and video only, so a
+  text request shows no Model menu. To offer a choice of text models, pass
+  your own `models`.
+- **The reply streams** into the `ResultCard` as it's written, and
+  `cancel()` stops it, keeping what has arrived.
+
+```tsx
+<ChaiProvider>
+  <Composer value={value} onChange={setValue} onSubmit={submit} submitting={busy} onAbort={cancel} />
+  {run && <ResultCard results={run.results} prompt={run.request.prompt} onAction={() => {}} />}
+</ChaiProvider>
+```
+
+For an app that's mostly about images, set the default instead; it's
+never shown as a chip, and it brings the suggested image models and the
+Aspect ratio menu:
 
 ```tsx
 <Composer defaultUseCase={{ kind: "image", label: "Image" }} … />
@@ -160,8 +184,8 @@ unlisted reply), the request runs on the first listed model and
 ## What else this package ships
 
 - **`MediaAnalyzer`** — drop in an image, video, or audio clip and get a
-  generation-ready prompt back, with kind-aware model menus and a prompt
-  length picker. Wire it with `useMediaAnalyzer()`, which sends the media
+  generation-ready prompt back, with kind-aware model menus (suggested
+  OpenRouter models unless you pass your own) and a prompt length picker. Wire it with `useMediaAnalyzer()`, which sends the media
   to `ChaiProvider`'s reasoning model and returns the prompt:
   `onSubmit={submit} submitting={analyzing} submitError={error}`.
 - **`ResultCard`** — renders one prompt's generated results (image, video,
@@ -177,6 +201,44 @@ unlisted reply), the request runs on the first listed model and
   `Pagination` (a progress-style pager any paginated surface can reuse).
   The components are built from these; they're also exported directly if
   you're assembling your own layout.
+
+## Suggested models
+
+You don't have to write model lists. Chai ships suggested lists, checked
+against each provider's own catalog, and the components use them when you
+pass none:
+
+| Use case | Export | Provider |
+|---|---|---|
+| Create image | `SUGGESTED_IMAGE_MODELS` | Fal |
+| Create video from a prompt | `SUGGESTED_TEXT_TO_VIDEO_MODELS` | Fal |
+| Create video from an image | `SUGGESTED_IMAGE_TO_VIDEO_MODELS` | Fal |
+| Edit image | `SUGGESTED_EDIT_MODELS` | Fal |
+| Media analysis, per media kind | `SUGGESTED_ANALYSIS_MODELS` | OpenRouter |
+
+- **Composer** offers the list for the current use case
+  (`suggestedModels(useCase)`), with its first model picked until the person
+  picks another. **MediaAnalyzer** offers the analysis lists.
+- **Your own list wins.** Pass `models` (or `modelsByKind`) to replace a
+  list, or `[]` for no Model menu. Nothing is required.
+- **Each suggested model knows its inputs**: its aspect ratios, and for Fal
+  the field its image goes in (`falInput`), so the Fal engine sends exactly
+  what that model expects.
+- **They change only through package releases.** Providers change faster,
+  so check them while setting up your engine. It needs no key, runs no
+  model and costs nothing:
+
+```ts
+import { checkSuggestedModels } from "@chai-ui/react";
+
+const { ok, problems } = await checkSuggestedModels();
+// problems: [{ provider: "fal", modelId, problem: "No longer takes these aspect_ratio values: 21:9." }]
+```
+
+  It confirms each model still exists and is active, still takes the
+  aspect ratios and image field Chai sends (Fal), and still accepts its media
+  kind (OpenRouter). If something changed, pick another model or update the
+  package once a release catches up.
 
 ## `useComposer` — wiring `Composer` to a real engine
 
@@ -291,11 +353,12 @@ to `EDIT_IMAGE_USE_CASE`, pass the attached image to `useComposer` as
 `editImage`, and drop in the card:
 
 ```tsx
-import { Composer, EditCard, EDIT_IMAGE_USE_CASE, PRECISE_EDIT_MODELS, useComposer } from "@chai-ui/react";
+import { Composer, EditCard, EDIT_IMAGE_USE_CASE, SUGGESTED_EDIT_MODELS, useComposer } from "@chai-ui/react";
 
 const editImage = useCase?.edit ? (attachments.find((a) => a.kind === "image") ?? null) : null;
 const { run, submit, edit } = useComposer({ engine: createFalEngine({ outputKind: "image" }), editImage });
-const model = PRECISE_EDIT_MODELS.find((m) => m.id === modelId);
+// Unpicked, the first suggested edit model (Flux 3 Image) runs.
+const model = SUGGESTED_EDIT_MODELS.find((m) => m.id === modelId) ?? SUGGESTED_EDIT_MODELS[0];
 
 {edit && <EditCard {...edit} maxRegions={model?.maxRegions} />}
 {!edit && run && <ResultCard results={run.results} prompt={run.request.prompt} onAction={…} />}
@@ -305,7 +368,6 @@ const model = PRECISE_EDIT_MODELS.find((m) => m.id === modelId);
   onAttachMenuSelect={(action) => {
     if (action === "edit-media") setUseCase(EDIT_IMAGE_USE_CASE);
   }}
-  models={useCase?.edit ? PRECISE_EDIT_MODELS : models}
   regions={edit?.regions}
   onRegionsChange={edit?.onRegionsChange}
   onSubmit={submit}
@@ -319,11 +381,11 @@ const model = PRECISE_EDIT_MODELS.find((m) => m.id === modelId);
 - **Submitting.** An edit needs the image plus a whole-image prompt, a
   region, or both. Regions carry their own instructions, so the prompt can
   stay empty.
-- **Models.** `PRECISE_EDIT_MODELS` is a suggested list: Flux 3 Image on
-  Fal, which reads each region as a box. Offer any edit model you like; one
-  without a `regionFormat` gets its regions described in words, which is
-  less precise. Change how the prompt is built with `useComposer`'s
-  `editPrompt`.
+- **Models.** In edit mode Composer offers `SUGGESTED_EDIT_MODELS`: Flux 3
+  Image first, which reads each region as a box, then Nano Banana Pro and
+  GPT Image 2. Offer any edit model you like; one without a `regionFormat`
+  gets its regions described in words, which is less precise. Change how
+  the prompt is built with `useComposer`'s `editPrompt`.
 - **Versions.** Each edit's result is a new version, shown in the card with
   dots to page back. The next edit applies to the version showing.
 - **Images only** for now.

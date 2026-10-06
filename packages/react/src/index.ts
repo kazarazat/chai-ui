@@ -22,6 +22,13 @@ export {
   DEFAULT_MEDIA_ANALYSIS_PROMPT_LENGTH,
   MEDIA_ANALYSIS_PROMPTS,
   MEDIA_ANALYSIS_PROMPT_LENGTHS,
+  SUGGESTED_IMAGE_MODELS,
+  SUGGESTED_TEXT_TO_VIDEO_MODELS,
+  SUGGESTED_IMAGE_TO_VIDEO_MODELS,
+  SUGGESTED_EDIT_MODELS,
+  SUGGESTED_ANALYSIS_MODELS,
+  suggestedModels,
+  checkSuggestedModels,
 } from "@chai-ui/core";
 export type {
   DroppedMedia,
@@ -40,5 +47,8 @@ export type {
   Result,
   ResultStatus,
   Run,
+  SuggestedModelProblem,
+  SuggestedModelsCheck,
+  FalInputFormat,
   Usage,
 } from "@chai-ui/core";

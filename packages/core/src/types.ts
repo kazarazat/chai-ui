@@ -92,6 +92,13 @@ export interface ModelOption {
   /** For image-edit models: the most regions one edit takes. `EditCard` disables "New region" at this many. */
   maxRegions?: number;
   /**
+   * How a Fal model takes its inputs, from its Fal schema: which field the
+   * attached image goes in, and whether the aspect ratio is sent as
+   * `aspect_ratio` or as a named `image_size`. The suggested lists carry it;
+   * without it the Fal engine guesses from the id.
+   */
+  falInput?: FalInputFormat;
+  /**
    * The output aspect ratios the model takes, e.g. `["1:1", "16:9", "9:16"]`.
    * Composer's Aspect ratio menu offers only ratios the selected models
    * share, and the engine sends the pick in the model's own format. Leave
@@ -99,6 +106,12 @@ export interface ModelOption {
    * the input image): no menu shows.
    */
   aspectRatios?: string[];
+}
+
+/** See `ModelOption.falInput`. */
+export interface FalInputFormat {
+  image?: "image_url" | "image_urls" | "start_image_url";
+  aspectRatio?: "aspect_ratio" | "image_size";
 }
 
 /** How an edit's regions reach the model — see `ModelOption.regionFormat`. */
