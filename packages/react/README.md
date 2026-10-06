@@ -116,9 +116,30 @@ for a live example with every opt-in feature.
 ### No use case picked: a text request
 
 A prompt typed with no use case picked is a text request
-(`TEXT_USE_CASE`): it gets a text reply rather than doing nothing. For an
-app that's mostly about images, set the default instead; it's never shown
-as a chip:
+(`TEXT_USE_CASE`): it gets a text reply rather than doing nothing. That's
+how to use the Composer as a plain chat bar for an LLM:
+
+- **The model:** `useComposer` sends it to `textEngine` with `textModel`
+  when you set them, otherwise to `ChaiProvider`'s reasoning model
+  (default Claude Opus 5 on OpenRouter). Without a `ChaiProvider` or a
+  `textEngine`, a mock text engine answers, so wrap your app in
+  `<ChaiProvider>` for real replies.
+- **No Model menu:** the suggested lists cover image and video only, so a
+  text request shows no Model menu. To offer a choice of text models, pass
+  your own `models`.
+- **The reply streams** into the `ResultCard` as it's written, and
+  `cancel()` stops it, keeping what has arrived.
+
+```tsx
+<ChaiProvider>
+  <Composer value={value} onChange={setValue} onSubmit={submit} submitting={busy} onAbort={cancel} />
+  {run && <ResultCard results={run.results} prompt={run.request.prompt} onAction={() => {}} />}
+</ChaiProvider>
+```
+
+For an app that's mostly about images, set the default instead; it's
+never shown as a chip, and it brings the suggested image models and the
+Aspect ratio menu:
 
 ```tsx
 <Composer defaultUseCase={{ kind: "image", label: "Image" }} … />
