@@ -24,7 +24,7 @@ const file = (name: string, type: string) => new File(["x"], name, { type });
 describe("Composer attach menu", () => {
   it("opens, lists the actions, reports a pick and closes", async () => {
     const onAttachMenuSelect = vi.fn();
-    const screen = render(<Harness onAttachMenuSelect={onAttachMenuSelect} />);
+    const screen = render(<Harness onAttachMenuSelect={onAttachMenuSelect} onAttachmentsChange={() => {}} />);
     await screen.getByRole("button", { name: "Add media" }).click();
     for (const item of ["Add media", "Create image", "Create video", "Edit image"]) {
       await expect.element(screen.getByRole("menuitem", { name: item })).toBeVisible();
@@ -38,7 +38,7 @@ describe("Composer attach menu", () => {
     const screen = render(
       <div>
         <p>Outside</p>
-        <Harness />
+        <Harness onAttachMenuSelect={() => {}} />
       </div>
     );
     await screen.getByRole("button", { name: "Add media" }).click();
@@ -81,10 +81,63 @@ describe("Composer attachments", () => {
     expect(onAttachmentsChange).toHaveBeenCalledWith([attachments[1]]);
   });
 
-  it("does nothing with files when there's nowhere to put them", async () => {
-    render(<Harness />);
-    await userEvent.upload(fileInput(), file("photo.png", "image/png"));
-    expect(document.querySelector(".chai-composer__thumb")).toBeNull();
+  it("shows no add or remove controls when there's nowhere to put files", async () => {
+    const attachments: ComposerAttachment[] = [{ id: "a", src: "data:image/png;base64,x", kind: "image", name: "a.png" }];
+    const screen = render(<Harness attachments={attachments} onAttachMenuSelect={() => {}} />);
+    await expect.element(screen.getByRole("button", { name: "Remove attachment" })).not.toBeInTheDocument();
+    await screen.getByRole("button", { name: "Add media" }).click();
+    await expect.element(screen.getByRole("menuitem", { name: "Add media" })).not.toBeInTheDocument();
+    await expect.element(screen.getByRole("menuitem", { name: "Create image" })).toBeVisible();
+  });
+
+  it("hides the + menu when nothing in it is wired, and shows only the items asked for", async () => {
+    const bare = render(<Harness />);
+    await expect.element(bare.getByRole("button", { name: "Add media" })).not.toBeInTheDocument();
+    bare.unmount();
+
+    const narrowed = render(
+      <Harness onAttachMenuSelect={() => {}} onAttachmentsChange={() => {}} attachMenuActions={["add-media", "edit-media"]} />
+    );
+    await narrowed.getByRole("button", { name: "Add media" }).click();
+    await expect.element(narrowed.getByRole("menuitem", { name: "Edit image" })).toBeVisible();
+    await expect.element(narrowed.getByRole("menuitem", { name: "Create video" })).not.toBeInTheDocument();
+  });
+
+  it("in edit mode, a new image replaces the one being edited", async () => {
+    function Editing() {
+      const [attachments, setAttachments] = useState<ComposerAttachment[]>([
+        { id: "old", src: "data:image/png;base64,old", kind: "image", name: "old.png" },
+      ]);
+      return (
+        <>
+          <Harness useCase={{ kind: "image", label: "Edit image", edit: true }} attachments={attachments} onAttachmentsChange={setAttachments} />
+          <p data-testid="names">{attachments.map((a) => a.name).join(",")}</p>
+        </>
+      );
+    }
+    const screen = render(<Editing />);
+    // One image at a time: the picker takes a single image file.
+    expect(fileInput().multiple).toBe(false);
+    expect(fileInput().accept).toBe("image/*");
+    await userEvent.upload(fileInput(), file("new.png", "image/png"));
+    await expect.element(screen.getByTestId("names")).toHaveTextContent(/^new\.png$/);
+  });
+
+  it("in edit mode, reports a file that isn't an image and keeps the current one", async () => {
+    const onUnsupportedFile = vi.fn();
+    const onAttachmentsChange = vi.fn();
+    const attachments: ComposerAttachment[] = [{ id: "old", src: "data:image/png;base64,old", kind: "image", name: "old.png" }];
+    render(
+      <Harness
+        useCase={{ kind: "image", label: "Edit image", edit: true }}
+        attachments={attachments}
+        onAttachmentsChange={onAttachmentsChange}
+        onUnsupportedFile={onUnsupportedFile}
+      />
+    );
+    await userEvent.upload(fileInput(), file("clip.mp4", "video/mp4"));
+    expect(onUnsupportedFile).toHaveBeenCalledWith("clip.mp4");
+    expect(onAttachmentsChange).not.toHaveBeenCalled();
   });
 });
 
@@ -214,6 +267,15 @@ describe("Composer model and option menus", () => {
     const screen = render(<Harness useCase={IMAGE} models={[OWN_SHAPE]} modelId="fal/own" aspectRatios={[{ value: "1:1", label: "1:1" }]} />);
     await expect.element(screen.getByText("Own shape")).toBeInTheDocument();
     await expect.element(screen.getByText("Aspect ratio")).not.toBeInTheDocument();
+  });
+
+  it("never submits a model that isn't in the current list", async () => {
+    const onSubmit = vi.fn();
+    const screen = render(<Harness initialValue="a mug" useCase={IMAGE} models={MODELS} modelId="gone/model" onSubmit={onSubmit} />);
+    await expect.element(screen.getByText("Select models")).toBeInTheDocument();
+    await screen.getByRole("button", { name: "Submit" }).click();
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: null });
+    expect(onSubmit.mock.calls[0]![0].selections[0].modelIds).toEqual([]);
   });
 
   it("never submits a ratio the picked model doesn't take", async () => {

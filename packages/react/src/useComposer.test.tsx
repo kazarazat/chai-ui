@@ -557,7 +557,7 @@ describe("useComposer editing an image", () => {
   it("starts with the original as the only version and no regions", () => {
     const { result } = renderHook(() => useComposer({ editImage: photo }));
     expect(result.current.edit).toMatchObject({ activeVersion: 0, regions: [] });
-    expect(result.current.edit?.versions).toEqual([{ id: "original", src: photo.src, status: "done", regions: [] }]);
+    expect(result.current.edit?.versions).toEqual([{ id: "original-0", src: photo.src, status: "done", regions: [] }]);
   });
 
   it("sends the regions as Flux 3 boxes, then shows the edit as a new version and clears the regions", async () => {
@@ -620,9 +620,12 @@ describe("useComposer editing an image", () => {
     act(() => result.current.submit(editPayload({ value: "x" })));
     await waitFor(() => expect(result.current.edit?.versions).toHaveLength(2));
 
+    const firstId = result.current.edit?.versions[0]!.id;
     rerender({ image: { src: "data:image/png;base64,BBB", kind: "image" } });
     expect(result.current.edit?.versions).toHaveLength(1);
     expect(result.current.edit?.activeVersion).toBe(0);
+    // A new id, so EditCard starts the new image clean.
+    expect(result.current.edit?.versions[0]!.id).not.toBe(firstId);
   });
 });
 
