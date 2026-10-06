@@ -122,6 +122,23 @@ describe("Composer attachments", () => {
     await userEvent.upload(fileInput(), file("new.png", "image/png"));
     await expect.element(screen.getByTestId("names")).toHaveTextContent(/^new\.png$/);
   });
+
+  it("in edit mode, reports a file that isn't an image and keeps the current one", async () => {
+    const onUnsupportedFile = vi.fn();
+    const onAttachmentsChange = vi.fn();
+    const attachments: ComposerAttachment[] = [{ id: "old", src: "data:image/png;base64,old", kind: "image", name: "old.png" }];
+    render(
+      <Harness
+        useCase={{ kind: "image", label: "Edit image", edit: true }}
+        attachments={attachments}
+        onAttachmentsChange={onAttachmentsChange}
+        onUnsupportedFile={onUnsupportedFile}
+      />
+    );
+    await userEvent.upload(fileInput(), file("clip.mp4", "video/mp4"));
+    expect(onUnsupportedFile).toHaveBeenCalledWith("clip.mp4");
+    expect(onAttachmentsChange).not.toHaveBeenCalled();
+  });
 });
 
 describe("Composer prompt optimization", () => {
