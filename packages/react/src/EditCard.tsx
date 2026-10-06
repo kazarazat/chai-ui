@@ -44,8 +44,20 @@ export interface EditCardProps {
   onRegionsChange: (next: EditRegion[]) => void;
   /** The most regions the chosen model takes (`ModelOption.maxRegions`). "New region" is disabled at this many. Defaults to 6. */
   maxRegions?: number;
-  /** Width in px. Defaults to 421. The height follows the image. */
+  /** Width in px. Defaults to 421. The height follows the image. With `scale`, used until the first image loads. Fitted within `maxWidth` and `maxHeight`. */
   width?: number;
+  /**
+   * Sizes the card from the image's own pixel width: `0.3` makes it 30% as
+   * wide as the image (a 5000px photo gives a 1500px card). The height
+   * follows the image's shape, and the card is never wider than its
+   * container. Each version is measured on its own, since an edit can come
+   * back a different size.
+   */
+  scale?: number;
+  /** The widest the card gets, in px. Defaults to 630. Applied after `width` or `scale`, keeping the image's shape. */
+  maxWidth?: number;
+  /** The tallest the card gets, in px. Defaults to 630. A tall image narrows the card to fit, keeping its shape. */
+  maxHeight?: number;
   /** Alt text for the image. Defaults to "Image being edited". */
   alt?: string;
   /** Fires after the card downloads or shares the version showing. */
@@ -54,6 +66,7 @@ export interface EditCardProps {
 }
 
 const ZOOM_STEPS = [1, 1.25, 1.5, 2, 3, 4];
+const DEFAULT_WIDTH = 421;
 const MIN_SIZE = 0.03;
 const KEY_STEP = 0.01;
 const KEY_STEP_LARGE = 0.05;
@@ -131,6 +144,9 @@ export function EditCard({
   onRegionsChange,
   maxRegions = DEFAULT_MAX_REGIONS,
   width,
+  scale,
+  maxWidth = 630,
+  maxHeight = 630,
   alt = "Image being edited",
   onAction,
   disabled = false,
@@ -149,6 +165,9 @@ export function EditCard({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState<Pan>({ x: 0, y: 0 });
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
+  // The shown image's own pixel size, for `scale` and the max height. Kept
+  // until the next version's image loads, so the card doesn't jump between.
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [expanded, setExpanded] = useState(false);
   const drag = useRef<Drag | null>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -379,11 +398,17 @@ export function EditCard({
 
   if (!version) return null;
 
+  // The starting width (from `scale`, else `width`), then fitted inside
+  // maxWidth × maxHeight with the image's shape kept.
+  const baseWidth = scale != null && natural ? natural.width * scale : (width ?? DEFAULT_WIDTH);
+  const heightCap = natural && natural.height > 0 ? (maxHeight * natural.width) / natural.height : Infinity;
+  const cardWidth = Math.round(Math.min(baseWidth, maxWidth, heightCap));
+
   return (
     <>
       <div
         className="chai-edit-card"
-        style={width != null ? ({ "--chai-edit-card-width": `${width}px` } as CSSProperties) : undefined}
+        style={{ "--chai-edit-card-width": `${cardWidth}px` } as CSSProperties}
       >
         <div
           ref={viewportRef}
@@ -403,7 +428,13 @@ export function EditCard({
             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, "--chai-edit-zoom": zoom } as CSSProperties}
           >
             {version.src || version.from ? (
-              <img className="chai-edit-card__image" src={version.src ?? version.from} alt={alt} draggable={false} />
+              <img
+                className="chai-edit-card__image"
+                src={version.src ?? version.from}
+                alt={alt}
+                draggable={false}
+                onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })}
+              />
             ) : (
               <div className="chai-edit-card__placeholder" />
             )}

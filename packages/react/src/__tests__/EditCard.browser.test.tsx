@@ -39,6 +39,26 @@ function Harness({
 }
 
 describe("EditCard", () => {
+  it("fits inside maxWidth and maxHeight, keeping the image's shape", async () => {
+    const image = (screen: { container: HTMLElement }) =>
+      screen.container.querySelector<HTMLElement>(".chai-edit-card__image")!.getBoundingClientRect();
+    // The test image is 400 × 600. A 450px max height narrows it to 300 × 450.
+    const tall = render(<Harness maxHeight={450} />);
+    await expect.poll(() => Math.round(image(tall).width)).toBe(300);
+    expect(Math.round(image(tall).height)).toBe(450);
+    tall.unmount();
+
+    const narrow = render(<Harness maxWidth={250} />);
+    await expect.poll(() => Math.round(image(narrow).width)).toBe(250);
+  });
+
+  it("sizes itself from the image's own width with scale", async () => {
+    const screen = render(<Harness scale={0.5} />);
+    const image = () => screen.container.querySelector<HTMLElement>(".chai-edit-card__image")!;
+    // The test image is 400px wide, so it shows at 200px.
+    await expect.poll(() => image().getBoundingClientRect().width).toBe(200);
+  });
+
   it("adds a region, describes it, and checks it in", async () => {
     const onRegions = vi.fn();
     const screen = render(<Harness onRegions={onRegions} />);
