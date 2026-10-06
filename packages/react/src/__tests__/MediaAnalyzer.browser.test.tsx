@@ -99,6 +99,25 @@ describe("MediaAnalyzer drop zone", () => {
     expect(onAttachmentsChange).not.toHaveBeenCalled();
   });
 
+  it("says what an attach of another kind replaced", async () => {
+    const screen = render(<Harness />);
+    await userEvent.upload(fileInput(), [file("a.png", "image/png"), file("b.png", "image/png")]);
+    await expect.element(screen.getByRole("button", { name: "Remove b.png" })).toBeInTheDocument();
+    await userEvent.upload(fileInput(), file("clip.wav", "audio/wav"));
+    await expect.element(screen.getByRole("status")).toHaveTextContent("Replaced 2 images with clip.wav.");
+    // Gone once the attachments change some other way.
+    await screen.getByRole("button", { name: "Remove clip.wav" }).click();
+    await expect.element(screen.getByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("turns submit into stop while analyzing, with onAbort", async () => {
+    const onAbort = vi.fn();
+    const attachments = [{ id: "a", src: "data:image/png;base64,x", kind: "image" as const, name: "a.png" }];
+    const screen = render(<Harness attachments={attachments} submitting onAbort={onAbort} />);
+    await screen.getByRole("button", { name: "Stop" }).click();
+    expect(onAbort).toHaveBeenCalled();
+  });
+
   it("a second video replaces the first, and an attachment can be removed", async () => {
     const screen = render(<Harness />);
     await userEvent.upload(fileInput(), file("one.mp4", "video/mp4"));

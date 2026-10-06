@@ -46,6 +46,17 @@ describe("ResultCard", () => {
     expect(single.container.querySelector(".chai-card-pager-label")).toBeNull();
   });
 
+  it("confirms with Link copied when sharing copies the link", async () => {
+    // No share sheet here, so Share copies the link.
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", { value: undefined, configurable: true });
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const screen = render(<ResultCard results={[result("r1")]} prompt="a mug" onAction={() => {}} />);
+    await screen.getByRole("button", { name: "Share" }).click();
+    await expect.element(screen.getByRole("button", { name: "Link copied" })).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalled();
+  });
+
   it("flips to show the prompt", async () => {
     const screen = render(<ResultCard results={[result("r1")]} prompt="a red mug on oak" onAction={() => {}} />);
     await screen.getByRole("button", { name: "Show details" }).click();

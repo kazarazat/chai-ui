@@ -24,16 +24,25 @@ export async function downloadMedia(src: string, filename: string): Promise<void
   }
 }
 
-/** The native share sheet where there is one, otherwise the media's URL copied to the clipboard. */
-export async function shareMedia(src: string): Promise<void> {
+/**
+ * The native share sheet where there is one, otherwise the media's URL
+ * copied to the clipboard. Says which, so the button can confirm a copy.
+ */
+export async function shareMedia(src: string): Promise<"shared" | "copied" | "none"> {
   if (navigator.share) {
     try {
       await navigator.share({ url: src });
+      return "shared";
     } catch {
       // Dismissed, or not shareable: same as closing a native share sheet.
+      return "none";
     }
-  } else {
-    navigator.clipboard?.writeText(src).catch(() => {});
+  }
+  try {
+    await navigator.clipboard.writeText(src);
+    return "copied";
+  } catch {
+    return "none";
   }
 }
 

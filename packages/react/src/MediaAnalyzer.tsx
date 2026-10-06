@@ -5,6 +5,7 @@ import { MdFab } from "@material/web/fab/fab.js";
 import type { DroppedMedia, ModelOption, MediaKind } from "@chai-ui/core";
 import type { MediaAnalysisPromptLength } from "@chai-ui/core";
 import { SearchMenu, type SearchMenuSection } from "./primitives/SearchMenu.js";
+import { StopIcon } from "./icons.js";
 
 /** See primitives/Toggle.tsx for why `createComponent` is used instead of raw JSX on custom-element tags. */
 const MdFabElement = createComponent({
@@ -154,6 +155,8 @@ export interface MediaAnalyzerProps {
   submitting?: boolean;
   submitError?: string | null;
   onSubmit: (payload: MediaAnalyzerSubmitPayload) => void;
+  /** Fires when the stop button is pressed while `submitting`. With it, submit turns into stop during an analysis (wire it to `useMediaAnalyzer`'s `cancel`); without it, submit is just disabled. */
+  onAbort?: () => void;
 }
 
 const KIND_LABEL: Record<MediaKind, string> = {
@@ -188,6 +191,7 @@ export function MediaAnalyzer({
   submitting,
   submitError,
   onSubmit,
+  onAbort,
 }: MediaAnalyzerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const kind = attachments[0]?.kind;
@@ -199,6 +203,9 @@ export function MediaAnalyzer({
   // children. Active for as long as this is > 0; both drag handlers below
   // clamp at 0 so a stray extra `dragleave` can't go negative.
   const [dragDepth, setDragDepth] = useState(0);
+  // What the last attach replaced (one kind per analysis), shown until the
+  // attachments change some other way.
+  const [replaced, setReplaced] = useState<{ note: string; for: MediaAnalyzerAttachment[] } | null>(null);
   const isDragActive = dragDepth > 0;
 
   /**
@@ -221,9 +228,14 @@ export function MediaAnalyzer({
     const settle = () => {
       pending -= 1;
       if (pending === 0 && resolved.length > 0) {
-        onAttachmentsChange(
-          resolved.reduce((acc, media) => nextMediaAnalyzerAttachments(acc, media, maxAttachmentsByKind), attachments)
+        const next = resolved.reduce(
+          (acc, media) => nextMediaAnalyzerAttachments(acc, media, maxAttachmentsByKind),
+          attachments
         );
+        const removed = attachments.filter((a) => !next.some((n) => n.id === a.id));
+        const added = next.filter((n) => !attachments.some((a) => a.id === n.id));
+        setReplaced(removed.length > 0 && added.length > 0 ? { note: replacedNote(removed, added), for: next } : null);
+        onAttachmentsChange(next);
       }
     };
     files.forEach((file) => {
@@ -278,6 +290,7 @@ export function MediaAnalyzer({
   const selectedLength = promptLengthOptions.find((o) => o.value === promptLength);
   const hasContent = attachments.length > 0;
   const isSubmitDisabled = disabled || !hasContent;
+  const showStop = Boolean(submitting && onAbort);
 
   return (
     <div className="chai-media-analyzer">
@@ -338,6 +351,12 @@ export function MediaAnalyzer({
         </div>
       )}
 
+      {replaced && replaced.for === attachments && (
+        <p className="chai-media-analyzer__note" role="status">
+          {replaced.note}
+        </p>
+      )}
+
       {submitError && (
         <p className="chai-media-analyzer__error" role="alert">
           {submitError}
@@ -390,14 +409,16 @@ export function MediaAnalyzer({
           size="small"
           variant="secondary"
           label=""
-          data-ready={!isSubmitDisabled || undefined}
+          data-ready={showStop || !isSubmitDisabled || undefined}
           data-error={Boolean(submitError) || undefined}
+          data-stop={showStop || undefined}
           {...({
-            ariaLabel: submitError ? "Retry" : "Analyze media",
-            ariaDisabled: submitting ? "true" : isSubmitDisabled ? "true" : "false",
+            ariaLabel: showStop ? "Stop" : submitError ? "Retry" : "Analyze media",
+            ariaDisabled: showStop ? "false" : submitting ? "true" : isSubmitDisabled ? "true" : "false",
           } as Record<string, unknown>)}
           onClick={() => {
-            if (!isSubmitDisabled && !submitting) onSubmit({
+            if (showStop) onAbort?.();
+            else if (!isSubmitDisabled && !submitting) onSubmit({
               attachments,
               modelId,
               autoSelectModel,
@@ -406,9 +427,7 @@ export function MediaAnalyzer({
             });
           }}
         >
-          <span slot="icon">
-            <ArrowForwardIcon />
-          </span>
+          <span slot="icon">{showStop ? <StopIcon /> : <ArrowForwardIcon />}</span>
         </MdFabElement>
       </div>
     </div>
@@ -446,6 +465,14 @@ function MediaAnalyzerThumbnail({
 // --- Icons ---------------------------------------------------------------
 // Same "trace and inline as a currentColor component" convention Composer.tsx
 // documents — icons aren't shared across files yet in this codebase.
+
+/** "Replaced 2 images with clip.wav." */
+function replacedNote(removed: MediaAnalyzerAttachment[], added: MediaAnalyzerAttachment[]): string {
+  const name = (a: MediaAnalyzerAttachment) => a.name ?? KIND_LABEL[a.kind].toLowerCase();
+  const describe = (list: MediaAnalyzerAttachment[]) =>
+    list.length === 1 ? name(list[0]!) : `${list.length} ${KIND_LABEL[list[0]!.kind].toLowerCase()}s`;
+  return `Replaced ${describe(removed)} with ${describe(added)}.`;
+}
 
 function ArrowForwardIcon() {
   return (
