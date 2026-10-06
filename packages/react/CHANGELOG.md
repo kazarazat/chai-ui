@@ -1,5 +1,17 @@
 # @chai-ui/react
 
+## 0.5.0
+
+### Minor Changes
+
+- 7232185: No more controls that silently do nothing, and no stale picks. `Composer` hides the thumbnail × and "Add media" without `onAttachmentsChange`, hides the `+` menu's use-case items without `onAttachMenuSelect` (and the `+` button when nothing in it would work), and hides a chip's × with nothing to clear it. New `attachMenuActions` shows only the `+` items you list. A picked model that isn't in the current `models` list shows as unpicked and is never submitted. In edit mode, attaching an image replaces the one being edited (the picker takes one image), and `useComposer` gives each new image's original version its own id, so `EditCard` starts it clean with no half-drawn region from the last image.
+- a3e45ec: `EditCard` sizing for real photos. By default the card now fills a 630 × 630 box, keeping the image's shape (a landscape photo is 630 wide, a portrait one 630 tall), instead of a fixed 421px width. New `maxWidth` and `maxHeight` set the box. New `scale` starts from the image's own width instead (`0.3` = 30%, so a 5000px photo starts at 1500px), and `width` is now an optional fixed starting width; both are then fitted inside the box. A tall image narrows to fit instead of running past the screen. Each version is measured on its own.
+
+### Patch Changes
+
+- @chai-ui/core@0.5.0
+  - @chai-ui/tokens@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
