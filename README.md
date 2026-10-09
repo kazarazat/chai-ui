@@ -10,7 +10,9 @@
   <a href="#install"><img src="https://img.shields.io/badge/React-18.3%20%7C%2019-61DAFB?logo=react&logoColor=white" alt="React 18.3 | 19" /></a>
 </p>
 
-# Chai UI
+<p align="center">
+  <a href="https://chai-ui.com/docs"><img src=".github/composer-bar.gif" alt="Chai UI Composer bar demo" width="640" /></a>
+</p>
 
 **A design system for AI model interactions.** Every component comes with
 its use case instructions built in, is built on Material Design 3 and
