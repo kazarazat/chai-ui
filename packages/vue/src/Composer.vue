@@ -144,6 +144,16 @@ watch(
   }
 );
 
+// Auto-select belongs to the Model menu it was turned on in: picking
+// another use case turns it off, so the new one's model is picked by hand.
+// Only when the end user owns the switch; a builder's setting stays.
+watch(
+  () => view.value.useCaseKey,
+  () => {
+    if (props.autoSelectModel && props.showAutoSelectToggle) props["onUpdate:autoSelectModel"]?.(false);
+  }
+);
+
 function toggleModel(id: string) {
   if (view.value.multiModel) props["onUpdate:modelIds"]?.(view.value.toggledModelIds(id));
   else props["onUpdate:modelId"]?.(id);

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import {
   EDIT_IMAGE_USE_CASE,
+  suggestedModels,
   TEXT_USE_CASE,
   type ComposerAttachment,
   type ComposerSubmitPayload,
@@ -44,7 +45,7 @@ export function composerContract(render: Render<ComposerProps>) {
    * its attachments), as an app would. Pickers only show with somewhere for a
    * pick to go, so they get handlers.
    */
-  const harness = (props: Record<string, unknown> = {}, { holdAttachments = false } = {}) =>
+  const harness = (props: Record<string, unknown> = {}, { holdAttachments = false, holdModel = false } = {}) =>
     controlled<ComposerProps>(
       render,
       {
@@ -57,7 +58,11 @@ export function composerContract(render: Render<ComposerProps>) {
         ...(holdAttachments && { attachments: [], onAttachmentsChange: () => {} }),
         ...props,
       },
-      holdAttachments ? { onChange: "value", onAttachmentsChange: "attachments" } : { onChange: "value" }
+      {
+        onChange: "value",
+        ...(holdAttachments && { onAttachmentsChange: "attachments" as const }),
+        ...(holdModel && { onModelChange: "modelId" as const }),
+      }
     );
 
   describe("Composer", () => {
@@ -185,6 +190,7 @@ export function composerContract(render: Render<ComposerProps>) {
         useCase: EDIT_IMAGE_USE_CASE,
         attachments: [photo],
         regions: [region(1)],
+        modelId: suggestedModels("image-edit")[0]!.id,
         aspectRatios: [{ value: "1:1", label: "1:1" }],
         onSubmit,
       });
@@ -322,6 +328,43 @@ export function composerContract(render: Render<ComposerProps>) {
   });
 
   describe("Composer model and option menus", () => {
+    it("turns auto-select off when the use case changes, so the new one's model is picked by hand", async () => {
+      const onAutoSelectModelChange = vi.fn();
+      const screen = controlled<ComposerProps>(
+        render,
+        {
+          value: "a mug",
+          onChange: () => {},
+          onSubmit: () => {},
+          useCase: IMAGE,
+          onClearUseCase: () => {},
+          modelId: null,
+          onModelChange: () => {},
+          showAutoSelectToggle: true,
+          autoSelectModel: true,
+          onAutoSelectModelChange,
+        },
+        { onChange: "value", onModelChange: "modelId", onAutoSelectModelChange: "autoSelectModel" }
+      );
+      await expect.element(screen.getByText("Auto-select")).toBeVisible();
+
+      // Remove Create image, then pick Create video.
+      await screen.rerender({ useCase: null });
+      await screen.rerender({ useCase: VIDEO });
+      await expect.poll(() => onAutoSelectModelChange.mock.calls).toEqual([[false]]);
+      // Video's own Model menu: nothing picked yet, and the switch off.
+      await screen.getByText("Select model").click();
+      await expect.element(screen.getByRole("switch", { name: "Auto-select model" })).not.toBeChecked();
+    });
+
+    it("keeps a builder's auto-select when there's no switch for the end user", async () => {
+      const onAutoSelectModelChange = vi.fn();
+      const screen = harness({ useCase: IMAGE, autoSelectModel: true, onAutoSelectModelChange });
+      await screen.rerender({ useCase: VIDEO });
+      await expect.element(screen.getByText("Auto-select")).toBeVisible();
+      expect(onAutoSelectModelChange).not.toHaveBeenCalled();
+    });
+
     it("multi-select models adds and removes picks", async () => {
       const onModelIdsChange = vi.fn();
       const screen = harness({ useCase: IMAGE, models: MODELS, multiSelectModels: true, modelIds: ["fal/fast"], onModelIdsChange });
@@ -402,24 +445,34 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(screen.getByText("Aspect ratio")).not.toBeInTheDocument();
     });
 
-    it("offers Chai's suggested models when the app passes none, with the first picked", async () => {
+    it("offers Chai's suggested models when the app passes none, and picks none: submit waits for a pick", async () => {
       const onSubmit = vi.fn();
-      const screen = harness({ value: "a mug", useCase: IMAGE, onSubmit });
-      await expect.element(screen.getByText("Nano Banana Pro")).toBeInTheDocument();
-      // The first model's aspect ratios fill the menu.
+      const screen = harness({ value: "a mug", useCase: IMAGE, onModelChange: () => {}, onSubmit }, { holdModel: true });
+      await expect.element(screen.getByText("Select model")).toBeVisible();
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).not.toHaveBeenCalled();
+
+      const first = suggestedModels("text-to-image")[0]!;
+      await screen.getByText("Select model").click();
+      await screen.getByRole("button", { name: first.label }).click();
+      await expect.element(screen.getByText(first.label)).toBeVisible();
+      // The suggested list's ratios fill the menu.
       await expect.element(screen.getByText("Aspect ratio")).toBeInTheDocument();
       await screen.getByRole("button", { name: "Submit" }).click();
-      expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: "fal-ai/nano-banana-pro" });
+      expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: first.id });
       expect(onSubmit.mock.calls[0]![0].selections[0].models.length).toBeGreaterThan(1);
     });
 
+
     it("suggests edit models in edit mode, and none for a text request", async () => {
       const edit = harness({ useCase: EDIT_IMAGE_USE_CASE });
-      await expect.element(edit.getByText("Flux 3 Image")).toBeInTheDocument();
+      await edit.getByText("Select model").click();
+      await expect.element(edit.getByRole("button", { name: suggestedModels("image-edit")[0]!.label })).toBeInTheDocument();
       edit.unmount();
       const text = harness();
-      await expect.element(text.getByText("Select models")).not.toBeInTheDocument();
+      await expect.element(text.getByText("Select model")).not.toBeInTheDocument();
     });
+
 
     it("hides the Model and Aspect ratio menus with nowhere for a pick to go, and still runs the first suggested model", async () => {
       const onSubmit = vi.fn();
@@ -430,14 +483,14 @@ export function composerContract(render: Render<ComposerProps>) {
       expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: "fal-ai/nano-banana-pro" });
     });
 
-    it("never submits a model that isn't in the current list", async () => {
+    it("shows a pick that isn't in the current list as unpicked, and won't submit it", async () => {
       const onSubmit = vi.fn();
       const screen = harness({ value: "a mug", useCase: IMAGE, models: MODELS, modelId: "gone/model", onSubmit });
-      await expect.element(screen.getByText("Select models")).toBeInTheDocument();
+      await expect.element(screen.getByText("Select model")).toBeInTheDocument();
       await screen.getByRole("button", { name: "Submit" }).click();
-      expect(onSubmit.mock.calls[0]![0]).toMatchObject({ modelId: null });
-      expect(onSubmit.mock.calls[0]![0].selections[0].modelIds).toEqual([]);
+      expect(onSubmit).not.toHaveBeenCalled();
     });
+
 
     it("never submits a ratio the picked model doesn't take", async () => {
       const onSubmit = vi.fn();

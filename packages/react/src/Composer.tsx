@@ -73,9 +73,10 @@ export interface ComposerProps {
   onModelIdsChange?: (ids: string[]) => void;
   /**
    * Models for the current use case. Leave it out and Composer offers Chai's
-   * suggested Fal models for the use case (`suggestedModels`), with the
-   * first one picked until the person picks another. Pass a list to use
-   * your own; pass `[]` for no Model menu.
+   * suggested Fal models for the use case (`suggestedModels`). Nothing is
+   * picked for the person: with a Model menu, submit waits until they pick
+   * a model or turn on auto-select; with no menu (no `onModelChange`), the
+   * list's first model runs. Pass a list to use your own; `[]` for no menu.
    */
   models?: ModelOption[];
   modelId?: string | null;
@@ -96,7 +97,7 @@ export interface ComposerProps {
    * user can interact with to change it.
    */
   showAutoSelectToggle?: boolean;
-  /** Fires when the end user toggles the switch — only reachable when `showAutoSelectToggle` is true. */
+  /** Fires when the end user toggles the switch — only reachable when `showAutoSelectToggle` is true — and with `false` when the picked use case changes, since auto-select belongs to the use case it was turned on for. */
   onAutoSelectModelChange?: (value: boolean) => void;
   /**
    * Optional. The Aspect ratio menu comes from the selected models'
@@ -247,6 +248,16 @@ export function Composer({
     if (!multiModel) return onModelChange?.(id);
     onModelIdsChange?.(view.toggledModelIds(id));
   }
+
+  // Auto-select belongs to the Model menu it was turned on in: picking
+  // another use case turns it off, so the new one's model is picked by hand.
+  // Only when the end user owns the switch; a builder's setting stays.
+  const lastUseCaseKey = useRef(view.useCaseKey);
+  useEffect(() => {
+    if (lastUseCaseKey.current === view.useCaseKey) return;
+    lastUseCaseKey.current = view.useCaseKey;
+    if (autoSelectModel && showAutoSelectToggle) onAutoSelectModelChange?.(false);
+  }, [view.useCaseKey, autoSelectModel, showAutoSelectToggle, onAutoSelectModelChange]);
 
   // Auto-select chooses at submit, from the prompt (`useComposer` routes
   // with the reasoning model). Turning it on clears the current pick, so

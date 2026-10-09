@@ -92,7 +92,6 @@ export function composerView(props: ComposerViewInput) {
   const hasContent = editing
     ? hasImage && (value.trim().length > 0 || regions.length > 0)
     : value.trim().length > 0 || attachments.length > 0;
-  const isSubmitDisabled = submitError ? disabled : (props.submitDisabled ?? (disabled || !hasContent));
   const placeholder =
     props.placeholder ??
     (editing
@@ -116,20 +115,27 @@ export function composerView(props: ComposerViewInput) {
     .map((u) => ({ label: multiSelectUseCases ? u.label : "", kind: u.kind, ...rosterFor(u) }))
     .filter((s) => s.options.length > 0);
   const allModels = modelSections.flatMap((s) => s.options);
+  // No menu that can't change anything: without its handler, the Model menu hides.
+  const canPickModel = Boolean(multiModel ? props.onModelIdsChange : props.onModelChange);
   // A pick that isn't in the current list (e.g. the edit model after leaving
   // edit mode) is shown as unpicked and never submitted. With no list at
-  // all, the app's pick is passed through as given. With nothing picked
-  // from a suggested list (and auto-select off), its first model is the pick.
+  // all, the app's pick is passed through as given. The Composer never picks
+  // for the person: with a Model menu, nothing is picked until they pick or
+  // turn on auto-select. Only with no menu (nothing the person could pick
+  // with) does a suggested list's first model run.
   const validPicks = allModels.length > 0 ? rawPickedIds.filter((id) => allModels.some((m) => m.id === id)) : rawPickedIds;
   const pickedModelIds =
-    validPicks.length > 0 || autoSelectModel ? validPicks : modelSections.filter((s) => s.suggested).map((s) => s.options[0]!.id);
+    validPicks.length > 0 || autoSelectModel || canPickModel
+      ? validPicks
+      : modelSections.filter((s) => s.suggested).map((s) => s.options[0]!.id);
   const pickedModels = allModels.filter((m) => pickedModelIds.includes(m.id));
-  // No menu that can't change anything: without its handler, the Model menu hides (the default pick still runs).
-  const canPickModel = Boolean(multiModel ? props.onModelIdsChange : props.onModelChange);
   const modelTriggerLabel =
     pickedModels.length > 1
       ? `${pickedModels.length} models`
-      : (pickedModels[0]?.label ?? (autoSelectModel ? "Auto-select" : "Select models"));
+      : (pickedModels[0]?.label ?? (autoSelectModel ? "Auto-select" : multiModel ? "Select models" : "Select model"));
+  // With a Model menu, a submit needs a model: one picked, or auto-select to pick it.
+  const needsModel = canPickModel && modelSections.length > 0 && !autoSelectModel && pickedModelIds.length === 0;
+  const isSubmitDisabled = submitError ? disabled : (props.submitDisabled ?? (disabled || !hasContent || needsModel));
 
   // An edit keeps the source image's shape.
   const showAspectRatio = activeUseCases.some((u) => !u.edit && (u.kind === "image" || u.kind === "video"));
@@ -156,6 +162,13 @@ export function composerView(props: ComposerViewInput) {
 
   return {
     pickedUseCases,
+    /**
+     * Which use cases are picked, as one string. When it changes, a Composer
+     * whose end user owns the auto-select switch turns auto-select off: it
+     * belongs to the Model menu it was turned on in, so a new use case
+     * starts with its model picked by hand.
+     */
+    useCaseKey: pickedUseCases.map((u) => `${u.kind}${u.edit ? ":edit" : ""}`).join(","),
     activeUseCases,
     editing,
     isSubmitDisabled,
