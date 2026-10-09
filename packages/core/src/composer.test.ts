@@ -180,12 +180,16 @@ describe("createComposerStore", () => {
 
   it("moves a result to error, with the engine's message, when the engine call rejects", async () => {
     const engine = fakeEngine(() => Promise.reject(new Error("upstream exploded")));
-    const { result } = setup({ engine });
+    const onError = vi.fn();
+    const { result } = setup({ engine, onError });
 
     result.current.submit(payload());
 
     await vi.waitFor(() => expect(result.current.run?.results[0]!.status).toBe("error"));
     expect(result.current.run?.results[0]!.error?.message).toBe("upstream exploded");
+    const [run, resultId] = onError.mock.calls[0]!;
+    expect(run.id).toBe(result.current.run?.id);
+    expect(resultId).toBe(result.current.run?.results[0]!.id);
   });
 
   it("derives request.mode from the use case + whether anything is attached", async () => {
@@ -278,6 +282,25 @@ describe("createComposerStore", () => {
     expect(generate.mock.calls[0]![0].modelId).toBe("google/gemini-2.5-flash");
   });
 
+  it("words Enhance's instruction for the last run's kind: video, then text", async () => {
+    const reason = vi.fn().mockResolvedValue({ src: "better", kind: "text" });
+    const media = fakeEngine(async () => ({ src: "x", kind: "video" as const }));
+    const { result } = setup({ engine: media, textEngine: media, reasoningEngine: fakeEngine(reason), reasoningModel: "m" });
+
+    result.current.submit(payload({ useCase: VIDEO }));
+    await result.current.enhance!("a dog");
+    expect(reason.mock.calls[0]![0].prompt).toContain("a video-generation prompt");
+
+    result.current.submit(payload({ useCase: TEXT_USE_CASE, modelId: null }));
+    await result.current.enhance!("a dog");
+    expect(reason.mock.calls[1]![0].prompt).toContain("an AI assistant prompt");
+  });
+
+  it("enhance throws without reasoning instead of calling anything", async () => {
+    const store = createComposerStore(() => ({}));
+    await expect(store.enhance("a mug")).rejects.toThrow(/reasoning engine/);
+  });
+
   describe("with a provider's reasoning", () => {
     it("enhance uses the provider's reasoning engine and model", async () => {
       const generate = vi.fn().mockResolvedValue({ src: "rewritten", kind: "text" });
@@ -368,8 +391,51 @@ describe("createComposerStore", () => {
       result.current.submit(autoPayload());
       await vi.waitFor(() => expect(result.current.run?.results[0]!.status).toBe("done"));
       expect(media.mock.calls[0]![0].modelId).toBe("fal/fast");
+      result.current.submit(autoPayload());
+      await vi.waitFor(() => expect(media).toHaveBeenCalledTimes(2));
       expect(warn).toHaveBeenCalledTimes(1);
       warn.mockRestore();
+    });
+
+    it("routes only the selections with models, reporting every pick through onModelIdsChange", async () => {
+      const reason = vi.fn().mockResolvedValue({ src: "fal/pro", kind: "text" });
+      const image = vi.fn().mockResolvedValue({ src: "https://x/img.png", kind: "image" });
+      const video = vi.fn().mockResolvedValue({ src: "https://x/clip.mp4", kind: "video" });
+      const onModelIdsChange = vi.fn();
+      const onModelChange = vi.fn();
+      const { result } = setup(
+        { engineByKind: { image: fakeEngine(image), video: fakeEngine(video) }, onModelIdsChange, onModelChange },
+        reasoningWith(fakeEngine(reason))
+      );
+
+      result.current.submit(
+        payload({
+          modelId: null,
+          autoSelectModel: true,
+          selections: [
+            { useCase: IMAGE, modelIds: [], models: roster },
+            { useCase: VIDEO, modelIds: ["vid-1"], models: [] },
+          ],
+        })
+      );
+      expect(result.current.runs[1]!.results[0]!.modelId).toBe("vid-1");
+      await vi.waitFor(() => expect(result.current.runs.every((r) => r.results[0]!.status === "done")).toBe(true));
+      expect(onModelIdsChange).toHaveBeenCalledWith(["fal/pro"]);
+      expect(onModelChange).not.toHaveBeenCalled();
+      expect(image.mock.calls[0]![0].modelId).toBe("fal/pro");
+      expect(video.mock.calls[0]![0].modelId).toBe("vid-1");
+    });
+
+    it("a plain submit while routing replaces it and clears `routing`", async () => {
+      const reason = vi.fn(() => new Promise<never>(() => {}));
+      const media = vi.fn().mockResolvedValue({ src: "https://x/img.png", kind: "image" });
+      const { result } = setup({ engine: fakeEngine(media) }, reasoningWith(fakeEngine(reason)));
+      result.current.submit(autoPayload());
+      expect(result.current.routing).toBe(true);
+      result.current.submit(payload());
+      expect(result.current.routing).toBe(false);
+      await vi.waitFor(() => expect(result.current.run?.results[0]!.status).toBe("done"));
+      expect(media.mock.calls[0]![0].modelId).toBe("model-a");
     });
 
     it("doesn't route when auto-select is off", async () => {
@@ -560,6 +626,27 @@ describe("createComposerStore editing an image", () => {
     await vi.waitFor(() => expect(result.current.edit?.versions[1]?.status).toBe("done"));
     expect(result.current.edit?.versions).toHaveLength(2);
     expect(generate.mock.calls[0]![0].modelId).toBe(flux.id);
+  });
+
+  it("shows a failed edit as a version with its error", async () => {
+    const generate = vi.fn().mockRejectedValue(new Error("content policy"));
+    const { result } = setup({ engine: fakeEngine(generate), editImage: photo });
+    result.current.submit(editPayload({ value: "x" }));
+    await vi.waitFor(() => expect(result.current.edit?.versions[1]?.status).toBe("error"));
+    expect(result.current.edit?.versions[1]?.error).toBe("content policy");
+  });
+
+  it("drops a routing placeholder version when a plain request replaces it", async () => {
+    const reason = vi.fn(() => new Promise<never>(() => {}));
+    const media = vi.fn().mockResolvedValue({ src: "https://x/img.png", kind: "image" as const });
+    const other: ModelOption = { id: "fal/other-edit", label: "Other", provider: "fal", speed: "fast" };
+    const { result } = setup({ engine: fakeEngine(media), editImage: photo }, reasoningWith(fakeEngine(reason)));
+    const selections = [{ useCase: EDIT_IMAGE_USE_CASE, modelIds: [], models: [flux, other] }];
+
+    result.current.submit(editPayload({ value: "x", modelId: null, autoSelectModel: true, selections }));
+    expect(result.current.edit?.versions).toHaveLength(2);
+    result.current.submit(payload());
+    expect(result.current.edit?.versions).toHaveLength(1);
   });
 
   it("starts over when the image changes", async () => {

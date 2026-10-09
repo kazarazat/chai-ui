@@ -1,0 +1,3 @@
+# Barrel files only re-export other modules: nothing in them to test.
+ignore:
+  - "packages/*/src/**/index.ts"

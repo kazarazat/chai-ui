@@ -159,4 +159,39 @@ describe("createMediaAnalyzerStore", () => {
     expect(result.current.analyzing).toBe(false);
     expect(result.current.error).toBeNull();
   });
+
+  it("auto-select without reasoning warns once, reports the fallback, and analyzes on the first model", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const generate = vi.fn().mockResolvedValue({ src: "A dog.", kind: "text" });
+    const onRoutingFallback = vi.fn();
+    const models = [
+      { id: "first/model", label: "First", provider: "x", speed: "fast" as const },
+      { id: "second/model", label: "Second", provider: "x", speed: "fast" as const },
+    ];
+    // An engine of its own, but no reasoning model to route with.
+    const { result } = setup({ engine: fakeEngine(generate), onRoutingFallback });
+    const routeAgain = async () => {
+      result.current.submit(payload({ autoSelectModel: true, models }));
+      await vi.waitFor(() => expect(result.current.analyzing).toBe(false));
+    };
+    await routeAgain();
+    await routeAgain();
+    expect(onRoutingFallback).toHaveBeenCalledWith(expect.objectContaining({ reason: "no-reasoning", modelId: "first/model" }));
+    expect(generate.mock.calls.at(-1)![0].modelId).toBe("first/model");
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  it("notifies listeners until they unsubscribe", () => {
+    const store = createMediaAnalyzerStore(() => ({}));
+    const listener = vi.fn();
+    const unsubscribe = store.subscribe(listener);
+    store.submit(payload({ attachments: [] }));
+    const calls = listener.mock.calls.length;
+    expect(calls).toBeGreaterThan(0);
+    unsubscribe();
+    store.reset();
+    expect(listener).toHaveBeenCalledTimes(calls);
+  });
 });
+
