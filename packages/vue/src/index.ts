@@ -1,5 +1,6 @@
 export { default as ChaiProvider } from "./ChaiProvider.vue";
 export { default as Composer } from "./Composer.vue";
+export { default as EditCard } from "./EditCard.vue";
 export { default as ResultCard } from "./ResultCard.vue";
 export { default as MediaAnalyzer } from "./MediaAnalyzer.vue";
 export { default as Pagination } from "./primitives/Pagination.vue";

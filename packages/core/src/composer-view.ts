@@ -3,7 +3,7 @@
  * the same in every framework binding. Pure; nothing here renders.
  */
 import type { ComposerAttachment, ComposerSelection, ComposerSubmitPayload, ComposerUseCase } from "./composer.js";
-import { attachmentId } from "./attachment-id.js";
+import { uniqueId } from "./unique-id.js";
 import { TEXT_USE_CASE } from "./composer.js";
 import { readMediaFiles } from "./media-analyzer.js";
 import type { EditRegion } from "./region-edit.js";
@@ -30,14 +30,6 @@ export const MAX_ANIMATE_ENHANCE_LENGTH = 260;
 /** How long the Enhance reveal takes: time-driven, between 300ms and 900ms. */
 export function enhanceRevealDurationMs(charCount: number): number {
   return Math.min(900, Math.max(300, charCount * 6));
-}
-
-/** How many region colors the tokens define (`--chai-color-semantic-region-1` to `-6`). */
-const REGION_COLOR_COUNT = 6;
-
-/** The color token for a region number. Numbers past the last color start over at the first. */
-export function regionColor(number: number): string {
-  return `var(--chai-color-semantic-region-${((Math.max(1, number) - 1) % REGION_COLOR_COUNT) + 1})`;
 }
 
 /** The Composer props `composerView` reads. Callbacks only matter by being there. */
@@ -223,8 +215,8 @@ export async function composerAttachmentsFromFiles(
     const image = list.find((f) => f.type.startsWith("image/"));
     if (!image) return { attachments: null, unsupported: list.map((f) => f.name) };
     const { media, unsupported } = await readMediaFiles([image]);
-    return { attachments: media.length > 0 ? media.map((m) => ({ ...m, id: attachmentId() })) : null, unsupported };
+    return { attachments: media.length > 0 ? media.map((m) => ({ ...m, id: uniqueId() })) : null, unsupported };
   }
   const { media, unsupported } = await readMediaFiles(list);
-  return { attachments: [...current, ...media.map((m) => ({ ...m, id: attachmentId() }))], unsupported };
+  return { attachments: [...current, ...media.map((m) => ({ ...m, id: uniqueId() }))], unsupported };
 }

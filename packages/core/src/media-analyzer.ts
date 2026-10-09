@@ -6,7 +6,7 @@
  * (`getState` + `subscribe`) that `useMediaAnalyzer` (React) and the Vue
  * composable wrap.
  */
-import { attachmentId } from "./attachment-id.js";
+import { uniqueId } from "./unique-id.js";
 import { warnNoReasoningOnce } from "./composer.js";
 import { createMockEngine, isAbortError, normalizeGenerationError, type GenerationEngine } from "./engine.js";
 import {
@@ -218,7 +218,7 @@ export function nextMediaAnalyzerAttachments(
   maxByKind: Record<MediaKind, number> = DEFAULT_MAX_ATTACHMENTS_BY_KIND
 ): MediaAnalyzerAttachment[] {
   const existingKind = current[0]?.kind;
-  const withId: MediaAnalyzerAttachment = { ...incoming, id: attachmentId() };
+  const withId: MediaAnalyzerAttachment = { ...incoming, id: uniqueId() };
   if (!existingKind || existingKind !== incoming.kind) return [withId];
   if (incoming.kind === "image") {
     if (current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image)) return current;

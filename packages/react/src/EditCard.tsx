@@ -1,5 +1,29 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
-import { DEFAULT_MAX_REGIONS, downloadFilename, downloadMedia, regionColor, shareMedia, type EditRegion, type EditVersion, type RegionBox } from "@chai-ui/core";
+import {
+  clampPan,
+  DEFAULT_MAX_REGIONS,
+  downloadFilename,
+  downloadMedia,
+  EDIT_ZOOM_STEPS,
+  editCardWidth,
+  fitBox,
+  freeRegionNumber,
+  newRegion,
+  panForKey,
+  panForZoom,
+  REGION_CORNERS,
+  regionBoxForKey,
+  regionBoxStyle,
+  regionPopoverPosition,
+  resizeBox,
+  shareMedia,
+  type EditRegion,
+  type EditVersion,
+  type Pan,
+  type RegionBox,
+  type RegionCorner,
+  type Size,
+} from "@chai-ui/core";
 
 export type { EditVersion } from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
@@ -49,59 +73,11 @@ export interface EditCardProps {
   disabled?: boolean;
 }
 
-const ZOOM_STEPS = [1, 1.25, 1.5, 2, 3, 4];
-const MIN_SIZE = 0.03;
-const KEY_STEP = 0.01;
-const KEY_STEP_LARGE = 0.05;
-
-type Size = { width: number; height: number };
-type Pan = { x: number; y: number };
 type Drag =
-  | { kind: "move" | "nw" | "ne" | "sw" | "se"; id: string; x: number; y: number; box: RegionBox; moved: boolean }
+  | { kind: "move" | RegionCorner; id: string; x: number; y: number; box: RegionBox; moved: boolean }
   | { kind: "pan"; x: number; y: number; pan: Pan; moved: boolean };
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-
-/** Keeps a box inside the image and at least the minimum size. */
-function fitBox(box: RegionBox): RegionBox {
-  const width = clamp(box.width, MIN_SIZE, 1);
-  const height = clamp(box.height, MIN_SIZE, 1);
-  return { x: clamp(box.x, 0, 1 - width), y: clamp(box.y, 0, 1 - height), width, height };
-}
-
-/** A box resized by dragging one corner; the opposite corner stays put. */
-function resizeBox(box: RegionBox, corner: "nw" | "ne" | "sw" | "se", dx: number, dy: number): RegionBox {
-  let left = box.x;
-  let top = box.y;
-  let right = box.x + box.width;
-  let bottom = box.y + box.height;
-  if (corner === "nw" || corner === "sw") left = clamp(left + dx, 0, right - MIN_SIZE);
-  else right = clamp(right + dx, left + MIN_SIZE, 1);
-  if (corner === "nw" || corner === "ne") top = clamp(top + dy, 0, bottom - MIN_SIZE);
-  else bottom = clamp(bottom + dy, top + MIN_SIZE, 1);
-  return { x: left, y: top, width: right - left, height: bottom - top };
-}
-
-/** Pan limits at a zoom level: the image always covers the viewport. */
-function clampPan(pan: Pan, zoom: number, size: Size): Pan {
-  return {
-    x: clamp(pan.x, size.width - size.width * zoom, 0),
-    y: clamp(pan.y, size.height - size.height * zoom, 0),
-  };
-}
-
-function nextRegionId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `region-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-/** The lowest number no current region uses, so freed numbers (and colors) come back first. */
-function freeNumber(regions: EditRegion[]): number {
-  let n = 1;
-  while (regions.some((r) => r.number === n)) n += 1;
-  return n;
-}
 
 /**
  * The image editing card: the person marks regions on the image, gives each
@@ -182,7 +158,7 @@ export function EditCard({
   // A region being drawn takes a free number, even if the regions changed
   // since it was started (so checking it in can't duplicate a number).
   const shownDraft =
-    draft && regions.some((r) => r.number === draft.number) ? { ...draft, number: freeNumber(regions) } : draft;
+    draft && regions.some((r) => r.number === draft.number) ? { ...draft, number: freeRegionNumber(regions) } : draft;
   const all = shownDraft ? [...regions, shownDraft] : regions;
   const selected = all.find((r) => r.id === selectedId) ?? null;
   const isDraft = selected != null && selected.id === draft?.id;
@@ -214,13 +190,7 @@ export function EditCard({
   }
 
   function addRegion() {
-    // Centered in the part of the image in view, so it's visible when zoomed in.
-    const viewW = 1 / zoom;
-    const viewH = 1 / zoom;
-    const centerX = size.width ? (-pan.x / (size.width * zoom)) + viewW / 2 : 0.5;
-    const centerY = size.height ? (-pan.y / (size.height * zoom)) + viewH / 2 : 0.5;
-    const box = fitBox({ x: centerX - (0.3 * viewW) / 2, y: centerY - (0.2 * viewH) / 2, width: 0.3 * viewW, height: 0.2 * viewH });
-    const region: EditRegion = { id: nextRegionId(), number: freeNumber(regions), box, prompt: "" };
+    const region = newRegion(regions, zoom, pan, size);
     setDraft(region);
     setHidden(false);
     select(region);
@@ -252,14 +222,10 @@ export function EditCard({
   }
 
   function zoomTo(next: number) {
-    // Zooms around the middle of the view, so what's centered stays centered.
-    const cx = size.width / 2;
-    const cy = size.height / 2;
-    const ratio = next / zoom;
-    setPan(clampPan({ x: cx - (cx - pan.x) * ratio, y: cy - (cy - pan.y) * ratio }, next, size));
+    setPan(panForZoom(pan, zoom, next, size));
     setZoom(next);
   }
-  const zoomIndex = ZOOM_STEPS.indexOf(zoom);
+  const zoomIndex = EDIT_ZOOM_STEPS.indexOf(zoom);
 
   // --- Pointer: move and resize regions, pan the zoomed image ---
   // Moves and releases bubble to the viewport, even while a region or
@@ -304,19 +270,11 @@ export function EditCard({
   // --- Keyboard ---
 
   function handleRegionKey(e: KeyboardEvent, region: EditRegion) {
-    const step = e.altKey ? KEY_STEP_LARGE : KEY_STEP;
-    const arrows: Record<string, [number, number]> = {
-      ArrowLeft: [-step, 0],
-      ArrowRight: [step, 0],
-      ArrowUp: [0, -step],
-      ArrowDown: [0, step],
-    };
-    const delta = arrows[e.key];
-    if (delta) {
+    const box = regionBoxForKey(region.box, e.key, { shift: e.shiftKey, alt: e.altKey });
+    if (box) {
       e.preventDefault();
       e.stopPropagation();
-      const [dx, dy] = delta;
-      setBox(region.id, e.shiftKey ? resizeBox(region.box, "se", dx, dy) : fitBox({ ...region.box, x: region.box.x + dx, y: region.box.y + dy }));
+      setBox(region.id, box);
     } else if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
       if (region.id === draft?.id) setDraft(null);
@@ -327,12 +285,10 @@ export function EditCard({
 
   function handleViewportKey(e: KeyboardEvent<HTMLDivElement>) {
     if (e.target !== e.currentTarget || zoom <= 1) return;
-    const step = 40;
-    const arrows: Record<string, [number, number]> = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
-    const delta = arrows[e.key];
-    if (!delta) return;
+    const next = panForKey(pan, e.key, zoom, size);
+    if (!next) return;
     e.preventDefault();
-    setPan(clampPan({ x: pan.x + delta[0], y: pan.y + delta[1] }, zoom, size));
+    setPan(next);
   }
 
   function handleFieldKey(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -367,31 +323,11 @@ export function EditCard({
   // --- Layout ---
 
   // The field sits above its region, or below it when there isn't room above.
-  const popover = selected && !hidden && size.width
-    ? (() => {
-        const left = selected.box.x * size.width * zoom + pan.x;
-        const top = selected.box.y * size.height * zoom + pan.y;
-        const bottom = (selected.box.y + selected.box.height) * size.height * zoom + pan.y;
-        // Below only when it clears the controls along the image's bottom edge.
-        const reserved = versions.length > 1 ? 100 : 56;
-        const fitsBelow = bottom + 8 + POPOVER_HEIGHT <= size.height - reserved;
-        const above = top > POPOVER_HEIGHT + 16 || !fitsBelow;
-        return {
-          left: clamp(left, 8, Math.max(8, size.width - POPOVER_WIDTH - 8)),
-          top: above ? Math.max(top - 8, POPOVER_HEIGHT + 8) : bottom + 8,
-          above,
-        };
-      })()
-    : null;
+  const popover = selected && !hidden && size.width ? regionPopoverPosition(selected.box, zoom, pan, size, versions.length > 1) : null;
 
   if (!version) return null;
 
-  // The starting width (from `scale`, else `width`), then fitted inside
-  // maxWidth × maxHeight with the image's shape kept.
-  // With neither, the card fills the box.
-  const baseWidth = scale != null && natural ? natural.width * scale : (width ?? maxWidth);
-  const heightCap = natural && natural.height > 0 ? (maxHeight * natural.width) / natural.height : Infinity;
-  const cardWidth = Math.round(Math.min(baseWidth, maxWidth, heightCap));
+  const cardWidth = editCardWidth(natural, { width, scale, maxWidth, maxHeight });
 
   return (
     <>
@@ -474,8 +410,8 @@ export function EditCard({
               className="chai-card-top-btn"
               aria-label="Zoom in"
               title="Zoom in"
-              disabled={!ready || zoomIndex >= ZOOM_STEPS.length - 1}
-              onClick={() => zoomTo(ZOOM_STEPS[zoomIndex + 1]!)}
+              disabled={!ready || zoomIndex >= EDIT_ZOOM_STEPS.length - 1}
+              onClick={() => zoomTo(EDIT_ZOOM_STEPS[zoomIndex + 1]!)}
             >
               <ZoomInIcon />
             </button>
@@ -488,7 +424,7 @@ export function EditCard({
               aria-label="Zoom out"
               title="Zoom out"
               disabled={!ready || zoomIndex <= 0}
-              onClick={() => zoomTo(ZOOM_STEPS[zoomIndex - 1]!)}
+              onClick={() => zoomTo(EDIT_ZOOM_STEPS[zoomIndex - 1]!)}
             >
               <ZoomOutIcon />
             </button>
@@ -613,12 +549,7 @@ export function EditCard({
   );
 }
 
-const POPOVER_WIDTH = 220;
-/** A typical height for the instruction panel (title row and a two-line field), for placing it. */
-const POPOVER_HEIGHT = 96;
-
-type DragKind = "move" | "nw" | "ne" | "sw" | "se";
-const CORNERS = ["nw", "ne", "sw", "se"] as const;
+type DragKind = "move" | RegionCorner;
 
 /** One region on the image: a button to select, move or delete it, its number badge, and corner handles while selected. */
 function RegionShape({
@@ -658,7 +589,7 @@ function RegionShape({
         {region.number}
       </span>
       {selected &&
-        CORNERS.map((corner) => (
+        REGION_CORNERS.map((corner) => (
           <span
             key={corner}
             className={`chai-edit-card__handle chai-edit-card__handle--${corner}`}
@@ -670,15 +601,7 @@ function RegionShape({
   );
 }
 
-function boxStyle(r: EditRegion): CSSProperties {
-  return {
-    left: `${r.box.x * 100}%`,
-    top: `${r.box.y * 100}%`,
-    width: `${r.box.width * 100}%`,
-    height: `${r.box.height * 100}%`,
-    "--chai-region-color": regionColor(r.number),
-  } as CSSProperties;
-}
+const boxStyle = (r: EditRegion) => regionBoxStyle(r) as CSSProperties;
 
 /** The full-size image in a modal dialog: focus moves in, Escape closes, and focus returns to Expand. */
 function ExpandedImage({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {

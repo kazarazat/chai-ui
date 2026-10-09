@@ -6,8 +6,8 @@ import {
   composerAttachMenuItems,
   composerView,
   enhanceRevealDurationMs,
-  regionColor,
 } from "./composer-view.js";
+import { regionColor } from "./region-edit.js";
 import type { ModelOption } from "./types.js";
 
 const IMAGE = { kind: "image" as const, label: "Image" };
