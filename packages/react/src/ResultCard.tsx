@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { ROUTING_MODEL_ID, type ModelOption, type Result } from "@chai-ui/core";
+import {
+  downloadFilename,
+  downloadMedia,
+  formatAspectRatio,
+  formatCost,
+  formatDuration,
+  formatTokens,
+  resultModelLabel,
+  shareMedia,
+  type ModelOption,
+  type Result,
+} from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
 import { CheckSymbolIcon, DownloadIcon, ExpandIcon, ShareIcon } from "./icons.js";
-import { downloadFilename, downloadMedia, shareMedia } from "./media-actions.js";
 import { PageSlide, usePageSlide } from "./page-slide.js";
 
 /**
@@ -18,38 +28,6 @@ import { PageSlide, usePageSlide } from "./page-slide.js";
  * only ever shows what came back from one prompt, one candidate at a time,
  * never a grid of separate prompts/history.
  */
-
-// --- Formatting ------------------------------------------------------------
-
-function formatDuration(ms: number | undefined): string | undefined {
-  if (ms == null) return undefined;
-  return `${(ms / 1000).toFixed(2)}s`;
-}
-
-function formatCost(usd: number | undefined): string | undefined {
-  if (usd == null) return undefined;
-  return `$${usd.toFixed(2)}`;
-}
-
-function formatTokens(total: number | undefined): string | undefined {
-  if (total == null) return undefined;
-  return `${total.toLocaleString()} tokens`;
-}
-
-function gcd(a: number, b: number): number {
-  return b === 0 ? a : gcd(b, a % b);
-}
-
-/** A real, exactly-reduced ratio (e.g. 1024×768 → "4:3", 1920×1080 → "16:9") from the media's own measured dimensions — not a guess at the nearest "named" ratio, so an unusual crop just shows its own honest (if less familiar) reduced fraction instead of a misleading rounded one. */
-function formatAspectRatio(width: number, height: number): string | undefined {
-  if (!width || !height) return undefined;
-  const w = Math.round(width);
-  const h = Math.round(height);
-  const divisor = gcd(w, h);
-  if (!divisor) return undefined;
-  return `${w / divisor}:${h / divisor}`;
-}
-
 
 // --- Public types ------------------------------------------------------------
 
@@ -207,10 +185,7 @@ export function ResultCard({
   if (!result) return null;
 
   const vote = getVote?.(result) ?? null;
-  const modelLabel =
-    result.modelId === ROUTING_MODEL_ID
-      ? "Choosing model…"
-      : (models?.find((m) => m.id === result.modelId)?.label ?? result.modelId);
+  const modelLabel = resultModelLabel(result, models);
   const duration = formatDuration(result.durationMs);
   const cost = formatCost(result.usage?.costUsd);
   const tokens = formatTokens(result.usage?.totalTokens);

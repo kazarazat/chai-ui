@@ -1,4 +1,7 @@
 export { default as ChaiProvider } from "./ChaiProvider.vue";
+export { default as ResultCard } from "./ResultCard.vue";
+export { default as Pagination } from "./primitives/Pagination.vue";
+export type { ResultCardMoreAction, ResultCardVote } from "./result-card/types.js";
 export * from "./reasoning.js";
 export * from "./useComposer.js";
 export * from "./useMediaAnalyzer.js";

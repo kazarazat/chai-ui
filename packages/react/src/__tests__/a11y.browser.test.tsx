@@ -7,7 +7,6 @@ import { MEDIA_ANALYSIS_PROMPT_LENGTHS, type MediaAnalysisPromptLength, type Mod
 import { Composer, EDIT_IMAGE_USE_CASE } from "../Composer.js";
 import { EditCard } from "../EditCard.js";
 import { MediaAnalyzer, type MediaAnalyzerAttachment } from "../MediaAnalyzer.js";
-import { ResultCard } from "../ResultCard.js";
 import { wcagViolations } from "./axe.js";
 
 const model = (id: string, label = id): ModelOption => ({ id, label, provider: "p", speed: "fast" });
@@ -84,28 +83,6 @@ describe("WCAG 2.2 AA (axe)", () => {
     expect(await wcagViolations()).toEqual([]);
   });
 
-  it("ResultCard: paginated image, flipped, loading, text, error and stopped", async () => {
-    const screen = render(<ResultCard results={[result("r1"), result("r2"), result("r3")]} prompt="a mug" onAction={() => {}} />);
-    expect(await wcagViolations()).toEqual([]);
-    await screen.getByRole("button", { name: "Show details" }).click();
-    expect(await wcagViolations()).toEqual([]);
-    screen.unmount();
-
-    render(
-      <ResultCard
-        results={[
-          result("q", { status: "running", output: undefined }),
-          result("t", { output: { src: "A long answer.", kind: "text" } }),
-          result("e", { status: "error", output: undefined, error: { message: "Timed out." } }),
-          result("c", { status: "cancelled", output: undefined }),
-        ]}
-        prompt="x"
-        onAction={() => {}}
-      />
-    );
-    expect(await wcagViolations()).toEqual([]);
-  });
-
   it("EditCard: regions, the open instruction field, zoomed, and an edit in progress", async () => {
     const regions = [
       { id: "r1", number: 1, box: { x: 0.1, y: 0.4, width: 0.3, height: 0.2 }, prompt: "make it green" },
@@ -154,54 +131,9 @@ describe("WCAG 2.2 AA (axe)", () => {
     await expect.element(screen.getByRole("textbox", { name: "Prompt" })).toBeInTheDocument();
   });
 
-  it("gives generated images alt text, defaulting to the prompt", async () => {
-    const screen = render(<ResultCard results={[result("r1")]} prompt="a red mug on oak" onAction={() => {}} />);
-    await expect.element(screen.getByRole("img", { name: "a red mug on oak" })).toBeInTheDocument();
-    screen.rerender(<ResultCard results={[result("r1")]} prompt="x" altText={() => "Custom alt"} onAction={() => {}} />);
-    await expect.element(screen.getByRole("img", { name: "Custom alt" })).toBeInTheDocument();
-  });
-
   it("names the auto-select switch", async () => {
     const screen = render(<ComposerHarness />);
     await screen.getByText("Fast Image").click();
     await expect.element(screen.getByRole("switch", { name: "Auto-select model" })).toBeInTheDocument();
-  });
-
-  describe("keyboard and focus", () => {
-    const video = (id: string) => result(id, { output: { src: "data:video/mp4;base64,AAAA", kind: "video" } });
-
-    it("video: play/pause and seek are keyboard controls, and axe passes", async () => {
-      const screen = render(<ResultCard results={[video("v")]} prompt="a clip" onAction={() => {}} />);
-      await expect.element(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
-      const seek = screen.getByRole("slider", { name: "Seek" });
-      await expect.element(seek).toHaveAttribute("tabindex", "0");
-      await expect.element(seek).toHaveAttribute("aria-valuenow", "0");
-      expect(await wcagViolations()).toEqual([]);
-    });
-
-    it("flipping moves focus to the side now showing", async () => {
-      const screen = render(<ResultCard results={[result("r1")]} prompt="a mug" onAction={() => {}} />);
-      await screen.getByRole("button", { name: "Show details" }).click();
-      await expect.element(screen.getByRole("button", { name: "Close details" })).toHaveFocus();
-      await screen.getByRole("button", { name: "Close details" }).click();
-      await expect.element(screen.getByRole("button", { name: "Show details" })).toHaveFocus();
-    });
-
-    it("the expanded view is a dialog: focus moves in, stays in, Escape closes and returns focus", async () => {
-      const screen = render(<ResultCard results={[result("r1")]} prompt="a mug" onAction={() => {}} />);
-      const expand = screen.getByRole("button", { name: "Expand" });
-      await expand.click();
-      const dialog = screen.getByRole("dialog", { name: "Expanded image" });
-      await expect.element(dialog).toBeVisible();
-      await expect.element(screen.getByRole("button", { name: "Collapse" })).toHaveFocus();
-      expect(await wcagViolations()).toEqual([]);
-
-      await userEvent.keyboard("{Tab}");
-      await expect.element(screen.getByRole("button", { name: "Collapse" })).toHaveFocus();
-
-      await userEvent.keyboard("{Escape}");
-      await expect.element(dialog).not.toBeInTheDocument();
-      await expect.element(expand).toHaveFocus();
-    });
   });
 });

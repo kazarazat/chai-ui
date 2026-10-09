@@ -11,3 +11,5 @@ export * from "./check-suggested-models.js";
 export * from "./reasoning.js";
 export * from "./composer.js";
 export * from "./media-analyzer.js";
+export * from "./media-actions.js";
+export * from "./result-format.js";

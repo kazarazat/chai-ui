@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // A packaging smoke test, not a demo: proves the installed tarballs resolve
 // and type-check. Offline: with no engine, useComposer uses mockEngine.
-// Grows into a Composer + ResultCard once those components ship.
+// Grows into a Composer once it ships.
 // (ChaiProvider here only proves it resolves: provide reaches children,
 // so this component's own useComposer doesn't see it.)
-import { ChaiProvider, useComposer } from "@chai-ui/vue";
+import { ChaiProvider, ResultCard, useComposer } from "@chai-ui/vue";
 
 const { run, submit } = useComposer();
 const image = { kind: "image" as const, label: "Image" };
@@ -27,6 +27,6 @@ const image = { kind: "image" as const, label: "Image" };
     >
       Generate
     </button>
-    <p>{{ run?.results[0]?.status ?? "idle" }}</p>
+    <ResultCard v-if="run" :results="run.results" :prompt="run.request.prompt" @action="() => {}" />
   </ChaiProvider>
 </template>

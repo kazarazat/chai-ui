@@ -19,5 +19,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Component tests run in a real browser (vitest.browser.config.ts).
+    exclude: ["**/node_modules/**", "**/dist/**", "**/*.browser.test.ts"],
   },
 });

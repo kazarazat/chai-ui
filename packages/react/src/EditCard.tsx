@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
-import { DEFAULT_MAX_REGIONS, type EditRegion, type EditVersion, type RegionBox } from "@chai-ui/core";
+import { DEFAULT_MAX_REGIONS, downloadFilename, downloadMedia, shareMedia, type EditRegion, type EditVersion, type RegionBox } from "@chai-ui/core";
 
 export type { EditVersion } from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
@@ -16,7 +16,6 @@ import {
   ZoomInIcon,
   ZoomOutIcon,
 } from "./icons.js";
-import { downloadFilename, downloadMedia, shareMedia } from "./media-actions.js";
 import { PageSlide, usePageSlide } from "./page-slide.js";
 import { regionColor } from "./regions.js";
 

@@ -2,7 +2,7 @@
   "name": "@chai-ui/vue",
   "private": true,
   "version": "0.6.0",
-  "description": "CHAI UI Vue components — smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, and the useComposer composable.",
+  "description": "CHAI UI Vue components \u2014 smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, and the useComposer composable.",
   "license": "MIT",
   "author": "kazarazat",
   "homepage": "https://chai-ui.com",
@@ -46,8 +46,10 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "lint": "echo \"(no lint configured yet)\"",
     "clean": "rimraf dist",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.include=src/**"
+    "test": "vitest run && vitest run --config vitest.browser.config.ts",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.include=src/** --coverage.reportsDirectory=coverage/unit && vitest run --config vitest.browser.config.ts --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.include=src/** --coverage.reportsDirectory=coverage/browser",
+    "test:unit": "vitest run",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "peerDependencies": {
     "vue": "^3.5.0"
@@ -60,13 +62,17 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/browser": "3.2.7",
     "@vitest/coverage-v8": "3.2.7",
     "@vue/test-utils": "^2.5.1",
+    "axe-core": "^4.13.0",
     "jsdom": "^25.0.1",
+    "playwright": "^1.63.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.6.3",
     "vite": "^7.3.6",
     "vitest": "^3.2.7",
+    "vitest-browser-vue": "^1.1.0",
     "vue": "^3.5.0",
     "vue-tsc": "^3.3.12"
   },

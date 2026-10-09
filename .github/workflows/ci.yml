@@ -42,7 +42,7 @@ jobs:
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: packages/core/coverage/lcov.info,packages/react/coverage/unit/lcov.info,packages/react/coverage/browser/lcov.info,packages/vue/coverage/lcov.info
+          files: packages/core/coverage/lcov.info,packages/react/coverage/unit/lcov.info,packages/react/coverage/browser/lcov.info,packages/vue/coverage/unit/lcov.info,packages/vue/coverage/browser/lcov.info
           fail_ci_if_error: false
 
   pack-test:
