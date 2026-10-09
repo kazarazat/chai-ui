@@ -8,3 +8,6 @@ export * from "./model-routing.js";
 export * from "./region-edit.js";
 export * from "./suggested-models.js";
 export * from "./check-suggested-models.js";
+export * from "./reasoning.js";
+export * from "./composer.js";
+export * from "./media-analyzer.js";

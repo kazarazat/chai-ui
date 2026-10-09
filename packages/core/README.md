@@ -14,9 +14,10 @@
 
 The headless core behind CHAI's components: the data types, the
 Request → Run → Result model a submitted prompt flows through, and the
-pluggable generation engines that actually call models. No framework, no
-rendering — `@chai-ui/react` is one binding of this; a future non-React
-binding would depend on this package the same way.
+pluggable generation engines that actually call models, and the components'
+behavior as small framework-free stores. No framework, no rendering:
+`@chai-ui/react` wraps the stores in hooks, and a Vue binding will wrap the
+same stores.
 
 ## Layout
 
@@ -29,6 +30,9 @@ binding would depend on this package the same way.
 - `suggested-models.ts` — the suggested model lists per use case (Fal for generation, OpenRouter for analysis), each model with its verified aspect ratios and Fal input format; `suggestedModels(useCase)`.
 - `check-suggested-models.ts` — `checkSuggestedModels()`: checks those lists against Fal's and OpenRouter's catalogs as they are today. No key, no model run.
 - `model-routing.ts` — auto-select: `buildModelRoutingPrompt`, `parseModelRoutingReply`, and `routeModel`, which falls back to the first listed model instead of throwing.
+- `reasoning.ts` — the reasoning engine and models a `ChaiProvider` shares: `createReasoning`, `pickReasoning`, `reasoningModelFor` and the suggested defaults.
+- `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance, cancel, and image edit versions. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
+- `media-analyzer.ts` — `createMediaAnalyzerStore`, what `useMediaAnalyzer` wraps.
 - `server/` — `createChaiHandler` and `toNodeHandler`, exported from `@chai-ui/core/server` (server-only).
 
 ## Suggested models, and checking them
