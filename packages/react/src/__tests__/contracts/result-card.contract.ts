@@ -100,6 +100,20 @@ export function resultCardContract(render: Render<ResultCardProps>) {
       await expect.element(stopped.getByText("Stopped")).toBeVisible();
     });
 
+    it("says something went wrong when a failure has no message", async () => {
+      const screen = render({ results: [result("e", { status: "error", output: undefined })], prompt: "x", onAction: () => {} });
+      await expect.element(screen.getByText("Something went wrong.")).toBeVisible();
+    });
+
+    it("plays an audio result with the browser's controls, and offers no Expand", async () => {
+      const screen = render({ results: [result("a", { output: { src: "data:audio/mpeg;base64,AA", kind: "audio" } })], prompt: "x", onAction: () => {} });
+      const audio = document.querySelector("audio")!;
+      expect(audio.controls).toBe(true);
+      expect(audio.getAttribute("src")).toBe("data:audio/mpeg;base64,AA");
+      await expect.element(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+      await expect.element(screen.getByRole("button", { name: "Expand" })).not.toBeInTheDocument();
+    });
+
     it("keeps a stopped stream's partial text", async () => {
       const screen = render(
         { results: [result("t", { status: "cancelled", output: { src: "Once upon a", kind: "text" } })], prompt: "x", onAction: () => {} }
@@ -289,6 +303,22 @@ export function resultCardContract(render: Render<ResultCardProps>) {
       expect(el.currentTime).toBeCloseTo(10, 0);
     });
 
+    it("picks up where the inline player was when expanded, still playing", async () => {
+      const screen = render({ results: [video()], prompt: "x", onAction: () => {} });
+      const inline = fakePlayback();
+      (screen.getByRole("button", { name: "Play" }).element() as HTMLElement).click();
+      inline.currentTime = 7;
+      inline.dispatchEvent(new Event("timeupdate"));
+      await screen.getByRole("button", { name: "Expand" }).click();
+
+      // The expanded player is a second <video>; it loads, then seeks and resumes.
+      const expanded = document.querySelector<HTMLVideoElement>('[role="dialog"] video')!;
+      const play = vi.spyOn(expanded, "play").mockResolvedValue(undefined);
+      expanded.dispatchEvent(new Event("loadedmetadata"));
+      expect(expanded.currentTime).toBe(7);
+      expect(play).toHaveBeenCalled();
+    });
+
     it("expands into the dialog with its own player", async () => {
       const screen = render({ results: [video()], prompt: "x", onAction: () => {} });
       await screen.getByRole("button", { name: "Expand" }).click();
@@ -311,48 +341,48 @@ export function resultCardContract(render: Render<ResultCardProps>) {
     });
   });
 
-    describe("ResultCard accessibility", () => {
-      it("passes axe: paginated image, flipped, loading, text, error and stopped", async () => {
-        const screen = render({ results: [result("r1"), result("r2"), result("r3")], prompt: "a mug", onAction: () => {} });
-        expect(await wcagViolations()).toEqual([]);
-        await screen.getByRole("button", { name: "Show details" }).click();
-        expect(await wcagViolations()).toEqual([]);
-        screen.unmount();
+  describe("ResultCard accessibility", () => {
+    it("passes axe: paginated image, flipped, loading, text, error and stopped", async () => {
+      const screen = render({ results: [result("r1"), result("r2"), result("r3")], prompt: "a mug", onAction: () => {} });
+      expect(await wcagViolations()).toEqual([]);
+      await screen.getByRole("button", { name: "Show details" }).click();
+      expect(await wcagViolations()).toEqual([]);
+      screen.unmount();
 
-        render({
-          results: [
-            result("q", { status: "running", output: undefined }),
-            result("t", { output: { src: "A long answer.", kind: "text" } }),
-            result("e", { status: "error", output: undefined, error: { message: "Timed out." } }),
-            result("c", { status: "cancelled", output: undefined }),
-          ],
-          prompt: "x",
-          onAction: () => {},
-        });
-        expect(await wcagViolations()).toEqual([]);
+      render({
+        results: [
+          result("q", { status: "running", output: undefined }),
+          result("t", { output: { src: "A long answer.", kind: "text" } }),
+          result("e", { status: "error", output: undefined, error: { message: "Timed out." } }),
+          result("c", { status: "cancelled", output: undefined }),
+        ],
+        prompt: "x",
+        onAction: () => {},
       });
-
-      it("gives generated images alt text, defaulting to the prompt", async () => {
-        const screen = render({ results: [result("r1")], prompt: "a red mug on oak", onAction: () => {} });
-        await expect.element(screen.getByRole("img", { name: "a red mug on oak" })).toBeInTheDocument();
-        screen.rerender({ results: [result("r1")], prompt: "x", altText: () => "Custom alt", onAction: () => {} });
-        await expect.element(screen.getByRole("img", { name: "Custom alt" })).toBeInTheDocument();
-      });
-
-      it("video: play/pause and seek are keyboard controls, and axe passes", async () => {
-        const screen = render({ results: [result("v", { output: { src: "data:video/mp4;base64,AAAA", kind: "video" } })], prompt: "a clip", onAction: () => {} });
-        await expect.element(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
-        const seek = screen.getByRole("slider", { name: "Seek" });
-        await expect.element(seek).toHaveAttribute("tabindex", "0");
-        await expect.element(seek).toHaveAttribute("aria-valuenow", "0");
-        expect(await wcagViolations()).toEqual([]);
-      });
-
-      it("the expanded dialog passes axe", async () => {
-        const screen = render({ results: [result("r1")], prompt: "a mug", onAction: () => {} });
-        await screen.getByRole("button", { name: "Expand" }).click();
-        await expect.element(screen.getByRole("dialog", { name: "Expanded image" })).toBeVisible();
-        expect(await wcagViolations()).toEqual([]);
-      });
+      expect(await wcagViolations()).toEqual([]);
     });
+
+    it("gives generated images alt text, defaulting to the prompt", async () => {
+      const screen = render({ results: [result("r1")], prompt: "a red mug on oak", onAction: () => {} });
+      await expect.element(screen.getByRole("img", { name: "a red mug on oak" })).toBeInTheDocument();
+      screen.rerender({ results: [result("r1")], prompt: "x", altText: () => "Custom alt", onAction: () => {} });
+      await expect.element(screen.getByRole("img", { name: "Custom alt" })).toBeInTheDocument();
+    });
+
+    it("video: play/pause and seek are keyboard controls, and axe passes", async () => {
+      const screen = render({ results: [result("v", { output: { src: "data:video/mp4;base64,AAAA", kind: "video" } })], prompt: "a clip", onAction: () => {} });
+      await expect.element(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+      const seek = screen.getByRole("slider", { name: "Seek" });
+      await expect.element(seek).toHaveAttribute("tabindex", "0");
+      await expect.element(seek).toHaveAttribute("aria-valuenow", "0");
+      expect(await wcagViolations()).toEqual([]);
+    });
+
+    it("the expanded dialog passes axe", async () => {
+      const screen = render({ results: [result("r1")], prompt: "a mug", onAction: () => {} });
+      await screen.getByRole("button", { name: "Expand" }).click();
+      await expect.element(screen.getByRole("dialog", { name: "Expanded image" })).toBeVisible();
+      expect(await wcagViolations()).toEqual([]);
+    });
+  });
 }

@@ -30,7 +30,8 @@ function setup(options: MediaAnalyzerOptions = {}, provided?: Reasoning) {
 describe("createMediaAnalyzerStore", () => {
   it("sends the instruction for the media's kind and length, with the media, and returns the prompt", async () => {
     const generate = vi.fn().mockResolvedValue({ src: "A red mug on oak.", kind: "text" });
-    const { result } = setup({}, reasoningWith(fakeEngine(generate)));
+    const onResult = vi.fn();
+    const { result } = setup({ onResult }, reasoningWith(fakeEngine(generate)));
 
     result.current.submit(payload({ promptLength: "detailed" }));
     expect(result.current.analyzing).toBe(true);
@@ -41,6 +42,7 @@ describe("createMediaAnalyzerStore", () => {
     expect(args.prompt).toBe(MEDIA_ANALYSIS_PROMPTS.image.detailed);
     expect(args.attachments).toHaveLength(1);
     expect(args.modelId).toBe(DEFAULT_REASONING_MODEL);
+    expect(onResult).toHaveBeenCalledWith("A red mug on oak.");
   });
 
   it("uses the concise instruction when no length was picked", async () => {
@@ -98,9 +100,11 @@ describe("createMediaAnalyzerStore", () => {
 
   it("errors without calling the engine when nothing analyzable is attached", () => {
     const generate = vi.fn();
-    const { result } = setup({}, reasoningWith(fakeEngine(generate)));
+    const onError = vi.fn();
+    const { result } = setup({ onError }, reasoningWith(fakeEngine(generate)));
     result.current.submit(payload({ attachments: [] }));
     expect(result.current.error).toMatch(/Attach an image, video, or audio/);
+    expect(onError).toHaveBeenCalledWith(result.current.error);
     expect(generate).not.toHaveBeenCalled();
   });
 
@@ -144,6 +148,25 @@ describe("createMediaAnalyzerStore", () => {
     expect(generate.mock.calls[0]![0].prompt).toMatch(/Pick the one model/);
     expect(onModelChange).toHaveBeenCalledWith("google/gemini-3.8-flash");
     expect(generate.mock.calls[1]![0].modelId).toBe("google/gemini-3.8-flash");
+  });
+
+  it("cancel while auto-select is choosing never runs the analysis", async () => {
+    let answer!: (v: { src: string; kind: "text" }) => void;
+    const generate = vi.fn(() => new Promise<{ src: string; kind: "text" }>((resolve) => (answer = resolve)));
+    const onModelChange = vi.fn();
+    const models = [
+      { id: "a", label: "A", provider: "p", speed: "fast" as const },
+      { id: "b", label: "B", provider: "p", speed: "fast" as const },
+    ];
+    const { result } = setup({ onModelChange }, reasoningWith(fakeEngine(generate)));
+    result.current.submit(payload({ autoSelectModel: true, models }));
+    await vi.waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
+    result.current.cancel();
+    answer({ src: "b", kind: "text" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(onModelChange).not.toHaveBeenCalled();
+    expect(result.current.analyzing).toBe(false);
   });
 
   it("cancel stops the call without showing an error", async () => {

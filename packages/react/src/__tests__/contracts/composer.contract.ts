@@ -94,6 +94,28 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(screen.getByText("Auto-select")).toBeVisible();
     });
 
+    it("turning auto-select off leaves the pick alone", async () => {
+      const onModelChange = vi.fn();
+      const screen = harness({ value: "a mug", useCase: IMAGE, models: MODELS, modelId: "fal/pro", autoSelectModel: true, onModelChange });
+      await screen.rerender({ autoSelectModel: false });
+      await expect.element(screen.getByText("Pro Image")).toBeVisible();
+      expect(onModelChange).not.toHaveBeenCalled();
+    });
+
+    it("removes a single picked use case from its chip with onClearUseCase", async () => {
+      const onClearUseCase = vi.fn();
+      const screen = harness({ useCase: IMAGE, onClearUseCase });
+      await screen.getByText("Image", { exact: true }).hover();
+      await screen.getByRole("button", { name: "Remove Image" }).click();
+      expect(onClearUseCase).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows a use-case chip without a remove button when it can't be removed", async () => {
+      const screen = harness({ useCase: IMAGE });
+      await expect.element(screen.getByText("Image", { exact: true })).toBeVisible();
+      await expect.element(screen.getByRole("button", { name: "Remove Image" })).not.toBeInTheDocument();
+    });
+
     it("shows a stop button while submitting, wired to onAbort", async () => {
       const onAbort = vi.fn();
       const screen = harness({ value: "a mug", submitting: true, onAbort });
@@ -348,7 +370,7 @@ export function composerContract(render: Render<ComposerProps>) {
       ]);
     });
 
-    it("offers the picked model's aspect ratios", async () => {
+    it("offers the picked model's aspect ratios, and shows the one picked", async () => {
       const onAspectRatioChange = vi.fn();
       const screen = harness({ useCase: IMAGE, models: [SQUARE_WIDE, WIDE_TALL], modelId: "fal/sw", onAspectRatioChange });
       await screen.getByText("Aspect ratio").click();
@@ -356,6 +378,8 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(screen.getByRole("button", { name: "9:16" })).not.toBeInTheDocument();
       await screen.getByRole("button", { name: "16:9" }).click();
       expect(onAspectRatioChange).toHaveBeenCalledWith("16:9");
+      await screen.rerender({ aspectRatio: "16:9" });
+      await expect.element(screen.getByRole("button", { name: "16:9", expanded: false })).toBeVisible();
     });
 
     it("with no model picked, offers only ratios every model takes, with the builder's labels", async () => {

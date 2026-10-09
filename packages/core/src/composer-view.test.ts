@@ -21,6 +21,7 @@ describe("composerView", () => {
     expect(empty.activeUseCases).toEqual([TEXT_USE_CASE]);
     expect(empty.isSubmitDisabled).toBe(true);
     expect(composerView({ value: "a mug" }).isSubmitDisabled).toBe(false);
+    expect(composerView({ value: "a mug" }).payload()).toMatchObject({ useCase: TEXT_USE_CASE, modelId: null, aspectRatio: null, regions: [] });
     expect(composerView({ value: "", attachments: [photo] }).isSubmitDisabled).toBe(false);
     // An app's own rule wins, except that retry always stays available.
     expect(composerView({ value: "", submitDisabled: false }).isSubmitDisabled).toBe(false);

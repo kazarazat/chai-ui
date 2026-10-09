@@ -164,19 +164,35 @@ export function mediaAnalyzerContract(render: Render<MediaAnalyzerProps>) {
       await expect.element(screen.getByRole("button", { name: "Remove two.mp4" })).not.toBeInTheDocument();
     });
 
+    it("names the prompt-length trigger once one is picked, and submits it", async () => {
+      const onSubmit = vi.fn();
+      const screen = harness({ attachments: [{ id: "a", src: "data:image/png;base64,x", kind: "image" }], onSubmit });
+      await screen.getByText("Prompt length").click();
+      // The row explains the length; the trigger keeps the short name.
+      await screen.getByRole("button", { name: "Detailed (long)" }).click();
+      await expect.element(screen.getByRole("button", { name: "Detailed", exact: true })).toBeVisible();
+      await screen.getByRole("button", { name: "Analyze media" }).click();
+      expect(onSubmit.mock.calls[0]![0].promptLength).toBe("detailed");
+    });
+
+    it("names an attachment by its kind when it has no file name", async () => {
+      const screen = harness({ attachments: [{ id: "a", src: "data:video/mp4;base64,x", kind: "video" }] });
+      await expect.element(screen.getByRole("button", { name: "Remove video" })).toBeInTheDocument();
+    });
+
     it("shows a failed analysis's message", async () => {
       const screen = harness({ submitError: "The analysis model timed out." });
       await expect.element(screen.getByRole("alert")).toHaveTextContent("The analysis model timed out.");
     });
   });
 
-    describe("MediaAnalyzer accessibility", () => {
-      it("passes axe empty and with an image", async () => {
-        harness();
-        expect(await wcagViolations()).toEqual([]);
-        await userEvent.upload(fileInput(), file("photo.png", "image/png"));
-        await expect.element(document.querySelector(".chai-media-analyzer__thumb")!).toBeInTheDocument();
-        expect(await wcagViolations()).toEqual([]);
-      });
+  describe("MediaAnalyzer accessibility", () => {
+    it("passes axe empty and with an image", async () => {
+      harness();
+      expect(await wcagViolations()).toEqual([]);
+      await userEvent.upload(fileInput(), file("photo.png", "image/png"));
+      await expect.element(document.querySelector(".chai-media-analyzer__thumb")!).toBeInTheDocument();
+      expect(await wcagViolations()).toEqual([]);
     });
+  });
 }

@@ -166,6 +166,16 @@ export function editCardContract(render: Render<EditCardProps>) {
       await expect.element(screen.getByRole("button", { name: /^Region 1/ })).toBeInTheDocument();
     });
 
+    it("can hide a version's own regions even with no new ones", async () => {
+      const edited: EditVersion = { id: "e1", src: original.src, status: "done", regions: [region(1, "x")] };
+      const screen = harness({ versions: [original, edited], activeVersion: 1 });
+      await expect.element(screen.getByRole("button", { name: "Clear regions" })).toBeDisabled();
+      await screen.getByRole("button", { name: "Hide regions" }).click();
+      expect(document.querySelector(".chai-edit-card__region--applied")).toBeNull();
+      await screen.getByRole("button", { name: "Show regions" }).click();
+      expect(document.querySelector(".chai-edit-card__region--applied")).not.toBeNull();
+    });
+
     it("stops new regions at the model's cap", async () => {
       const screen = harness({ regions: [wide(1, "x"), wide(2, "y")], maxRegions: 2 });
       await expect.element(screen.getByRole("button", { name: "New region" })).toBeDisabled();
@@ -274,6 +284,18 @@ export function editCardContract(render: Render<EditCardProps>) {
       expect(onRegions.mock.lastCall![0][0].box.x).toBeLessThan(resized.x);
     });
 
+    it("ignores a drag with any button but the main one", async () => {
+      const onRegions = vi.fn();
+      const screen = harness({ regions: [region(1, "x")], onRegionsChange: onRegions });
+      await measured();
+      const body = screen.getByRole("button", { name: /^Region 1/ }).element();
+      const r = body.getBoundingClientRect();
+      body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 2, pointerId: 1, clientX: r.left + 5, clientY: r.top + 5 }));
+      pointer(body, "pointermove", r.left + 60, r.top + 60);
+      pointer(body, "pointerup", r.left + 60, r.top + 60);
+      expect(onRegions).not.toHaveBeenCalled();
+    });
+
     it("drags the zoomed image to pan, and a plain click closes the open field", async () => {
       const screen = harness({ regions: [region(1, "x")] });
       await screen.getByRole("button", { name: /^Region 1/ }).click();
@@ -330,27 +352,38 @@ export function editCardContract(render: Render<EditCardProps>) {
       await expect.element(screen.getByText("Timed out.")).toBeVisible();
     });
 
+    it("says something went wrong when a failed edit has no message", async () => {
+      const screen = render({
+        versions: [original, { id: "e", status: "error", regions: [] }],
+        activeVersion: 1,
+        onActiveVersionChange: () => {},
+        regions: [],
+        onRegionsChange: () => {},
+      });
+      await expect.element(screen.getByText("Something went wrong.")).toBeVisible();
+    });
+
     it("renders nothing without versions", () => {
       render({ versions: [], activeVersion: 0, onActiveVersionChange: () => {}, regions: [], onRegionsChange: () => {} });
       expect(document.querySelector(".chai-edit-card")).toBeNull();
     });
   });
 
-    describe("EditCard accessibility", () => {
-      it("passes axe: regions, the open instruction field, zoomed, and an edit in progress", async () => {
-        const regions = [
-          { id: "r1", number: 1, box: { x: 0.1, y: 0.4, width: 0.3, height: 0.2 }, prompt: "make it green" },
-          { id: "r2", number: 2, box: { x: 0.5, y: 0.5, width: 0.3, height: 0.2 }, prompt: "" },
-        ];
-        const versions: EditVersion[] = [original, { id: "e1", from: original.src, status: "running", regions }];
-        const screen = render({ versions, activeVersion: 0, onActiveVersionChange: () => {}, regions, onRegionsChange: () => {} });
-        expect(await wcagViolations()).toEqual([]);
-        await screen.getByRole("button", { name: /^Region 1/ }).click();
-        expect(await wcagViolations()).toEqual([]);
-        await screen.getByRole("button", { name: "Zoom in" }).click();
-        expect(await wcagViolations()).toEqual([]);
-        await screen.rerender({ versions, activeVersion: 1, onActiveVersionChange: () => {}, regions: [], onRegionsChange: () => {} });
-        expect(await wcagViolations()).toEqual([]);
-      });
+  describe("EditCard accessibility", () => {
+    it("passes axe: regions, the open instruction field, zoomed, and an edit in progress", async () => {
+      const regions = [
+        { id: "r1", number: 1, box: { x: 0.1, y: 0.4, width: 0.3, height: 0.2 }, prompt: "make it green" },
+        { id: "r2", number: 2, box: { x: 0.5, y: 0.5, width: 0.3, height: 0.2 }, prompt: "" },
+      ];
+      const versions: EditVersion[] = [original, { id: "e1", from: original.src, status: "running", regions }];
+      const screen = render({ versions, activeVersion: 0, onActiveVersionChange: () => {}, regions, onRegionsChange: () => {} });
+      expect(await wcagViolations()).toEqual([]);
+      await screen.getByRole("button", { name: /^Region 1/ }).click();
+      expect(await wcagViolations()).toEqual([]);
+      await screen.getByRole("button", { name: "Zoom in" }).click();
+      expect(await wcagViolations()).toEqual([]);
+      await screen.rerender({ versions, activeVersion: 1, onActiveVersionChange: () => {}, regions: [], onRegionsChange: () => {} });
+      expect(await wcagViolations()).toEqual([]);
     });
+  });
 }
