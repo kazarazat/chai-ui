@@ -1,5 +1,18 @@
 # @chai-ui/core
 
+## 0.7.0
+
+### Minor Changes
+
+- 1f0219b: New: `@chai-ui/vue`, the same components for Vue 3.5 or later (Nuxt included): `Composer`, `MediaAnalyzer`, `ResultCard`, `EditCard`, `ChaiProvider`, the `useComposer` and `useMediaAnalyzer` composables, and the `Toggle`, `SearchMenu` and `Pagination` building blocks. It uses `v-model` for every controlled value and events for the rest, and runs the same browser test suite as `@chai-ui/react`, including the WCAG 2.2 AA checks. `DESIGN.md` now covers both packages.
+
+### Patch Changes
+
+- 338dc24: The Composer's derived state (active use cases, model sections and picks, offered aspect ratios, submit rules, placeholder and submit payload) is now `composerView()` in `@chai-ui/core`, with `composerAttachMenuItems`, `composerAttachmentsFromFiles`, `regionColor` and the Enhance reveal timing alongside it. React's `Composer` uses them and behaves as before; picked files are now added in the order picked rather than the order they finish reading.
+- f785993: EditCard's geometry (fitting, moving and resizing region boxes, zoom and pan, the instruction field's placement and the card's width) now lives in `@chai-ui/core`, with `regionColor` alongside the other region helpers. React's `EditCard` uses it and behaves as before.
+- 0dc5c92: MediaAnalyzer's attachment rules and file reading (`nextMediaAnalyzerAttachments`, `isMediaAnalyzerAtCap`, `DEFAULT_MAX_ATTACHMENTS_BY_KIND`, `readMediaFiles`, `replacedNote`, `mediaAnalyzerModelSections`) now live in `@chai-ui/core`; `@chai-ui/react` still exports the first three. No change to how the React component behaves.
+- ead952e: ResultCard's download, share and formatting helpers (`downloadMedia`, `shareMedia`, `downloadFilename`, `formatDuration`, `formatCost`, `formatTokens`, `formatAspectRatio`, `resultModelLabel`) now live in `@chai-ui/core`, so every framework binding shows results the same way. No change to how the React components behave.
+
 ## 0.6.1
 
 ### Patch Changes
