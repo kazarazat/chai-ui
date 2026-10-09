@@ -191,7 +191,8 @@ export function mediaAnalyzerContract(render: Render<MediaAnalyzerProps>) {
       harness();
       expect(await wcagViolations()).toEqual([]);
       await userEvent.upload(fileInput(), file("photo.png", "image/png"));
-      await expect.element(document.querySelector(".chai-media-analyzer__thumb")!).toBeInTheDocument();
+      // Polled: the thumbnail appears once the file is read and the parent re-renders.
+      await expect.poll(() => document.querySelector(".chai-media-analyzer__thumb")).not.toBeNull();
       expect(await wcagViolations()).toEqual([]);
     });
   });
