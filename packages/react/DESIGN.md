@@ -1,7 +1,8 @@
 # CHAI UI — DESIGN.md
 
-The rules for building with `@chai-ui/react`, written for the people and
-the coding agents who integrate it. The API reference is the JSDoc on each
+The rules for building with `@chai-ui/react` or `@chai-ui/vue`, written for
+the people and the coding agents who integrate them. Both packages ship
+this file. It uses React's names; "In Vue" below maps them. The API reference is the JSDoc on each
 component's props and the docs site's `llms.txt`. This file covers how to
 use the pieces correctly: which component to pick, which tokens to use,
 which states you get for free, and what not to build.
@@ -28,7 +29,8 @@ use these names: `Results`, `Compare`, `ModelPicker`,
 ## 2. Integration rules
 
 1. **Load the CSS in order:** `@chai-ui/tokens/css` first, then
-   `@chai-ui/react/style.css`. Component styles read the token variables.
+   `@chai-ui/react/style.css` (or `@chai-ui/vue/style.css`). Component
+   styles read the token variables.
 2. **Everything is controlled.** Every value comes in as a prop and every
    change comes out as a callback (`value` / `onChange`). Keep the state in
    your app.
@@ -58,6 +60,20 @@ use these names: `Results`, `Compare`, `ModelPicker`,
 8. **Only show what's real.** Show cost only when the engine reports it.
    Don't show model rankings or leaderboard positions you can't keep up to
    date. Don't show a control the selected model can't honor.
+
+### In Vue
+
+The same components, rules and behavior, with Vue's names:
+
+- `value` / `onChange` is `v-model`; every other `x` / `onXChange` pair is
+  `v-model:x` (`v-model:attachments`, `v-model:model-id`, `v-model:regions`, …).
+- Other callbacks are events: `@submit`, `@action`, `@enhance`, `@abort`.
+  Rule 4 holds: a control that needs a callback shows only with its
+  listener (`@enhance` for the optimize button, `@abort` for stop,
+  `@update:model-id` for the Model menu).
+- `useComposer` and `useMediaAnalyzer` are composables returning refs.
+  Pass a getter for options that change: `useComposer(() => ({ engine, editImage: image.value }))`.
+- `ChaiProvider` is a component with the same props.
 
 ## 3. Material components, and where Chai uses its own
 
