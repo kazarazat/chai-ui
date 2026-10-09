@@ -50,15 +50,33 @@ describe("composerView", () => {
     expect(composerView({ value: "x", submitting: true, onAbort: () => {} }).showStop).toBe(true);
   });
 
-  it("picks the first suggested model when the app gives none, and drops picks not in the list", () => {
-    const suggested = composerView({ value: "x", useCase: IMAGE });
-    expect(suggested.pickedModelIds).toHaveLength(1);
-    const gone = composerView({ value: "x", useCase: IMAGE, models: [model("a")], modelId: "gone" });
-    expect(gone.pickedModelIds).toEqual([]);
-    expect(gone.modelTriggerLabel).toBe("Select models");
-    expect(composerView({ value: "x", useCase: IMAGE, models: [], modelId: "kept" }).pickedModelIds).toEqual(["kept"]);
-    expect(composerView({ value: "x", useCase: IMAGE, models: [model("a")], autoSelectModel: true }).modelTriggerLabel).toBe("Auto-select");
+  it("never picks a model for the person when there's a Model menu, and needs one to submit", () => {
+    const menu = { value: "a mug", useCase: IMAGE, onModelChange: () => {} };
+    const unpicked = composerView(menu);
+    expect(unpicked.pickedModelIds).toEqual([]);
+    expect(unpicked.modelTriggerLabel).toBe("Select model");
+    expect(unpicked.isSubmitDisabled).toBe(true);
+    // A pick, or auto-select, makes it ready.
+    const firstSuggested = unpicked.modelSections[0]!.options[0]!.id;
+    expect(composerView({ ...menu, modelId: firstSuggested }).isSubmitDisabled).toBe(false);
+    const auto = composerView({ ...menu, autoSelectModel: true });
+    expect([auto.isSubmitDisabled, auto.modelTriggerLabel]).toEqual([false, "Auto-select"]);
+    expect(composerView({ ...menu, multiSelectModels: true, onModelIdsChange: () => {} }).modelTriggerLabel).toBe("Select models");
   });
+
+  it("with no Model menu, runs a suggested list's first model, and passes an app's pick through", () => {
+    const noMenu = composerView({ value: "a mug", useCase: IMAGE });
+    expect(noMenu.pickedModelIds).toHaveLength(1);
+    expect(noMenu.isSubmitDisabled).toBe(false);
+    expect(composerView({ value: "x", useCase: IMAGE, models: [], modelId: "kept" }).pickedModelIds).toEqual(["kept"]);
+  });
+
+  it("drops a pick that isn't in the current list", () => {
+    const gone = composerView({ value: "x", useCase: IMAGE, models: [model("a")], modelId: "gone", onModelChange: () => {} });
+    expect(gone.pickedModelIds).toEqual([]);
+    expect(gone.payload().modelId).toBeNull();
+  });
+
 
   it("offers the model menu only with a handler for the picks", () => {
     expect(composerView({ value: "x", useCase: IMAGE }).canPickModel).toBe(false);

@@ -80,9 +80,11 @@ capability beyond the default file picker. Every other control is additive:
   onAttachMenuSelect={(action) => {
     if (action === "create-image") setUseCase({ kind: "image", label: "Image" });
   }}
-  // The Model menu lists Chai's suggested models for the use case, with the
-  // first picked, unless you pass your own `models` (see "Suggested models").
-  // It shows only with `onModelChange`; without it the first model still runs.
+  // The Model menu lists Chai's suggested models for the use case, unless
+  // you pass your own `models` (see "Suggested models"). Nothing is picked
+  // for the person: submit waits until they pick a model or turn on
+  // auto-select. Without `onModelChange` there's no menu, and the list's
+  // first model runs.
   modelId={modelId}
   onModelChange={setModelId}
   // An "Auto-select model" switch appears at the top of the model menu so
@@ -220,8 +222,9 @@ pass none:
 | Media analysis, per media kind | `SUGGESTED_ANALYSIS_MODELS` | OpenRouter |
 
 - **Composer** offers the list for the current use case
-  (`suggestedModels(useCase)`), with its first model picked until the person
-  picks another. **MediaAnalyzer** offers the analysis lists.
+  (`suggestedModels(useCase)`). It never picks for the person: with a Model
+  menu, submit waits for a pick or auto-select; with no menu, the list's
+  first model runs. **MediaAnalyzer** offers the analysis lists.
 - **Your own list wins.** Pass `models` (or `modelsByKind`) to replace a
   list, or `[]` for no Model menu. Nothing is required.
 - **Each suggested model knows its inputs**: its aspect ratios, and for Fal
@@ -360,7 +363,7 @@ import { Composer, EditCard, EDIT_IMAGE_USE_CASE, SUGGESTED_EDIT_MODELS, useComp
 
 const editImage = useCase?.edit ? (attachments.find((a) => a.kind === "image") ?? null) : null;
 const { run, submit, edit } = useComposer({ engine: createFalEngine({ outputKind: "image" }), editImage });
-// Unpicked, the first suggested edit model (Flux 3 Image) runs.
+// The pick decides how many regions it takes (Flux 3 Image's until one is picked).
 const model = SUGGESTED_EDIT_MODELS.find((m) => m.id === modelId) ?? SUGGESTED_EDIT_MODELS[0];
 
 {edit && <EditCard {...edit} maxRegions={model?.maxRegions} />}

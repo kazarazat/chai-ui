@@ -73,9 +73,10 @@ export interface ComposerProps {
   onModelIdsChange?: (ids: string[]) => void;
   /**
    * Models for the current use case. Leave it out and Composer offers Chai's
-   * suggested Fal models for the use case (`suggestedModels`), with the
-   * first one picked until the person picks another. Pass a list to use
-   * your own; pass `[]` for no Model menu.
+   * suggested Fal models for the use case (`suggestedModels`). Nothing is
+   * picked for the person: with a Model menu, submit waits until they pick
+   * a model or turn on auto-select; with no menu (no `onModelChange`), the
+   * list's first model runs. Pass a list to use your own; `[]` for no menu.
    */
   models?: ModelOption[];
   modelId?: string | null;
