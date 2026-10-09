@@ -1,5 +1,6 @@
 /**
- * Download and share for a piece of generated media, shared by the cards.
+ * Download and share for a piece of generated media, shared by the cards in
+ * every framework binding.
  *
  * A plain `<a download href={remoteUrl}>` only forces a download for a
  * same-origin or `blob:`/`data:` URL; for a cross-origin CDN URL (what a

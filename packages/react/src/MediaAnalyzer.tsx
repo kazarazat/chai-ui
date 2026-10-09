@@ -2,14 +2,28 @@ import { createComponent } from "@lit/react";
 import * as React from "react";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { MdFab } from "@material/web/fab/fab.js";
-import { SUGGESTED_ANALYSIS_MODELS } from "@chai-ui/core";
-import type { DroppedMedia, ModelOption, MediaKind } from "@chai-ui/core";
-import type { MediaAnalysisPromptLength } from "@chai-ui/core";
-import { SearchMenu, type SearchMenuSection } from "./primitives/SearchMenu.js";
+import {
+  DEFAULT_MAX_ATTACHMENTS_BY_KIND,
+  isMediaAnalyzerAtCap,
+  mediaAnalyzerModelSections,
+  nextMediaAnalyzerAttachments,
+  PROMPT_LENGTH_HINT,
+  readMediaFiles,
+  replacedNote,
+  SUGGESTED_ANALYSIS_MODELS,
+} from "@chai-ui/core";
+import type { ModelOption, MediaKind, MediaAnalysisPromptLength } from "@chai-ui/core";
+import { SearchMenu } from "./primitives/SearchMenu.js";
 import { StopIcon } from "./icons.js";
 import type { MediaAnalyzerAttachment, MediaAnalyzerSubmitPayload } from "@chai-ui/core";
 
-export type { MediaAnalyzerAttachment, MediaAnalyzerSubmitPayload } from "@chai-ui/core";
+export {
+  DEFAULT_MAX_ATTACHMENTS_BY_KIND,
+  isMediaAnalyzerAtCap,
+  nextMediaAnalyzerAttachments,
+  type MediaAnalyzerAttachment,
+  type MediaAnalyzerSubmitPayload,
+} from "@chai-ui/core";
 
 /** See primitives/Toggle.tsx for why `createComponent` is used instead of raw JSX on custom-element tags. */
 const MdFabElement = createComponent({
@@ -18,85 +32,6 @@ const MdFabElement = createComponent({
   elementClass: MdFab,
   events: { onClick: "click" },
 });
-
-const ACCEPTED_KINDS: MediaKind[] = ["image", "video", "audio"];
-
-function detectKind(file: File): MediaKind | undefined {
-  const prefix = file.type.split("/")[0];
-  return ACCEPTED_KINDS.find((k) => k === prefix);
-}
-
-function nextAttachmentId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-/**
- * How many attachments of each kind an analysis can hold at once. Image
- * defaults to 5 (a sequence/series reads as one analysis); video and audio
- * default to 1 — there's no equivalent "a few short clips" case for either,
- * and multiple would each need their own kind-specific model/template
- * anyway.  Only one *kind* is ever active per analysis (see
- * `nextMediaAnalyzerAttachments`'s own comment) — these caps only bound how
- * many of that one kind can pile up before the drop zone stops accepting
- * more.
- */
-export const DEFAULT_MAX_ATTACHMENTS_BY_KIND: Record<MediaKind, number> = {
-  image: 5,
-  video: 1,
-  audio: 1,
-  // `MediaKind`'s fourth member — text is output, never what a drop zone
-  // itself detects (`detectKind` only ever
-  // returns image/video/audio) — unreachable here, present only so this
-  // stays a total map over the real type instead of a partial one.
-  text: 0,
-};
-
-/**
- * Applies one newly-read file to the current attachment list (§3 principle
- * 3, "derive intent, don't demand it" — extended here to multiple files of
- * one kind). Only one media *kind* exists per analysis: dropping a kind
- * that doesn't match what's already attached replaces the whole list
- * (reference: the design spec — "there can only be one media
- * type per analysis... the video thumbnail will replace the image"), never
- * merges the two. Within one kind, video/audio are single-slot (a second
- * drop replaces the first — there's nothing to "add" to), while image fills
- * up to `max` and then silently stops accepting more of the same kind (the
- * drop zone's own disabled-looking state is what explains why, not a
- * rejected-file dialog for something this low-stakes).
- */
-export function nextMediaAnalyzerAttachments(
-  current: MediaAnalyzerAttachment[],
-  incoming: DroppedMedia,
-  maxByKind: Record<MediaKind, number> = DEFAULT_MAX_ATTACHMENTS_BY_KIND
-): MediaAnalyzerAttachment[] {
-  const existingKind = current[0]?.kind;
-  const withId: MediaAnalyzerAttachment = { ...incoming, id: nextAttachmentId() };
-  if (!existingKind || existingKind !== incoming.kind) return [withId];
-  if (incoming.kind === "image") {
-    if (current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image)) return current;
-    return [...current, withId];
-  }
-  // video/audio: single slot, a same-kind drop always replaces it.
-  return [withId];
-}
-
-/**
- * True once a same-kind drop would actually be rejected outright, i.e. the
- * drop zone should show its disabled "maximum added" look. Only ever true
- * for image: video/audio are single-slot, so a same-kind drop *always*
- * succeeds by replacing the one already there (see
- * `nextMediaAnalyzerAttachments`'s own comment) — there's no "blocked"
- * state to show for either, just the normal "ready to replace" one.
- */
-export function isMediaAnalyzerAtCap(
-  current: MediaAnalyzerAttachment[],
-  maxByKind: Record<MediaKind, number> = DEFAULT_MAX_ATTACHMENTS_BY_KIND
-): boolean {
-  if (current[0]?.kind !== "image") return false;
-  return current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image);
-}
 
 export interface MediaAnalyzerProps {
   attachments: MediaAnalyzerAttachment[];
@@ -153,20 +88,6 @@ export interface MediaAnalyzerProps {
   onAbort?: () => void;
 }
 
-const KIND_LABEL: Record<MediaKind, string> = {
-  image: "Image",
-  video: "Video",
-  audio: "Audio",
-  text: "Text", // unreachable — see DEFAULT_MAX_ATTACHMENTS_BY_KIND's own comment
-};
-
-/** Clarifies what "Terse"/"Concise"/"Detailed" actually mean in the "Prompt length" menu's own option rows — design spec, not core prompt data (it's UI copy, not sent to any model), so it lives here rather than in media-analysis-to-prompt.prompts.ts. */
-const PROMPT_LENGTH_HINT: Record<MediaAnalysisPromptLength, string> = {
-  terse: "short",
-  concise: "moderate",
-  detailed: "long",
-};
-
 export function MediaAnalyzer({
   attachments,
   onAttachmentsChange,
@@ -202,69 +123,23 @@ export function MediaAnalyzer({
   const [replaced, setReplaced] = useState<{ note: string; for: MediaAnalyzerAttachment[] } | null>(null);
   const isDragActive = dragDepth > 0;
 
-  /**
-   * Reads every file first, then folds each resolved one through
-   * `nextMediaAnalyzerAttachments` in drop order and commits a single final
-   * result — not one `onAttachmentsChange` call per file as each
-   * `FileReader` happens to finish. Multiple files read concurrently
-   * resolve in whatever order the browser gets to them; a call per file
-   * would have each one apply itself on top of the *pre-drop* `attachments`
-   * closure instead of the previous file's own result, so dropping 3 images
-   * at once onto an empty zone could easily end up with just 1 attached
-   * instead of 3 (last write wins) — same failure shape as Composer.tsx's
-   * own `handleFilesSelected`, which this mirrors for exactly that reason.
-   */
-  function handleFiles(fileList: FileList | null) {
+  /** Reads every file first, then applies them in drop order and commits once. */
+  async function handleFiles(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
-    const files = Array.from(fileList);
-    let pending = files.length;
-    const resolved: DroppedMedia[] = [];
-    const settle = () => {
-      pending -= 1;
-      if (pending === 0 && resolved.length > 0) {
-        const next = resolved.reduce(
-          (acc, media) => nextMediaAnalyzerAttachments(acc, media, maxAttachmentsByKind),
-          attachments
-        );
-        const removed = attachments.filter((a) => !next.some((n) => n.id === a.id));
-        const added = next.filter((n) => !attachments.some((a) => a.id === n.id));
-        setReplaced(removed.length > 0 && added.length > 0 ? { note: replacedNote(removed, added), for: next } : null);
-        onAttachmentsChange(next);
-      }
-    };
-    files.forEach((file) => {
-      const fileKind = detectKind(file);
-      if (!fileKind) {
-        onUnsupportedFile?.(file.name);
-        settle();
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        resolved.push({ src: String(reader.result), kind: fileKind, name: file.name, size: file.size });
-        settle();
-      };
-      reader.onerror = () => {
-        onUnsupportedFile?.(file.name);
-        settle();
-      };
-      reader.readAsDataURL(file);
-    });
+    const { media, unsupported } = await readMediaFiles(fileList);
+    unsupported.forEach((name) => onUnsupportedFile?.(name));
+    if (media.length === 0) return;
+    const next = media.reduce((acc, m) => nextMediaAnalyzerAttachments(acc, m, maxAttachmentsByKind), attachments);
+    const note = replacedNote(attachments, next);
+    setReplaced(note ? { note, for: next } : null);
+    onAttachmentsChange(next);
   }
 
   function handleRemove(id: string) {
     onAttachmentsChange(attachments.filter((a) => a.id !== id));
   }
 
-  const modelOptions: { id: string; label: string }[] = kind
-    ? (modelsByKind[kind] ?? models).map((m) => ({ id: m.id, label: m.label }))
-    : [];
-  const sections: SearchMenuSection<{ id: string; label: string }>[] = kind
-    ? [{ label: KIND_LABEL[kind], options: modelOptions }]
-    : (["image", "video", "audio"] as const).map((k) => ({
-        label: KIND_LABEL[k],
-        options: (modelsByKind[k] ?? []).map((m) => ({ id: m.id, label: m.label })),
-      }));
+  const sections = mediaAnalyzerModelSections(kind, modelsByKind, models);
   // Looked up across every section (not just `modelOptions`, which is empty
   // until a kind is known) — a model picked while the menu still shows all
   // three kinds' sections (no attachment yet) must still resolve to a real
@@ -459,14 +334,6 @@ function MediaAnalyzerThumbnail({
 // --- Icons ---------------------------------------------------------------
 // Same "trace and inline as a currentColor component" convention Composer.tsx
 // documents — icons aren't shared across files yet in this codebase.
-
-/** "Replaced 2 images with clip.wav." */
-function replacedNote(removed: MediaAnalyzerAttachment[], added: MediaAnalyzerAttachment[]): string {
-  const name = (a: MediaAnalyzerAttachment) => a.name ?? KIND_LABEL[a.kind].toLowerCase();
-  const describe = (list: MediaAnalyzerAttachment[]) =>
-    list.length === 1 ? name(list[0]!) : `${list.length} ${KIND_LABEL[list[0]!.kind].toLowerCase()}s`;
-  return `Replaced ${describe(removed)} with ${describe(added)}.`;
-}
 
 function ArrowForwardIcon() {
   return (

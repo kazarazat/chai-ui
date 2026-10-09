@@ -3,15 +3,24 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
-import { deriveGenerationUseCase, suggestedModels, TEXT_USE_CASE } from "@chai-ui/core";
-import type { DroppedMedia, EditRegion, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
+import {
+  composerAttachmentsFromFiles,
+  composerAttachMenuItems,
+  composerView,
+  enhanceRevealDurationMs,
+  MAX_ANIMATE_ENHANCE_LENGTH,
+  regionColor,
+  TEXT_USE_CASE,
+  type ComposerAttachMenuAction,
+} from "@chai-ui/core";
+import type { EditRegion, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
-import { regionColor } from "./regions.js";
-import type { ComposerAttachment, ComposerSelection, ComposerSubmitPayload, ComposerUseCase } from "@chai-ui/core";
+import type { ComposerAttachment, ComposerSubmitPayload, ComposerUseCase } from "@chai-ui/core";
 
 export {
   EDIT_IMAGE_USE_CASE,
   TEXT_USE_CASE,
+  type ComposerAttachMenuAction,
   type ComposerAttachment,
   type ComposerSelection,
   type ComposerSubmitPayload,
@@ -25,38 +34,6 @@ const MdFabElement = createComponent({
   elementClass: MdFab,
   events: { onClick: "click" },
 });
-
-const ACCEPTED_KINDS: MediaKind[] = ["image", "video", "audio"];
-
-function detectKind(file: File): MediaKind | undefined {
-  const prefix = file.type.split("/")[0];
-  return ACCEPTED_KINDS.find((k) => k === prefix);
-}
-
-// Past this length the rewritten prompt just appears instantly — a
-// multi-hundred-character reveal reads as sluggish, not delightful, and a
-// long prompt is exactly the case where a person wants the result now, not
-// a show. Picked to comfortably cover a typical Enhance rewrite (usually a
-// sentence or two of added detail) while bailing out before it doesn't.
-const MAX_ANIMATE_ENHANCE_LENGTH = 260;
-
-// Time-driven (see the `requestAnimationFrame` loop that uses this), not
-// count-driven — a fixed ms-per-character reveal on a slow frame would
-// drift or stall instead of just finishing a beat later. Capped on both
-// ends: a two-word rewrite shouldn't take as long as a five-word one to
-// feel intentional, and even a near-max-length one should still resolve
-// under a second.
-function enhanceRevealDurationMs(charCount: number): number {
-  return Math.min(900, Math.max(300, charCount * 6));
-}
-
-function nextAttachmentId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-export type ComposerAttachMenuAction = "add-media" | "create-image" | "create-video" | "edit-media";
 
 export interface ComposerProps {
   /** The prompt text. Controlled — Composer owns no text state of its own. */
@@ -239,92 +216,36 @@ export function Composer({
   onRegionsChange,
   disabled = false,
 }: ComposerProps) {
-  // What the person picked, and what actually runs: with nothing picked,
-  // the builder's default use case (a text request unless they chose
-  // otherwise), so a typed prompt always goes somewhere.
-  const pickedUseCases = multiSelectUseCases ? useCases : useCase ? [useCase] : [];
-  const activeUseCases = pickedUseCases.length > 0 ? pickedUseCases : [defaultUseCase];
-  // An edit needs an image, then a change: a prompt for the whole image, a
-  // region with its own instruction, or both.
-  const editing = activeUseCases.some((u) => u.edit);
-  const hasImage = attachments.some((a) => a.kind === "image");
-  const hasContent = editing
-    ? hasImage && (value.trim().length > 0 || regions.length > 0)
-    : value.trim().length > 0 || attachments.length > 0;
-  const isSubmitDisabled = submitError ? disabled : (submitDisabled ?? (disabled || !hasContent));
-  const effectivePlaceholder =
-    placeholder ??
-    (editing
-      ? hasImage
-        ? "Describe a change across the whole image, or leave this empty"
-        : "Attach an image to edit"
-      : "Describe media to create");
-  // The stop icon only appears with somewhere for its click to go — without
-  // `onAbort`, `submitting` just disables the FAB instead (below), same as
-  // it would with no opt-in wired at all.
-  const showStop = submitting && Boolean(onAbort);
-  const multiModel = multiSelectModels || multiSelectUseCases;
-  const rawPickedIds = multiModel ? modelIds : modelId ? [modelId] : [];
-  // The app's list for a use case, or Chai's suggested models when it gave none.
-  const rosterFor = (u: ComposerUseCase): { options: ModelOption[]; suggested: boolean } => {
-    const given = multiSelectUseCases ? modelsByKind?.[u.kind] : models;
-    if (given) return { options: given, suggested: false };
-    return { options: suggestedModels(u.edit ? "image-edit" : deriveGenerationUseCase(u, attachments)), suggested: true };
-  };
-  // One menu section per use case with multi-use-case select; otherwise one flat roster.
-  const modelSections = (multiSelectUseCases ? activeUseCases : activeUseCases.slice(0, 1))
-    .map((u) => ({ label: multiSelectUseCases ? u.label : "", kind: u.kind, ...rosterFor(u) }))
-    .filter((s) => s.options.length > 0);
-  const allModels = modelSections.flatMap((s) => s.options);
-  // A pick that isn't in the current list (e.g. the edit model after leaving
-  // edit mode) is shown as unpicked and never submitted. With no list at
-  // all, the app's pick is passed through as given. With nothing picked
-  // from a suggested list (and auto-select off), its first model is the pick.
-  const validPicks =
-    allModels.length > 0 ? rawPickedIds.filter((id) => allModels.some((m) => m.id === id)) : rawPickedIds;
-  const pickedModelIds =
-    validPicks.length > 0 || autoSelectModel
-      ? validPicks
-      : modelSections.filter((s) => s.suggested).map((s) => s.options[0]!.id);
-  const pickedModels = allModels.filter((m) => pickedModelIds.includes(m.id));
-  // No menu that can't change anything: without its handler, the Model menu
-  // hides (the default pick still runs).
-  const canPickModel = multiModel ? Boolean(onModelIdsChange) : Boolean(onModelChange);
-  const modelTriggerLabel =
-    pickedModels.length > 1
-      ? `${pickedModels.length} models`
-      : pickedModels[0]?.label ?? (autoSelectModel ? "Auto-select" : "Select models");
-  // An edit keeps the source image's shape.
-  const showAspectRatio = activeUseCases.some((u) => !u.edit && (u.kind === "image" || u.kind === "video"));
-  // Only ratios every model that might run takes: the picked ones, or with
-  // none picked (or auto-select on) the whole list, so whichever runs can
-  // honor it. A model with no `aspectRatios` sets its own shape: no menu.
-  const ratioModels = pickedModels.length > 0 && !autoSelectModel ? pickedModels : allModels;
-  const sharedRatios =
-    ratioModels.reduce<string[] | null>(
-      (shared, m) => (shared ?? m.aspectRatios ?? []).filter((r) => m.aspectRatios?.includes(r)),
-      null
-    ) ?? [];
-  const aspectOptions = aspectRatios
-    ? aspectRatios.filter((o) => sharedRatios.includes(o.value))
-    : sharedRatios.map((r) => ({ value: r, label: r }));
-  // A pick the current models don't take is shown as unpicked and never sent.
-  const offeredAspect = showAspectRatio && aspectOptions.some((o) => o.value === aspectRatio) ? aspectRatio : null;
-  const selectedAspect = aspectOptions.find((o) => o.value === offeredAspect) ?? null;
+  const view = composerView({
+    value,
+    placeholder,
+    attachments,
+    useCase,
+    defaultUseCase,
+    multiSelectUseCases,
+    useCases,
+    modelsByKind,
+    multiSelectModels,
+    modelIds,
+    models,
+    modelId,
+    onModelChange,
+    onModelIdsChange,
+    autoSelectModel,
+    aspectRatios,
+    aspectRatio,
+    submitError,
+    submitDisabled,
+    submitting,
+    onAbort,
+    regions,
+    disabled,
+  });
+  const { editing, isSubmitDisabled, showStop, multiModel, modelSections, pickedModelIds, aspectOptions, offeredAspect } = view;
 
   function toggleModel(id: string) {
     if (!multiModel) return onModelChange?.(id);
-    onModelIdsChange?.(modelIds.includes(id) ? modelIds.filter((m) => m !== id) : [...modelIds, id]);
-  }
-
-  function buildSelections(): ComposerSelection[] {
-    return activeUseCases.map((u) => ({
-      useCase: u,
-      models: rosterFor(u).options,
-      modelIds: multiSelectUseCases
-        ? pickedModelIds.filter((id) => rosterFor(u).options.some((m) => m.id === id))
-        : pickedModelIds,
-    }));
+    onModelIdsChange?.(view.toggledModelIds(id));
   }
 
   // Auto-select chooses at submit, from the prompt (`useComposer` routes
@@ -413,54 +334,19 @@ export function Composer({
     onEnhance?.(value);
   }
 
-  function handleFilesSelected(fileList: FileList | null) {
+  async function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || !onAttachmentsChange) return;
     // Edit mode works on one image: a new one replaces it, and the edit starts over.
-    if (editing) {
-      const image = Array.from(fileList).find((f) => detectKind(f) === "image");
-      if (!image) {
-        Array.from(fileList).forEach((f) => onUnsupportedFile?.(f.name));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () =>
-        onAttachmentsChange([{ id: nextAttachmentId(), src: String(reader.result), kind: "image", name: image.name, size: image.size }]);
-      reader.onerror = () => onUnsupportedFile?.(image.name);
-      reader.readAsDataURL(image);
-      return;
-    }
-    const next = [...attachments];
-    let pending = fileList.length;
-    const settle = () => {
-      pending -= 1;
-      if (pending === 0) onAttachmentsChange(next);
-    };
-    Array.from(fileList).forEach((file) => {
-      const kind = detectKind(file);
-      if (!kind) {
-        onUnsupportedFile?.(file.name);
-        settle();
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        next.push({ id: nextAttachmentId(), src: String(reader.result), kind, name: file.name, size: file.size });
-        settle();
-      };
-      reader.onerror = () => {
-        onUnsupportedFile?.(file.name);
-        settle();
-      };
-      reader.readAsDataURL(file);
-    });
+    const { attachments: next, unsupported } = await composerAttachmentsFromFiles(fileList, attachments, editing);
+    unsupported.forEach((name) => onUnsupportedFile?.(name));
+    if (next) onAttachmentsChange(next);
   }
 
   // Only items that can work: no menu item that silently does nothing.
-  const menuItems = ATTACH_MENU_ITEMS.filter(
-    (item) =>
-      (attachMenuActions ?? ATTACH_MENU_ITEMS.map((i) => i.action)).includes(item.action) &&
-      (item.action === "add-media" ? Boolean(onAttachmentsChange) : Boolean(onAttachMenuSelect))
-  );
+  const menuItems = composerAttachMenuItems(attachMenuActions, {
+    canAddMedia: Boolean(onAttachmentsChange),
+    canSelect: Boolean(onAttachMenuSelect),
+  });
 
   function handleRemoveAttachment(id: string) {
     onAttachmentsChange?.(attachments.filter((a) => a.id !== id));
@@ -500,8 +386,8 @@ export function Composer({
           className={`chai-composer__input chai-composer__type${animating ? " chai-composer__input--revealing" : ""}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={effectivePlaceholder}
-          aria-label={promptLabel ?? effectivePlaceholder}
+          placeholder={view.placeholder}
+          aria-label={promptLabel ?? view.placeholder}
           rows={1}
           disabled={disabled || animating}
         />
@@ -557,7 +443,7 @@ export function Composer({
             />
           )}
 
-          {pickedUseCases.map((u) => (
+          {view.pickedUseCases.map((u) => (
             <UseCaseChip
               key={u.kind}
               useCase={u}
@@ -576,7 +462,7 @@ export function Composer({
               trigger stays enabled whenever the switch is shown — it's the
               only way back to the switch. Rows are disabled by `SearchMenu`
               itself while auto-select is on. */}
-          {modelSections.length > 0 && canPickModel && (
+          {modelSections.length > 0 && view.canPickModel && (
             <SearchMenu
               {...(multiSelectUseCases
                 ? { sections: modelSections.map((s) => ({ label: s.label, options: s.options })) }
@@ -592,7 +478,7 @@ export function Composer({
                     }
                   : undefined
               }
-              triggerLabel={modelTriggerLabel}
+              triggerLabel={view.modelTriggerLabel}
               menuLabel={multiModel ? "Select models" : "Select model"}
               onSelect={(opt) => toggleModel(opt.id)}
               searchable={false}
@@ -602,11 +488,11 @@ export function Composer({
             />
           )}
 
-          {showAspectRatio && aspectOptions.length > 0 && onAspectRatioChange && (
+          {view.showAspectRatio && aspectOptions.length > 0 && onAspectRatioChange && (
             <SearchMenu
               options={aspectOptions.map((o) => ({ id: o.value, label: o.label }))}
               value={offeredAspect}
-              triggerLabel={selectedAspect?.label ?? "Aspect ratio"}
+              triggerLabel={view.selectedAspect?.label ?? "Aspect ratio"}
               menuLabel="Aspect ratio"
               onSelect={(opt) => onAspectRatioChange?.(opt.id)}
               searchable={false}
@@ -671,19 +557,7 @@ export function Composer({
           } as Record<string, unknown>)}
           onClick={() => {
             if (showStop) onAbort?.();
-            else if (!isSubmitDisabled && !submitting) {
-              const selections = buildSelections();
-              onSubmit({
-                value,
-                attachments,
-                useCase: activeUseCases[0]!,
-                modelId: pickedModelIds[0] ?? null,
-                aspectRatio: offeredAspect,
-                selections,
-                autoSelectModel,
-                regions: editing ? regions : [],
-              });
-            }
+            else if (!isSubmitDisabled && !submitting) onSubmit(view.payload());
           }}
         >
           <span slot="icon">
@@ -695,18 +569,12 @@ export function Composer({
   );
 }
 
-const ATTACH_MENU_ITEMS: {
-  action: ComposerAttachMenuAction;
-  label: string;
-  icon: React.ReactNode;
-  /** Reference: "Add media" (`MenuListItem1`) is the only item with `showDivider: true` in the source. */
-  divider?: boolean;
-}[] = [
-  { action: "add-media", label: "Add media", icon: <AttachFileIcon />, divider: true },
-  { action: "create-image", label: "Create image", icon: <ImageIcon /> },
-  { action: "create-video", label: "Create video", icon: <VideocamIcon /> },
-  { action: "edit-media", label: "Edit image", icon: <ContentCutIcon /> },
-];
+const ATTACH_MENU_ICONS: Record<ComposerAttachMenuAction, React.ReactNode> = {
+  "add-media": <AttachFileIcon />,
+  "create-image": <ImageIcon />,
+  "create-video": <VideocamIcon />,
+  "edit-media": <ContentCutIcon />,
+};
 
 /**
  * The "+" / "×" attach control (reference: Composer_01 "Menu open" state,
@@ -722,7 +590,7 @@ function ComposerAttachMenu({
   imagesOnly,
   disabled,
 }: {
-  items: typeof ATTACH_MENU_ITEMS;
+  items: ReturnType<typeof composerAttachMenuItems>;
   onSelect?: (action: ComposerAttachMenuAction) => void;
   onAddMediaFiles: (files: FileList | null) => void;
   /** Edit mode: one image file at a time. */
@@ -779,7 +647,7 @@ function ComposerAttachMenu({
                 className="chai-composer__attach-menu-item"
                 onClick={() => handleItemClick(item.action)}
               >
-                <span className="chai-composer__attach-menu-icon">{item.icon}</span>
+                <span className="chai-composer__attach-menu-icon">{ATTACH_MENU_ICONS[item.action]}</span>
                 {item.label}
               </button>
               {item.divider && i < items.length - 1 && <hr className="chai-composer__attach-menu-divider" role="separator" />}

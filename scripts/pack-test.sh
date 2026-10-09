@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Packaging smoke test: builds and packs @chai-ui/tokens, core and react,
-# installs the tarballs into sandbox/consumer-app with npm (as a real user
-# would), and builds that app. It exercises each package's exports, files
+# Packaging smoke test: builds and packs @chai-ui/tokens, core, react and
+# vue, installs the tarballs into sandbox/consumer-app (React) and
+# sandbox/vue-app with npm (as a real user would), and builds both apps. It exercises each package's exports, files
 # and peerDependencies, which workspace symlinks never do. Fully offline:
 # nothing is published.
 #
@@ -25,7 +25,7 @@ fail() { printf '\n\033[1;31mERROR:\033[0m %s\n' "$1" >&2; exit 1; }
 log "Building all packages"
 pnpm build
 
-log "Packing tokens, core, and react into $TARBALLS"
+log "Packing tokens, core, react, and vue into $TARBALLS"
 rm -rf "$TARBALLS"
 mkdir -p "$TARBALLS"
 ABS_TARBALLS="$(cd "$TARBALLS" && pwd)"
@@ -39,10 +39,14 @@ pack_one() {
 pack_one packages/tokens chai-ui-tokens.tgz
 pack_one packages/core chai-ui-core.tgz
 pack_one packages/react chai-ui-react.tgz
+pack_one packages/vue chai-ui-vue.tgz
 
 log "Clean-installing the sandbox app from those tarballs (via npm, not pnpm)"
 rm -rf "$SANDBOX/node_modules" "$SANDBOX/package-lock.json" "$SANDBOX/dist"
 (cd "$SANDBOX" && npm install)
+VUE_SANDBOX="sandbox/vue-app"
+rm -rf "$VUE_SANDBOX/node_modules" "$VUE_SANDBOX/package-lock.json" "$VUE_SANDBOX/dist"
+(cd "$VUE_SANDBOX" && npm install)
 
 log "Verifying the installed packages actually contain what files/exports promise"
 check_file() {
@@ -52,11 +56,14 @@ check_file "@chai-ui/tokens/dist/css/tokens.css"
 check_file "@chai-ui/core/dist/index.js"
 check_file "@chai-ui/react/dist/index.js"
 check_file "@chai-ui/react/dist/style.css"
+[ -f "$VUE_SANDBOX/node_modules/@chai-ui/vue/dist/index.js" ] || fail "@chai-ui/vue/dist/index.js missing after install."
+[ -f "$VUE_SANDBOX/node_modules/@chai-ui/vue/dist/style.css" ] || fail "@chai-ui/vue/dist/style.css missing after install."
 
 log "Type-checking and building the sandbox app against the installed packages"
 (cd "$SANDBOX" && npm run build)
+(cd "$VUE_SANDBOX" && npm run build)
 
-log "Packaging smoke test passed. tokens/core/react all installed, resolved each other correctly, and built as real external dependencies — not workspace links."
+log "Packaging smoke test passed. tokens/core/react/vue all installed, resolved each other correctly, and built as real external dependencies — not workspace links."
 
 if [ "${1:-}" = "--dev" ]; then
   log "Starting the sandbox dev server at http://localhost:5190 (Ctrl+C to stop)"

@@ -36,13 +36,13 @@ jobs:
       - run: pnpm test
       - name: Coverage
         if: matrix.react == '18'
-        run: pnpm --filter @chai-ui/core --filter @chai-ui/react run test:coverage
+        run: pnpm --filter @chai-ui/core --filter @chai-ui/react --filter @chai-ui/vue run test:coverage
       - name: Upload coverage to Codecov
         if: matrix.react == '18'
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: packages/core/coverage/lcov.info,packages/react/coverage/unit/lcov.info,packages/react/coverage/browser/lcov.info
+          files: packages/core/coverage/lcov.info,packages/react/coverage/unit/lcov.info,packages/react/coverage/browser/lcov.info,packages/vue/coverage/unit/lcov.info,packages/vue/coverage/browser/lcov.info
           fail_ci_if_error: false
 
   pack-test:
