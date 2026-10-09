@@ -6,7 +6,8 @@
     [
       "@chai-ui/tokens",
       "@chai-ui/core",
-      "@chai-ui/react"
+      "@chai-ui/react",
+      "@chai-ui/vue"
     ]
   ],
   "linked": [],

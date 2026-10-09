@@ -1,6 +1,5 @@
 {
   "name": "@chai-ui/vue",
-  "private": true,
   "version": "0.6.0",
   "description": "CHAI UI Vue components \u2014 smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, and the useComposer composable.",
   "license": "MIT",
@@ -38,10 +37,11 @@
     "dist",
     "src",
     "!src/**/*.test.*",
-    "!src/__tests__"
+    "!src/__tests__",
+    "DESIGN.md"
   ],
   "scripts": {
-    "build": "rimraf dist && vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir dist && node -e \"require('fs').copyFileSync('../react/src/style.css','dist/style.css')\"",
+    "build": "rimraf dist && vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir dist && node -e \"require('fs').copyFileSync('../react/src/style.css','dist/style.css');require('fs').copyFileSync('../react/DESIGN.md','DESIGN.md')\"",
     "dev": "vite build --watch",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "lint": "echo \"(no lint configured yet)\"",

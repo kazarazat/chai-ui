@@ -13,3 +13,4 @@ coverage
 sandbox/consumer-app/.tarballs
 sandbox/consumer-app/package-lock.json
 sandbox/vue-app/package-lock.json
+packages/vue/DESIGN.md
