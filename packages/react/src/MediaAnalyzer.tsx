@@ -7,6 +7,9 @@ import type { DroppedMedia, ModelOption, MediaKind } from "@chai-ui/core";
 import type { MediaAnalysisPromptLength } from "@chai-ui/core";
 import { SearchMenu, type SearchMenuSection } from "./primitives/SearchMenu.js";
 import { StopIcon } from "./icons.js";
+import type { MediaAnalyzerAttachment, MediaAnalyzerSubmitPayload } from "@chai-ui/core";
+
+export type { MediaAnalyzerAttachment, MediaAnalyzerSubmitPayload } from "@chai-ui/core";
 
 /** See primitives/Toggle.tsx for why `createComponent` is used instead of raw JSX on custom-element tags. */
 const MdFabElement = createComponent({
@@ -27,10 +30,6 @@ function nextAttachmentId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-export interface MediaAnalyzerAttachment extends DroppedMedia {
-  id: string;
 }
 
 /**
@@ -97,17 +96,6 @@ export function isMediaAnalyzerAtCap(
 ): boolean {
   if (current[0]?.kind !== "image") return false;
   return current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image);
-}
-
-export interface MediaAnalyzerSubmitPayload {
-  attachments: MediaAnalyzerAttachment[];
-  modelId: string | null;
-  /** When true, `useMediaAnalyzer` routes among `models` at submit instead of using `modelId`. */
-  autoSelectModel: boolean;
-  /** The models offered for the attached media's kind. */
-  models: ModelOption[];
-  /** `null` until a person actually picks one — see the `promptLength` prop's own doc comment for why this doesn't default to "concise". */
-  promptLength: MediaAnalysisPromptLength | null;
 }
 
 export interface MediaAnalyzerProps {

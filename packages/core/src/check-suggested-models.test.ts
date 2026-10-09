@@ -92,4 +92,69 @@ describe("checkSuggestedModels", () => {
     const { problems } = await checkSuggestedModels({ fetchImpl: failing });
     expect(problems.map((p) => p.modelId)).toEqual(["*", "*"]);
   });
+
+  it("says so when a catalog answers with an error status", async () => {
+    const failing = (async () => new Response("", { status: 503, statusText: "Service Unavailable" })) as unknown as typeof fetch;
+    const { problems } = await checkSuggestedModels({ fetchImpl: failing });
+    expect(problems.map((p) => p.problem)).toEqual([
+      "Couldn't reach Fal's model catalog: 503 Service Unavailable",
+      "Couldn't reach OpenRouter's model list: 503 Service Unavailable",
+    ]);
+  });
+
+  it("follows Fal's cursor through every page", async () => {
+    const fal = allFal();
+    const urls: string[] = [];
+    const paged = (async (url: string) => {
+      urls.push(String(url));
+      if (!String(url).includes("api.fal.ai")) return new Response(JSON.stringify({ data: allOpenRouter() }));
+      const second = String(url).includes("cursor=next");
+      const body = second ? { models: fal.slice(10), has_more: false } : { models: fal.slice(0, 10), has_more: true, next_cursor: "next" };
+      return new Response(JSON.stringify(body));
+    }) as unknown as typeof fetch;
+    const { ok } = await checkSuggestedModels({ fetchImpl: paged });
+    expect(ok).toBe(true);
+    expect(urls.filter((u) => u.includes("api.fal.ai"))).toHaveLength(2);
+  });
+
+  it("reads allowed values from anyOf, allOf and const, and skips what it can't check", async () => {
+    const fal = allFal();
+    const at = (id: string) => fal.findIndex((f) => f.endpoint_id === id);
+    const set = (id: string, tweak: (props: Record<string, unknown>, input: Record<string, unknown>) => void) => {
+      fal[at(id)] = falEntry(SUGGESTED_FAL_MODELS.get(id)!, (input) => tweak(input.properties as Record<string, unknown>, input));
+    };
+    const ratioModels = [...SUGGESTED_FAL_MODELS.values()].filter((m) => m.aspectRatios && m.falInput?.aspectRatio === "aspect_ratio");
+    const [anyOf, allOf, constant, open, dropped] = ratioModels.map((m) => m.id);
+    // Every listed ratio, but behind anyOf / a $ref'd allOf: still fine.
+    set(anyOf!, (props) => (props.aspect_ratio = { anyOf: [{ type: "null" }, props.aspect_ratio] }));
+    set(allOf!, (props) => (props.aspect_ratio = { allOf: [{ $ref: "#/components/schemas/Ratio" }] }));
+    fal[at(allOf!)]!.openapi.components.schemas = {
+      ...fal[at(allOf!)]!.openapi.components.schemas,
+      Ratio: { enum: SUGGESTED_FAL_MODELS.get(allOf!)!.aspectRatios },
+    } as never;
+    // A single const value: the other ratios are reported.
+    set(constant!, (props) => (props.aspect_ratio = { const: "16:9" }));
+    // Free text: nothing to compare.
+    set(open!, (props) => (props.aspect_ratio = { type: "string" }));
+    // Gone entirely.
+    set(dropped!, (props) => delete props.aspect_ratio);
+    // A new required field with a default doesn't need sending; no schema at all is skipped.
+    const [withDefault, noSchema] = [...SUGGESTED_FAL_MODELS.keys()].filter((id) => ![anyOf, allOf, constant, open, dropped].includes(id));
+    set(withDefault!, (props, input) => {
+      props.seed = { type: "integer", default: 0 };
+      input.required = ["prompt", "seed"];
+    });
+    delete (fal[at(noSchema!)] as { openapi?: unknown }).openapi;
+
+    const { problems } = await checkSuggestedModels({ fetchImpl: fakeFetch(fal, allOpenRouter()) });
+    expect(problems.map((p) => p.modelId).sort()).toEqual([constant, dropped].sort());
+    expect(problems.find((p) => p.modelId === dropped)?.problem).toBe('No longer takes "aspect_ratio".');
+  });
+
+  it("treats an empty answer as an empty catalog", async () => {
+    const empty = (async () => new Response("{}")) as unknown as typeof fetch;
+    const { problems } = await checkSuggestedModels({ fetchImpl: empty });
+    expect(problems.every((p) => /catalog any more/.test(p.problem))).toBe(true);
+  });
 });
+

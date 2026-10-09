@@ -3,10 +3,20 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
-import { deriveGenerationUseCase, suggestedModels } from "@chai-ui/core";
+import { deriveGenerationUseCase, suggestedModels, TEXT_USE_CASE } from "@chai-ui/core";
 import type { DroppedMedia, EditRegion, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
 import { regionColor } from "./regions.js";
+import type { ComposerAttachment, ComposerSelection, ComposerSubmitPayload, ComposerUseCase } from "@chai-ui/core";
+
+export {
+  EDIT_IMAGE_USE_CASE,
+  TEXT_USE_CASE,
+  type ComposerAttachment,
+  type ComposerSelection,
+  type ComposerSubmitPayload,
+  type ComposerUseCase,
+} from "@chai-ui/core";
 
 /** See primitives/Toggle.tsx for why `createComponent` is used instead of raw JSX on custom-element tags. */
 const MdFabElement = createComponent({
@@ -46,70 +56,7 @@ function nextAttachmentId(): string {
     : `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export interface ComposerAttachment extends DroppedMedia {
-  id: string;
-}
-
 export type ComposerAttachMenuAction = "add-media" | "create-image" | "create-video" | "edit-media";
-
-/**
- * The selected generation use case, shown as a removable chip (reference:
- * the mock's "Video"/"Image" chip) — deliberately independent of
- * `attachments`: a use case can be picked from the attach menu with nothing
- * attached yet (e.g. "Create video"). Composer never derives this from
- * `attachments` itself (that's app-level policy, not a Composer opinion —
- * the design). With none picked, `defaultUseCase` applies.
- */
-export interface ComposerUseCase {
-  kind: MediaKind;
-  label: string;
-  /**
-   * An edit of the attached image rather than a new one: no aspect ratio,
-   * region chips when `regions` is set, and a submit needs only an image and
-   * either a prompt or a region. Images only for now.
-   */
-  edit?: boolean;
-}
-
-/** A plain text request — what a submit means when no use case is picked, unless the builder sets `defaultUseCase`. */
-export const TEXT_USE_CASE: ComposerUseCase = { kind: "text", label: "Text" };
-
-/** Editing the attached image, the attach menu's "Edit image". Pair it with `useComposer`'s `editImage` and an `EditCard`. */
-export const EDIT_IMAGE_USE_CASE: ComposerUseCase = { kind: "image", label: "Edit image", edit: true };
-
-/** One use case to run and the models picked for it. Empty `modelIds` means the engine's default model. */
-export interface ComposerSelection {
-  useCase: ComposerUseCase;
-  modelIds: string[];
-  /** The models offered for this use case: what auto-select routes among. */
-  models: ModelOption[];
-}
-
-/**
- * Everything Composer itself tracks, assembled into one object at submit
- * time — not the the design `Request` shape (no `mode`/`params`/
- * `presetId`; those belong to the run store this package doesn't have yet,
- * see the package README), just an honest snapshot of this component's own
- * state. Handed to `onSubmit` so a builder doesn't have to re-derive it
- * from five separately-controlled props they already hold — mainly a
- * correctness/ergonomics win for a coding agent wiring this up from the
- * type signature alone.
- */
-export interface ComposerSubmitPayload {
-  value: string;
-  attachments: ComposerAttachment[];
-  /** The use case to run — the picked one, or `defaultUseCase` when none is picked. The first one with `multiSelectUseCases`. */
-  useCase: ComposerUseCase;
-  /** The first picked model, or null for the engine's default. */
-  modelId: string | null;
-  aspectRatio: string | null;
-  /** Everything to run: one entry per use case with its picked models. A single entry unless `multiSelectUseCases` is on. */
-  selections: ComposerSelection[];
-  /** When true, the model is chosen at submit (`useComposer` routes among each selection's `models`), not by the picks. */
-  autoSelectModel: boolean;
-  /** An edit's marked regions, each with its own instruction. Empty unless the use case is an edit. */
-  regions?: EditRegion[];
-}
 
 export interface ComposerProps {
   /** The prompt text. Controlled — Composer owns no text state of its own. */
