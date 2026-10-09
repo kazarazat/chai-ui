@@ -1,5 +1,11 @@
 # @chai-ui/core
 
+## 0.6.1
+
+### Patch Changes
+
+- eecad9a: The Composer's and Media Analyzer's behavior now lives in `@chai-ui/core` as framework-free stores (`createComposerStore`, `createMediaAnalyzerStore`), along with the reasoning helpers and the shared Composer types. `useComposer`, `useMediaAnalyzer` and `ChaiProvider` wrap them and work exactly as before. This is groundwork for the Vue package.
+
 ## 0.6.0
 
 ### Minor Changes
