@@ -7,7 +7,8 @@
  */
 import "@material/web/checkbox/checkbox.js";
 import "@material/web/textfield/outlined-text-field.js";
-import { computed, nextTick, onScopeDispose, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
+import { useDismiss } from "../dismiss.js";
 import { CheckIcon } from "../icons.js";
 import Toggle from "./Toggle.vue";
 import type { SearchMenuOption, SearchMenuSection, SearchMenuToggleHeader } from "./search-menu.js";
@@ -53,7 +54,6 @@ function close() {
 // The panel opens from the trigger's left edge; near the right edge of a
 // narrow screen it shifts left to fit, keeping a 16px margin on both sides.
 watch(open, async (isOpen) => {
-  listen(isOpen);
   if (!isOpen) return;
   await nextTick();
   const el = panel.value!;
@@ -62,22 +62,7 @@ watch(open, async (isOpen) => {
   if (over > 0) el.style.left = `${-Math.min(over, Math.max(0, rect.left - 16))}px`;
 });
 
-function onPointerDown(e: PointerEvent) {
-  if (!root.value?.contains(e.target as Node)) close();
-}
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === "Escape") close();
-}
-function listen(on: boolean) {
-  if (on) {
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeydown);
-  } else {
-    document.removeEventListener("pointerdown", onPointerDown);
-    document.removeEventListener("keydown", onKeydown);
-  }
-}
-onScopeDispose(() => listen(false));
+useDismiss(root, open, close);
 
 const groups = computed(() => {
   const q = search.value.trim().toLowerCase();

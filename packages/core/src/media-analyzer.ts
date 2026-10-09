@@ -6,6 +6,7 @@
  * (`getState` + `subscribe`) that `useMediaAnalyzer` (React) and the Vue
  * composable wrap.
  */
+import { attachmentId } from "./attachment-id.js";
 import { warnNoReasoningOnce } from "./composer.js";
 import { createMockEngine, isAbortError, normalizeGenerationError, type GenerationEngine } from "./engine.js";
 import {
@@ -204,12 +205,6 @@ export const PROMPT_LENGTH_HINT: Record<MediaAnalysisPromptLength, string> = {
  */
 export const DEFAULT_MAX_ATTACHMENTS_BY_KIND: Record<MediaKind, number> = { image: 5, video: 1, audio: 1, text: 0 };
 
-function nextAttachmentId(): string {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 /**
  * Applies one newly-read file to the current attachment list. Only one media
  * *kind* exists per analysis: a different kind replaces the whole list,
@@ -223,7 +218,7 @@ export function nextMediaAnalyzerAttachments(
   maxByKind: Record<MediaKind, number> = DEFAULT_MAX_ATTACHMENTS_BY_KIND
 ): MediaAnalyzerAttachment[] {
   const existingKind = current[0]?.kind;
-  const withId: MediaAnalyzerAttachment = { ...incoming, id: nextAttachmentId() };
+  const withId: MediaAnalyzerAttachment = { ...incoming, id: attachmentId() };
   if (!existingKind || existingKind !== incoming.kind) return [withId];
   if (incoming.kind === "image") {
     if (current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image)) return current;

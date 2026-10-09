@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
-import { DEFAULT_MAX_REGIONS, downloadFilename, downloadMedia, shareMedia, type EditRegion, type EditVersion, type RegionBox } from "@chai-ui/core";
+import { DEFAULT_MAX_REGIONS, downloadFilename, downloadMedia, regionColor, shareMedia, type EditRegion, type EditVersion, type RegionBox } from "@chai-ui/core";
 
 export type { EditVersion } from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
@@ -17,7 +17,6 @@ import {
   ZoomOutIcon,
 } from "./icons.js";
 import { PageSlide, usePageSlide } from "./page-slide.js";
-import { regionColor } from "./regions.js";
 
 export interface EditCardProps {
   /** The original image first, then each edit. Paged with the dots in the card's bottom row. */

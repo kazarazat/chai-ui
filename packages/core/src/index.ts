@@ -13,3 +13,4 @@ export * from "./composer.js";
 export * from "./media-analyzer.js";
 export * from "./media-actions.js";
 export * from "./result-format.js";
+export * from "./composer-view.js";

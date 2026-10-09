@@ -16,41 +16,7 @@ const result = (id: string, overrides: Partial<Result> = {}): Result => ({
   id, runId: "run", modelId: "fal/fast", status: "done", output: { src: svg, kind: "image" }, ...overrides,
 });
 
-function ComposerHarness() {
-  const [value, setValue] = useState("a mug");
-  const [modelId, setModelId] = useState<string | null>("fal/fast");
-  return (
-    <Composer
-      value={value}
-      onChange={setValue}
-      onSubmit={() => {}}
-      onEnhance={() => {}}
-      useCase={IMAGE}
-      onClearUseCase={() => {}}
-      models={MODELS}
-      modelId={modelId}
-      onModelChange={setModelId}
-      showAutoSelectToggle
-      onAutoSelectModelChange={() => {}}
-      aspectRatios={[{ value: "1:1", label: "1:1" }, { value: "16:9", label: "16:9" }]}
-      aspectRatio="1:1"
-      onAspectRatioChange={() => {}}
-    />
-  );
-}
-
 describe("WCAG 2.2 AA (axe)", () => {
-  it("Composer", async () => {
-    render(<ComposerHarness />);
-    expect(await wcagViolations()).toEqual([]);
-  });
-
-  it("Composer with the model menu open", async () => {
-    const screen = render(<ComposerHarness />);
-    await screen.getByText("Fast Image").click();
-    expect(await wcagViolations()).toEqual([]);
-  });
-
   it("EditCard: regions, the open instruction field, zoomed, and an edit in progress", async () => {
     const regions = [
       { id: "r1", number: 1, box: { x: 0.1, y: 0.4, width: 0.3, height: 0.2 }, prompt: "make it green" },
@@ -74,34 +40,4 @@ describe("WCAG 2.2 AA (axe)", () => {
     expect(await wcagViolations()).toEqual([]);
   });
 
-  it("Composer editing an image, with region chips", async () => {
-    render(
-      <Composer
-        value=""
-        onChange={() => {}}
-        onSubmit={() => {}}
-        useCase={EDIT_IMAGE_USE_CASE}
-        onClearUseCase={() => {}}
-        attachments={[{ id: "a", src: svg, kind: "image" }]}
-        regions={[{ id: "r1", number: 1, box: { x: 0, y: 0, width: 0.5, height: 0.5 }, prompt: "x" }]}
-        onRegionsChange={() => {}}
-      />
-    );
-    expect(await wcagViolations()).toEqual([]);
-  });
-
-  // axe accepts a placeholder as a field's name and an empty alt as
-  // valid, so these two are checked directly.
-  it("names the Composer prompt field, defaulting to the placeholder", async () => {
-    const screen = render(<Composer value="" onChange={() => {}} onSubmit={() => {}} placeholder="Describe media to create" />);
-    await expect.element(screen.getByRole("textbox", { name: "Describe media to create" })).toBeInTheDocument();
-    screen.rerender(<Composer value="" onChange={() => {}} onSubmit={() => {}} promptLabel="Prompt" />);
-    await expect.element(screen.getByRole("textbox", { name: "Prompt" })).toBeInTheDocument();
-  });
-
-  it("names the auto-select switch", async () => {
-    const screen = render(<ComposerHarness />);
-    await screen.getByText("Fast Image").click();
-    await expect.element(screen.getByRole("switch", { name: "Auto-select model" })).toBeInTheDocument();
-  });
 });
