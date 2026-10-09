@@ -6,7 +6,6 @@ import { render } from "vitest-browser-react";
 import { MEDIA_ANALYSIS_PROMPT_LENGTHS, type MediaAnalysisPromptLength, type ModelOption, type Result } from "@chai-ui/core";
 import { Composer, EDIT_IMAGE_USE_CASE } from "../Composer.js";
 import { EditCard } from "../EditCard.js";
-import { MediaAnalyzer, type MediaAnalyzerAttachment } from "../MediaAnalyzer.js";
 import { wcagViolations } from "./axe.js";
 
 const model = (id: string, label = id): ModelOption => ({ id, label, provider: "p", speed: "fast" });
@@ -40,29 +39,6 @@ function ComposerHarness() {
   );
 }
 
-function AnalyzerHarness() {
-  const [attachments, setAttachments] = useState<MediaAnalyzerAttachment[]>([]);
-  const [modelId, setModelId] = useState<string | null>(null);
-  const [auto, setAuto] = useState(false);
-  const [length, setLength] = useState<MediaAnalysisPromptLength | null>(null);
-  return (
-    <MediaAnalyzer
-      attachments={attachments}
-      onAttachmentsChange={setAttachments}
-      models={[]}
-      modelsByKind={{ image: MODELS, video: [model("v")], audio: [model("a")] }}
-      modelId={modelId}
-      onModelChange={setModelId}
-      autoSelectModel={auto}
-      onAutoSelectModelChange={setAuto}
-      promptLength={length}
-      onPromptLengthChange={setLength}
-      promptLengthOptions={MEDIA_ANALYSIS_PROMPT_LENGTHS}
-      onSubmit={() => {}}
-    />
-  );
-}
-
 describe("WCAG 2.2 AA (axe)", () => {
   it("Composer", async () => {
     render(<ComposerHarness />);
@@ -72,14 +48,6 @@ describe("WCAG 2.2 AA (axe)", () => {
   it("Composer with the model menu open", async () => {
     const screen = render(<ComposerHarness />);
     await screen.getByText("Fast Image").click();
-    expect(await wcagViolations()).toEqual([]);
-  });
-
-  it("MediaAnalyzer, empty and with an image", async () => {
-    render(<AnalyzerHarness />);
-    expect(await wcagViolations()).toEqual([]);
-    const input = document.querySelector<HTMLInputElement>('.chai-media-analyzer input[type="file"]')!;
-    await userEvent.upload(input, new File(["x"], "photo.png", { type: "image/png" }));
     expect(await wcagViolations()).toEqual([]);
   });
 

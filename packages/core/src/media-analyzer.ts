@@ -15,7 +15,7 @@ import {
 } from "./media-analysis-prompts.js";
 import { routeModel, type ModelRoutingInput, type ModelRoutingResult } from "./model-routing.js";
 import { reasoningModelFor, type Reasoning } from "./reasoning.js";
-import type { DroppedMedia, ModelOption } from "./types.js";
+import type { DroppedMedia, MediaKind, ModelOption } from "./types.js";
 
 export interface MediaAnalyzerAttachment extends DroppedMedia {
   id: string;
@@ -180,3 +180,119 @@ export function createMediaAnalyzerStore(
 }
 
 export type MediaAnalyzerStore = ReturnType<typeof createMediaAnalyzerStore>;
+
+// --- Attachments and menus: what the MediaAnalyzer component shows, the same in every framework binding.
+
+const ACCEPTED_KINDS: MediaKind[] = ["image", "video", "audio"];
+
+export const MEDIA_KIND_LABEL: Record<MediaKind, string> = { image: "Image", video: "Video", audio: "Audio", text: "Text" };
+
+/** Clarifies what "Terse"/"Concise"/"Detailed" mean in the "Prompt length" menu's rows. UI copy, not sent to any model. */
+export const PROMPT_LENGTH_HINT: Record<MediaAnalysisPromptLength, string> = {
+  terse: "short",
+  concise: "moderate",
+  detailed: "long",
+};
+
+/**
+ * How many attachments of each kind an analysis can hold at once. Image
+ * defaults to 5 (a sequence/series reads as one analysis); video and audio
+ * default to 1. Only one *kind* is ever active per analysis — these caps only
+ * bound how many of that one kind can pile up before the drop zone stops
+ * accepting more. `text` is output, never dropped: present only so this
+ * stays a total map.
+ */
+export const DEFAULT_MAX_ATTACHMENTS_BY_KIND: Record<MediaKind, number> = { image: 5, video: 1, audio: 1, text: 0 };
+
+function nextAttachmentId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `attachment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * Applies one newly-read file to the current attachment list. Only one media
+ * *kind* exists per analysis: a different kind replaces the whole list,
+ * never merges. Video and audio are single-slot (a same-kind drop replaces
+ * it); image fills up to `max`, then silently stops accepting more (the drop
+ * zone's "maximum added" look explains why).
+ */
+export function nextMediaAnalyzerAttachments(
+  current: MediaAnalyzerAttachment[],
+  incoming: DroppedMedia,
+  maxByKind: Record<MediaKind, number> = DEFAULT_MAX_ATTACHMENTS_BY_KIND
+): MediaAnalyzerAttachment[] {
+  const existingKind = current[0]?.kind;
+  const withId: MediaAnalyzerAttachment = { ...incoming, id: nextAttachmentId() };
+  if (!existingKind || existingKind !== incoming.kind) return [withId];
+  if (incoming.kind === "image") {
+    if (current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image)) return current;
+    return [...current, withId];
+  }
+  return [withId];
+}
+
+/** True once a same-kind drop would be rejected: only ever for image, since video and audio replace. */
+export function isMediaAnalyzerAtCap(
+  current: MediaAnalyzerAttachment[],
+  maxByKind: Record<MediaKind, number> = DEFAULT_MAX_ATTACHMENTS_BY_KIND
+): boolean {
+  if (current[0]?.kind !== "image") return false;
+  return current.length >= (maxByKind.image ?? DEFAULT_MAX_ATTACHMENTS_BY_KIND.image);
+}
+
+/**
+ * Reads image, video and audio files as data URLs, all of them before
+ * returning, so a caller applies them in drop order in one go (applying
+ * each as its reader finishes would stack them on a stale list).
+ * `unsupported` names the files of another type, or that couldn't be read.
+ */
+export async function readMediaFiles(files: Iterable<File>): Promise<{ media: DroppedMedia[]; unsupported: string[] }> {
+  const unsupported: string[] = [];
+  const read = await Promise.all(
+    [...files].map((file) => {
+      const kind = ACCEPTED_KINDS.find((k) => k === file.type.split("/")[0]);
+      if (!kind) {
+        unsupported.push(file.name);
+        return null;
+      }
+      return new Promise<DroppedMedia | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ src: String(reader.result), kind, name: file.name, size: file.size });
+        reader.onerror = () => {
+          unsupported.push(file.name);
+          resolve(null);
+        };
+        reader.readAsDataURL(file);
+      });
+    })
+  );
+  return { media: read.filter((m): m is DroppedMedia => m !== null), unsupported };
+}
+
+/** "Replaced 2 images with clip.wav.", or `null` when nothing was replaced. */
+export function replacedNote(before: MediaAnalyzerAttachment[], after: MediaAnalyzerAttachment[]): string | null {
+  const removed = before.filter((a) => !after.some((n) => n.id === a.id));
+  const added = after.filter((n) => !before.some((a) => a.id === n.id));
+  if (removed.length === 0 || added.length === 0) return null;
+  const name = (a: MediaAnalyzerAttachment) => a.name ?? MEDIA_KIND_LABEL[a.kind].toLowerCase();
+  const describe = (list: MediaAnalyzerAttachment[]) =>
+    list.length === 1 ? name(list[0]!) : `${list.length} ${MEDIA_KIND_LABEL[list[0]!.kind].toLowerCase()}s`;
+  return `Replaced ${describe(removed)} with ${describe(added)}.`;
+}
+
+/**
+ * The "Select model" menu's sections: once a kind is attached, only its
+ * models (falling back to `models`); before that, all three kinds, each
+ * under its own header.
+ */
+export function mediaAnalyzerModelSections(
+  kind: MediaKind | undefined,
+  modelsByKind: Partial<Record<MediaKind, ModelOption[]>>,
+  models: ModelOption[]
+): { label: string; options: { id: string; label: string }[] }[] {
+  const options = (list: ModelOption[] = []) => list.map((m) => ({ id: m.id, label: m.label }));
+  return kind
+    ? [{ label: MEDIA_KIND_LABEL[kind], options: options(modelsByKind[kind] ?? models) }]
+    : (["image", "video", "audio"] as const).map((k) => ({ label: MEDIA_KIND_LABEL[k], options: options(modelsByKind[k]) }));
+}

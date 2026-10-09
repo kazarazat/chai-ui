@@ -1,6 +1,10 @@
 export { default as ChaiProvider } from "./ChaiProvider.vue";
 export { default as ResultCard } from "./ResultCard.vue";
+export { default as MediaAnalyzer } from "./MediaAnalyzer.vue";
 export { default as Pagination } from "./primitives/Pagination.vue";
+export { default as SearchMenu } from "./primitives/SearchMenu.vue";
+export { default as Toggle } from "./primitives/Toggle.vue";
+export type { SearchMenuOption, SearchMenuSection, SearchMenuToggleHeader } from "./primitives/search-menu.js";
 export type { ResultCardMoreAction, ResultCardVote } from "./result-card/types.js";
 export * from "./reasoning.js";
 export * from "./useComposer.js";
@@ -14,6 +18,7 @@ export {
   createMockEngine,
   mockEngine,
   buildRegionEditPrompt,
+  DEFAULT_MAX_ATTACHMENTS_BY_KIND,
   DEFAULT_MAX_REGIONS,
   DEFAULT_MODEL_ID,
   DEFAULT_REASONING_MODEL,
@@ -23,6 +28,8 @@ export {
   PRECISE_EDIT_MODELS,
   ROUTING_MODEL_ID,
   GenerationError,
+  isMediaAnalyzerAtCap,
+  nextMediaAnalyzerAttachments,
   DEFAULT_MEDIA_ANALYSIS_PROMPT_LENGTH,
   MEDIA_ANALYSIS_PROMPTS,
   MEDIA_ANALYSIS_PROMPT_LENGTHS,
