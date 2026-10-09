@@ -1,0 +1,76 @@
+{
+  "name": "@chai-ui/vue",
+  "private": true,
+  "version": "0.6.0",
+  "description": "CHAI UI Vue components — smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, and the useComposer composable.",
+  "license": "MIT",
+  "author": "kazarazat",
+  "homepage": "https://chai-ui.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kazarazat/chai-ui.git",
+    "directory": "packages/vue"
+  },
+  "bugs": {
+    "url": "https://github.com/kazarazat/chai-ui/issues"
+  },
+  "keywords": [
+    "ai",
+    "generative-ai",
+    "design-system",
+    "ai-ui",
+    "vue",
+    "components",
+    "prompt",
+    "composer"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.*",
+    "!src/__tests__"
+  ],
+  "scripts": {
+    "build": "rimraf dist && vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir dist && node -e \"require('fs').copyFileSync('../react/src/style.css','dist/style.css')\"",
+    "dev": "vite build --watch",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "lint": "echo \"(no lint configured yet)\"",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text-summary --coverage.include=src/**"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@chai-ui/core": "workspace:*",
+    "@chai-ui/tokens": "workspace:*",
+    "@fontsource/roboto": "^5.3.0",
+    "@material/web": "^2.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "3.2.7",
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^25.0.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^7.3.6",
+    "vitest": "^3.2.7",
+    "vue": "^3.5.0",
+    "vue-tsc": "^3.3.12"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

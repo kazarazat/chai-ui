@@ -1,0 +1,25 @@
+{
+  "name": "chai-sandbox-vue",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Vue half of the packaging smoke test (see ../consumer-app/README.md). Installs @chai-ui/vue from the tarballs ../../scripts/pack-test.sh packs into ../consumer-app/.tarballs, with npm, not pnpm.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit -p tsconfig.json && vite build"
+  },
+  "dependencies": {
+    "@chai-ui/vue": "file:../consumer-app/.tarballs/chai-ui-vue.tgz",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.9",
+    "typescript": "^5.6.3",
+    "vite": "^7.3.6",
+    "vue-tsc": "^3.3.12"
+  },
+  "overrides": {
+    "@chai-ui/core": "file:../consumer-app/.tarballs/chai-ui-core.tgz",
+    "@chai-ui/tokens": "file:../consumer-app/.tarballs/chai-ui-tokens.tgz"
+  }
+}
