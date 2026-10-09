@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import {
   EDIT_IMAGE_USE_CASE,
+  suggestedModels,
   TEXT_USE_CASE,
   type ComposerAttachment,
   type ComposerSubmitPayload,
@@ -322,6 +323,44 @@ export function composerContract(render: Render<ComposerProps>) {
   });
 
   describe("Composer model and option menus", () => {
+    it("turns auto-select off when the use case changes, so the new one's model is picked by hand", async () => {
+      const onAutoSelectModelChange = vi.fn();
+      const screen = controlled<ComposerProps>(
+        render,
+        {
+          value: "a mug",
+          onChange: () => {},
+          onSubmit: () => {},
+          useCase: IMAGE,
+          onClearUseCase: () => {},
+          modelId: null,
+          onModelChange: () => {},
+          showAutoSelectToggle: true,
+          autoSelectModel: true,
+          onAutoSelectModelChange,
+        },
+        { onChange: "value", onModelChange: "modelId", onAutoSelectModelChange: "autoSelectModel" }
+      );
+      await expect.element(screen.getByText("Auto-select")).toBeVisible();
+
+      // Remove Create image, then pick Create video.
+      await screen.rerender({ useCase: null });
+      await screen.rerender({ useCase: VIDEO });
+      await expect.poll(() => onAutoSelectModelChange.mock.calls).toEqual([[false]]);
+      // Video's own Model menu: its first suggested model, picked by hand, with the switch off.
+      const video = suggestedModels("text-to-video")[0]!;
+      await screen.getByText(video.label).click();
+      await expect.element(screen.getByRole("switch", { name: "Auto-select model" })).not.toBeChecked();
+    });
+
+    it("keeps a builder's auto-select when there's no switch for the end user", async () => {
+      const onAutoSelectModelChange = vi.fn();
+      const screen = harness({ useCase: IMAGE, autoSelectModel: true, onAutoSelectModelChange });
+      await screen.rerender({ useCase: VIDEO });
+      await expect.element(screen.getByText("Auto-select")).toBeVisible();
+      expect(onAutoSelectModelChange).not.toHaveBeenCalled();
+    });
+
     it("multi-select models adds and removes picks", async () => {
       const onModelIdsChange = vi.fn();
       const screen = harness({ useCase: IMAGE, models: MODELS, multiSelectModels: true, modelIds: ["fal/fast"], onModelIdsChange });

@@ -156,6 +156,13 @@ export function composerView(props: ComposerViewInput) {
 
   return {
     pickedUseCases,
+    /**
+     * Which use cases are picked, as one string. When it changes, a Composer
+     * whose end user owns the auto-select switch turns auto-select off: it
+     * belongs to the Model menu it was turned on in, so a new use case
+     * starts with its model picked by hand.
+     */
+    useCaseKey: pickedUseCases.map((u) => `${u.kind}${u.edit ? ":edit" : ""}`).join(","),
     activeUseCases,
     editing,
     isSubmitDisabled,

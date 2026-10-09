@@ -38,6 +38,13 @@ describe("composerView", () => {
     expect(composerView({ value: "x", placeholder: "Mine" }).placeholder).toBe("Mine");
   });
 
+  it("keys the picked use cases, so a change of use case can be noticed", () => {
+    expect(composerView({ value: "" }).useCaseKey).toBe("");
+    expect(composerView({ value: "", useCase: IMAGE }).useCaseKey).toBe("image");
+    expect(composerView({ value: "", useCase: EDIT_IMAGE_USE_CASE }).useCaseKey).toBe("image:edit");
+    expect(composerView({ value: "", multiSelectUseCases: true, useCases: [IMAGE, VIDEO] }).useCaseKey).toBe("image,video");
+  });
+
   it("shows stop only with somewhere for it to go", () => {
     expect(composerView({ value: "x", submitting: true }).showStop).toBe(false);
     expect(composerView({ value: "x", submitting: true, onAbort: () => {} }).showStop).toBe(true);

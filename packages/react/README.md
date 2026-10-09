@@ -169,7 +169,10 @@ entry per use case.
 
 With `autoSelectModel` on, the trigger reads "Auto-select" and
 `useComposer` picks the model at submit: the reasoning model reads the
-prompt and media and chooses from that use case's `models`. Pass
+prompt and media and chooses from that use case's `models`. When the end
+user owns the switch (`showAutoSelectToggle`), auto-select belongs to the
+use case it was turned on for: picking another use case calls
+`onAutoSelectModelChange(false)`, so the new one's model is picked by hand. Pass
 `onModelChange` (or `onModelIdsChange`) to the hook too, so the trigger
 shows the pick:
 
