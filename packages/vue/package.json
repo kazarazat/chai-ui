@@ -1,6 +1,6 @@
 {
   "name": "@chai-ui/vue",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "CHAI UI Vue components \u2014 smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, and the useComposer composable.",
   "license": "MIT",
   "author": "kazarazat",
