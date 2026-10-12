@@ -3,7 +3,7 @@
 import { ref } from "vue";
 import type { ComposerAttachMenuAction, composerAttachMenuItems } from "@chai-ui/core";
 import { useDismiss } from "../dismiss.js";
-import { AttachFileIcon, CloseSymbolIcon, ContentCutIcon, ImageIcon, PlusIcon, VideocamIcon } from "../icons.js";
+import { AttachFileIcon, CloseSymbolIcon, ContentCutIcon, ImageIcon, PlusIcon, GlobeIcon, VideocamIcon } from "../icons.js";
 
 defineProps<{
   items: ReturnType<typeof composerAttachMenuItems>;
@@ -13,7 +13,7 @@ defineProps<{
 }>();
 const emit = defineEmits<{ select: [action: ComposerAttachMenuAction]; files: [files: FileList | null] }>();
 
-const ICONS = { "add-media": AttachFileIcon, "create-image": ImageIcon, "create-video": VideocamIcon, "edit-media": ContentCutIcon };
+const ICONS = { "add-media": AttachFileIcon, "create-image": ImageIcon, "create-video": VideocamIcon, "create-world": GlobeIcon, "edit-media": ContentCutIcon };
 const open = ref(false);
 const root = ref<HTMLElement>();
 const input = ref<HTMLInputElement>();

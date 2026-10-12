@@ -6,6 +6,13 @@
 export type MediaKind = "image" | "video" | "audio" | "text";
 
 /**
+ * What a generation produces: any `MediaKind`, or an interactive world from
+ * a world model (Create world). A world is never an attachment, so it lives
+ * here rather than in `MediaKind`.
+ */
+export type OutputKind = MediaKind | "world";
+
+/**
  * A piece of media a person attached (or an engine received) — just enough
  * to know its kind and where it lives.
  */
@@ -106,6 +113,12 @@ export interface ModelOption {
    * the input image): no menu shows.
    */
   aspectRatios?: string[];
+  /**
+   * The frame rates a world model runs at, e.g. `[16]`. Composer's frame
+   * rate menu offers only rates the selected models share. Leave it out for
+   * a model with one fixed rate it doesn't take as an input: no menu shows.
+   */
+  frameRates?: number[];
 }
 
 /** See `ModelOption.falInput`. */

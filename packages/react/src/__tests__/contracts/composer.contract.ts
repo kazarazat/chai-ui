@@ -173,6 +173,61 @@ export function composerContract(render: Render<ComposerProps>) {
     });
   });
 
+  describe("Composer creating a world", () => {
+    const WORLD = { kind: "world" as const, label: "World" };
+    const LINGBOT: ModelOption = { id: "lingbot", label: "LingBot-World", provider: "p", speed: "fast", frameRates: [16, 24] };
+
+    it("takes an environment and a character, and needs the environment", async () => {
+      const onSubmit = vi.fn();
+      const screen = controlled<ComposerProps>(
+        render,
+        { value: "", onChange: () => {}, onSubmit, useCase: WORLD, models: [], character: "", onCharacterChange: () => {} },
+        { onChange: "value", onCharacterChange: "character" }
+      );
+      await userEvent.fill(screen.getByRole("textbox", { name: "Character (optional)" }), "a blue parrot");
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).not.toHaveBeenCalled();
+      // Says why, tied to the environment field.
+      await expect
+        .element(screen.getByRole("textbox", { name: "Environment (required)" }))
+        .toHaveAccessibleDescription("Add an environment to create a world");
+      await userEvent.fill(screen.getByRole("textbox", { name: "Environment (required)" }), "a rainforest temple");
+      await expect.element(screen.getByText("Add an environment to create a world")).not.toBeInTheDocument();
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ value: "a rainforest temple", character: "a blue parrot", useCase: WORLD, frameRate: null })
+      );
+    });
+
+    it("enhances each field on its own, and tells the handler which", async () => {
+      const onEnhance = vi.fn();
+      const screen = harness({ value: "a temple", useCase: WORLD, models: [], character: "a parrot", onCharacterChange: () => {}, onEnhance });
+      await screen.getByRole("button", { name: "Optimize character" }).click();
+      expect(onEnhance).toHaveBeenCalledWith("a parrot", "character");
+      await screen.getByRole("button", { name: "Optimize environment" }).click();
+      expect(onEnhance).toHaveBeenCalledWith("a temple", "environment");
+    });
+
+    it("offers the models' frame rates and sends the pick", async () => {
+      const onSubmit = vi.fn();
+      const screen = controlled<ComposerProps>(
+        render,
+        { value: "a city", onChange: () => {}, onSubmit, useCase: WORLD, models: [LINGBOT], modelId: "lingbot", frameRate: null, onFrameRateChange: () => {} },
+        { onFrameRateChange: "frameRate" }
+      );
+      await screen.getByText("Frame rate").click();
+      await screen.getByRole("button", { name: "24fps" }).click();
+      await expect.element(screen.getByRole("button", { name: "24fps", expanded: false })).toBeVisible();
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ frameRate: 24 }));
+    });
+
+    it("has no WCAG violations", async () => {
+      harness({ value: "a temple", useCase: WORLD, models: [], character: "", onCharacterChange: () => {}, onEnhance: () => {} });
+      expect(await wcagViolations(document.querySelector(".chai-composer")!)).toEqual([]);
+    });
+  });
+
   describe("Composer editing an image", () => {
     const photo = { id: "a1", src: "data:image/png;base64,AAA", kind: "image" as const };
 
@@ -291,6 +346,20 @@ export function composerContract(render: Render<ComposerProps>) {
       await narrowed.getByRole("button", { name: "Add media" }).click();
       await expect.element(narrowed.getByRole("menuitem", { name: "Edit image" })).toBeVisible();
       await expect.element(narrowed.getByRole("menuitem", { name: "Create video" })).not.toBeInTheDocument();
+    });
+
+    it("shows Create world only when attachMenuActions lists it", async () => {
+      const onAttachMenuSelect = vi.fn();
+      const defaults = harness({ onAttachMenuSelect });
+      await defaults.getByRole("button", { name: "Add media" }).click();
+      await expect.element(defaults.getByRole("menuitem", { name: "Create video" })).toBeVisible();
+      await expect.element(defaults.getByRole("menuitem", { name: "Create world" })).not.toBeInTheDocument();
+      defaults.unmount();
+
+      const screen = harness({ onAttachMenuSelect, attachMenuActions: ["create-image", "create-world"] });
+      await screen.getByRole("button", { name: "Add media" }).click();
+      await screen.getByRole("menuitem", { name: "Create world" }).click();
+      expect(onAttachMenuSelect).toHaveBeenCalledWith("create-world");
     });
   });
 

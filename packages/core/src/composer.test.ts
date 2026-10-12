@@ -81,6 +81,18 @@ describe("createComposerStore", () => {
     expect(generate.mock.calls[0]![0].aspectRatio).toBe("16:9");
   });
 
+  it("sends a world to the world engine with its character and frame rate", async () => {
+    const media = vi.fn();
+    const world = vi.fn().mockResolvedValue({ src: "https://x/world.mp4", kind: "video" as const });
+    const { result } = setup({ engine: fakeEngine(media), engineByKind: { world: fakeEngine(world) } });
+    const WORLD = { kind: "world" as const, label: "World" };
+
+    result.current.submit(payload({ useCase: WORLD, value: "a temple", character: "a parrot", frameRate: 16 }));
+    await vi.waitFor(() => expect(result.current.run?.results[0]!.status).toBe("done"));
+    expect(world.mock.calls[0]![0]).toMatchObject({ prompt: "a temple", character: "a parrot", frameRate: 16 });
+    expect(media).not.toHaveBeenCalled();
+  });
+
   it("sends a text request (no use case picked) to the text engine with the builder's text model", async () => {
     const media = vi.fn();
     const text = vi.fn().mockResolvedValue({ src: "Hello!", kind: "text" as const });
@@ -294,6 +306,17 @@ describe("createComposerStore", () => {
     result.current.submit(payload({ useCase: TEXT_USE_CASE, modelId: null }));
     await result.current.enhance!("a dog");
     expect(reason.mock.calls[1]![0].prompt).toContain("an AI assistant prompt");
+  });
+
+  it("words Enhance's instruction for a world's environment and character, each about its own field", async () => {
+    const reason = vi.fn().mockResolvedValue({ src: "better", kind: "text" });
+    const { result } = setup({ reasoningEngine: fakeEngine(reason), reasoningModel: "m" });
+
+    await result.current.enhance!("a temple", "environment");
+    expect(reason.mock.calls[0]![0].prompt).toMatch(/interactive world for a world model.*Don't add a character/s);
+    await result.current.enhance!("a parrot", "character");
+    expect(reason.mock.calls[1]![0].prompt).toMatch(/character a person plays.*Don't describe the world/s);
+    expect(reason.mock.calls[1]![0].prompt).toContain("a parrot");
   });
 
   it("enhance throws without reasoning instead of calling anything", async () => {

@@ -6,13 +6,13 @@
  */
 
 import { normalizeGenerationError, type GenerationEngine } from "./engine.js";
-import type { DroppedMedia, MediaKind, ModelOption } from "./types.js";
+import type { DroppedMedia, MediaKind, ModelOption, OutputKind } from "./types.js";
 
 export interface ModelRoutingInput {
   /** What the person typed. Empty for media-only requests (e.g. Media Analyzer). */
   prompt: string;
   /** What the request produces, e.g. "image" for Create image, "text" for analysis. */
-  outputKind: MediaKind;
+  outputKind: OutputKind;
   /** Kinds of media attached, if any. */
   attachmentKinds: MediaKind[];
   /** The candidates: only models the builder offers for this request. */

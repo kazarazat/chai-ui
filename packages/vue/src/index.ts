@@ -46,6 +46,7 @@ export {
 } from "@chai-ui/core";
 export type {
   ComposerAttachMenuAction,
+  ComposerPromptField,
   ComposerAttachment,
   ComposerSelection,
   ComposerSubmitPayload,
@@ -62,6 +63,7 @@ export type {
   MediaAnalyzerSubmitPayload,
   MediaKind,
   ModelOption,
+  OutputKind,
   ParameterOption,
   Reasoning,
   RegionBox,

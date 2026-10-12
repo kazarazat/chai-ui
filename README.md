@@ -31,7 +31,8 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
   model menu comes filled with suggested models for each use case, the
   aspect-ratio menu offers only what the selected model takes, and the
   pick reaches the model in its own format, so you never write a model or
-  ratio list.
+  ratio list. Create world (opt-in) adds world model support: Environment
+  and Character prompts, each with its own Enhance, and a frame rate menu.
 - **MediaAnalyzer:** drop in an image, video or audio clip and get a
   generation-ready prompt back.
 - **ResultCard:** one prompt's results (image, video, audio or text), with

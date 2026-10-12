@@ -9,15 +9,29 @@ import { readMediaFiles } from "./media-analyzer.js";
 import type { EditRegion } from "./region-edit.js";
 import { deriveGenerationUseCase } from "./run.js";
 import { suggestedModels } from "./suggested-models.js";
-import type { MediaKind, ModelOption, ParameterOption } from "./types.js";
+import type { ModelOption, OutputKind, ParameterOption } from "./types.js";
 
-export type ComposerAttachMenuAction = "add-media" | "create-image" | "create-video" | "edit-media";
+/** Which prompt field an Enhance click is for: the bar's prompt, or a world's environment or character. */
+export type ComposerPromptField = "prompt" | "environment" | "character";
 
-/** The `+` menu, in order. "Add media" is the only item with a divider after it. */
-export const COMPOSER_ATTACH_MENU_ITEMS: { action: ComposerAttachMenuAction; label: string; divider?: boolean }[] = [
+export type ComposerAttachMenuAction = "add-media" | "create-image" | "create-video" | "create-world" | "edit-media";
+
+/**
+ * The `+` menu, in order. "Add media" is the only item with a divider after
+ * it. An `optIn` item shows only when `attachMenuActions` lists it.
+ */
+export const COMPOSER_ATTACH_MENU_ITEMS: {
+  action: ComposerAttachMenuAction;
+  label: string;
+  divider?: boolean;
+  optIn?: boolean;
+}[] = [
   { action: "add-media", label: "Add media", divider: true },
   { action: "create-image", label: "Create image" },
   { action: "create-video", label: "Create video" },
+  // No suggested world models or shipped world engine yet: a builder adds
+  // this with their own models and `engineByKind.world`.
+  { action: "create-world", label: "Create world", optIn: true },
   { action: "edit-media", label: "Edit image" },
 ];
 
@@ -41,7 +55,7 @@ export interface ComposerViewInput {
   defaultUseCase?: ComposerUseCase;
   multiSelectUseCases?: boolean;
   useCases?: ComposerUseCase[];
-  modelsByKind?: Partial<Record<MediaKind, ModelOption[]>>;
+  modelsByKind?: Partial<Record<OutputKind, ModelOption[]>>;
   multiSelectModels?: boolean;
   modelIds?: string[];
   models?: ModelOption[];
@@ -51,6 +65,9 @@ export interface ComposerViewInput {
   autoSelectModel?: boolean;
   aspectRatios?: ParameterOption<string>[];
   aspectRatio?: string | null;
+  /** A world's character field. */
+  character?: string;
+  frameRate?: number | null;
   submitError?: string | null;
   submitDisabled?: boolean;
   submitting?: boolean;
@@ -75,6 +92,8 @@ export function composerView(props: ComposerViewInput) {
     autoSelectModel = false,
     aspectRatios,
     aspectRatio = null,
+    character = "",
+    frameRate = null,
     submitError = null,
     submitting = false,
     regions = [],
@@ -88,17 +107,27 @@ export function composerView(props: ComposerViewInput) {
   // An edit needs an image, then a change: a prompt for the whole image, a
   // region with its own instruction, or both.
   const editing = activeUseCases.some((u) => u.edit);
+  // A world takes two prompts: the environment (`value`, required) and the
+  // character the person plays (optional). An image can start the world,
+  // but the environment is still needed.
+  const world = activeUseCases.some((u) => u.kind === "world");
   const hasImage = attachments.some((a) => a.kind === "image");
   const hasContent = editing
     ? hasImage && (value.trim().length > 0 || regions.length > 0)
-    : value.trim().length > 0 || attachments.length > 0;
+    : world
+      ? value.trim().length > 0
+      : value.trim().length > 0 || attachments.length > 0;
   const placeholder =
     props.placeholder ??
     (editing
       ? hasImage
         ? "Describe a change across the whole image, or leave this empty"
         : "Attach an image to edit"
-      : "Describe media to create");
+      : world
+        ? attachments.length > 0
+          ? "Describe the world, and how to use the attached media"
+          : "Describe the world and how you move through it"
+        : "Describe media to create");
   // The stop icon only appears with somewhere for its click to go.
   const showStop = submitting && Boolean(props.onAbort);
 
@@ -153,6 +182,13 @@ export function composerView(props: ComposerViewInput) {
   const offeredAspect = showAspectRatio && aspectOptions.some((o) => o.value === aspectRatio) ? aspectRatio : null;
   const selectedAspect = aspectOptions.find((o) => o.value === offeredAspect) ?? null;
 
+  // A world's frame rate works like aspect ratio: only rates every model
+  // that might run takes, and a pick outside them is never sent.
+  const frameRateOptions = world
+    ? (ratioModels.reduce<number[] | null>((shared, m) => (shared ?? m.frameRates ?? []).filter((r) => m.frameRates?.includes(r)), null) ?? [])
+    : [];
+  const offeredFrameRate = frameRate != null && frameRateOptions.includes(frameRate) ? frameRate : null;
+
   const selections = (): ComposerSelection[] =>
     activeUseCases.map((u) => ({
       useCase: u,
@@ -183,6 +219,18 @@ export function composerView(props: ComposerViewInput) {
     aspectOptions,
     offeredAspect,
     selectedAspect,
+    world,
+    /**
+     * Why submit can't go yet, shown under the environment: there's
+     * something to send (a character or an attachment) but no environment.
+     */
+    environmentHint:
+      world && !value.trim() && (character.trim().length > 0 || attachments.length > 0)
+        ? "Add an environment to create a world"
+        : null,
+    characterPlaceholder: "Describe who you play as, or leave this empty",
+    frameRateOptions,
+    offeredFrameRate,
     /** The model ids after a row click: the one picked, or with multi-select that one toggled. */
     toggledModelIds: (id: string) => (modelIds.includes(id) ? modelIds.filter((m) => m !== id) : [...modelIds, id]),
     /** Everything a submit sends. */
@@ -195,20 +243,25 @@ export function composerView(props: ComposerViewInput) {
       selections: selections(),
       autoSelectModel,
       regions: editing ? regions : [],
+      ...(world && { character, frameRate: offeredFrameRate }),
     }),
   };
 }
 
 export type ComposerView = ReturnType<typeof composerView>;
 
-/** The `+` menu items that can work: "Add media" needs somewhere to put files, the use-case items a handler. */
+/**
+ * The `+` menu items that can work: "Add media" needs somewhere to put
+ * files, the use-case items a handler. With no `actions`, every item that
+ * isn't opt-in.
+ */
 export function composerAttachMenuItems(
   actions: ComposerAttachMenuAction[] | undefined,
   { canAddMedia, canSelect }: { canAddMedia: boolean; canSelect: boolean }
 ) {
   return COMPOSER_ATTACH_MENU_ITEMS.filter(
     (item) =>
-      (actions ?? COMPOSER_ATTACH_MENU_ITEMS.map((i) => i.action)).includes(item.action) &&
+      (actions ? actions.includes(item.action) : !item.optIn) &&
       (item.action === "add-media" ? canAddMedia : canSelect)
   );
 }

@@ -134,4 +134,9 @@ describe("deriveGenerationUseCase", () => {
   it("returns undefined for audio — no GenerationUseCase member exists yet", () => {
     expect(deriveGenerationUseCase({ kind: "audio" }, [])).toBeUndefined();
   });
+
+  it("returns undefined for world, with or without a starting image", () => {
+    expect(deriveGenerationUseCase({ kind: "world" }, [])).toBeUndefined();
+    expect(deriveGenerationUseCase({ kind: "world" }, [{ src: "x", kind: "image" }])).toBeUndefined();
+  });
 });

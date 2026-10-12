@@ -12,6 +12,8 @@ const V_MODEL: Record<string, string> = {
   onAutoSelectModelChange: "onUpdate:autoSelectModel",
   onAspectRatioChange: "onUpdate:aspectRatio",
   onRegionsChange: "onUpdate:regions",
+  onCharacterChange: "onUpdate:character",
+  onFrameRateChange: "onUpdate:frameRate",
 };
 
 composerContract(

@@ -9,30 +9,32 @@
  * Some controls show only with somewhere for them to go, so these listeners
  * are props, checked for: `@update:attachments` (add and remove media),
  * `@update:model-id` / `@update:model-ids` (the Model menu),
- * `@update:aspect-ratio`, `@update:use-cases` and `@clear-use-case` (chip
+ * `@update:aspect-ratio`, `@update:character` and `@update:frame-rate` (a
+ * world's fields), `@update:use-cases` and `@clear-use-case` (chip
  * remove), `@update:regions`, `@enhance` (the Enhance button), `@abort` (stop
  * while submitting) and `@attach-menu-select` (the + menu's use cases).
  */
 import "@material/web/fab/fab.js";
-import { computed, onScopeDispose, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   composerAttachmentsFromFiles,
   composerAttachMenuItems,
   composerView,
-  enhanceRevealDurationMs,
-  MAX_ANIMATE_ENHANCE_LENGTH,
   type ComposerAttachment,
   type ComposerAttachMenuAction,
+  type ComposerPromptField,
   type ComposerSubmitPayload,
   type ComposerUseCase,
   type EditRegion,
   type MediaKind,
   type ModelOption,
+  type OutputKind,
   type ParameterOption,
 } from "@chai-ui/core";
 import AttachMenu from "./composer/AttachMenu.vue";
 import Chip from "./composer/Chip.vue";
-import { ArrowForwardIcon, CloseSymbolIcon, ErrorIcon, ImageIcon, MusicNoteIcon, OptimizeIcon, RetryIcon, StopIcon, UndoIcon, VideocamIcon } from "./icons.js";
+import PromptField from "./composer/PromptField.vue";
+import { ArrowForwardIcon, CloseSymbolIcon, ErrorIcon, ImageIcon, MusicNoteIcon, RetryIcon, StopIcon, VideocamIcon } from "./icons.js";
 import SearchMenu from "./primitives/SearchMenu.vue";
 
 const props = withDefaults(
@@ -55,7 +57,7 @@ const props = withDefaults(
     useCases?: ComposerUseCase[];
     "onUpdate:useCases"?: (next: ComposerUseCase[]) => void;
     /** Models per use-case kind, for `multiSelectUseCases`. A kind left out gets Chai's suggested models. */
-    modelsByKind?: Partial<Record<MediaKind, ModelOption[]>>;
+    modelsByKind?: Partial<Record<OutputKind, ModelOption[]>>;
     /** The end user can pick several models, each producing its own result, with `modelIds`. */
     multiSelectModels?: boolean;
     modelIds?: string[];
@@ -73,10 +75,16 @@ const props = withDefaults(
     aspectRatios?: ParameterOption<string>[];
     aspectRatio?: string | null;
     "onUpdate:aspectRatio"?: (value: string) => void;
-    /** Shows the Enhance button; your handler runs the rewrite and updates the prompt. Gets the current prompt. */
-    onEnhance?: (value: string) => void;
+    /** Shows the Enhance button; your handler runs the rewrite and updates the prompt. Gets the current text, and with a world which field it's for. */
+    onEnhance?: (value: string, field: ComposerPromptField) => void;
     /** True while your Enhance handler is running. */
     enhancing?: boolean;
+    /** A world's character field (Create world), beside the environment (`v-model`). Shows with `v-model:character`. */
+    character?: string;
+    "onUpdate:character"?: (value: string) => void;
+    /** A world's frame rate menu, from the selected models' `frameRates`. */
+    frameRate?: number | null;
+    "onUpdate:frameRate"?: (value: number) => void;
     /** The last submit's failure: submit becomes retry, and the message shows inline. */
     submitError?: string | null;
     /** Overrides the built-in "empty prompt and no attachments" check. Ignored while `submitError` is set. */
@@ -99,6 +107,8 @@ const props = withDefaults(
     modelIds: () => [],
     modelId: null,
     aspectRatio: null,
+    character: "",
+    frameRate: null,
     submitError: null,
     // Left undefined unless set: Vue would make an absent boolean `false`,
     // which reads as "never disable".
@@ -159,64 +169,14 @@ function toggleModel(id: string) {
   else props["onUpdate:modelId"]?.(id);
 }
 
-// Grows with wrapped text from one line, instead of a fixed row count.
-const textarea = ref<HTMLTextAreaElement>();
-watch(
-  () => props.modelValue,
-  () => {
-    const el = textarea.value;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  },
-  { flush: "post", immediate: true }
-);
-
-// Enhance and undo. The prompt already holds the rewrite once `enhancing`
-// drops; the reveal is a decorative overlay painting it in, then gone.
-const originalValue = ref<string | null>(null);
-const enhancedValue = ref<string | null>(null);
-const animatingText = ref<string | null>(null);
-const revealedLength = ref(0);
-let raf = 0;
-
-watch(
-  () => props.enhancing,
-  (now, was) => {
-    if (!was || now || originalValue.value == null || props.modelValue === originalValue.value) return;
-    const value = props.modelValue;
-    enhancedValue.value = value;
-    // Long rewrites and reduced-motion requests appear at once.
-    if (value.length > MAX_ANIMATE_ENHANCE_LENGTH || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    animatingText.value = value;
-    revealedLength.value = 0;
-    const duration = enhanceRevealDurationMs(value.length);
-    const start = performance.now();
-    const tick = (time: number) => {
-      revealedLength.value = Math.min(value.length, Math.floor(((time - start) / duration) * value.length));
-      if (revealedLength.value < value.length) raf = requestAnimationFrame(tick);
-      else animatingText.value = null;
-    };
-    raf = requestAnimationFrame(tick);
-  }
-);
-onScopeDispose(() => cancelAnimationFrame(raf));
-
-const animating = computed(() => animatingText.value != null);
-const isEnhanced = computed(() => !animating.value && enhancedValue.value != null && props.modelValue === enhancedValue.value);
-const enhanceBusy = computed(() => Boolean(props.enhancing) || animating.value);
-
-function onOptimizeClick() {
-  if (isEnhanced.value) {
-    const original = originalValue.value;
-    enhancedValue.value = null;
-    originalValue.value = null;
-    if (original != null) emit("update:modelValue", original);
-    return;
-  }
-  originalValue.value = props.modelValue; // for undo, before the rewrite lands
-  props.onEnhance?.(props.modelValue);
-}
+// Which field's Enhance is running: `enhancing` is one flag for the bar.
+const enhancingField = ref<ComposerPromptField>("prompt");
+const enhanceField = (field: ComposerPromptField) =>
+  props.onEnhance &&
+  ((current: string) => {
+    enhancingField.value = field;
+    props.onEnhance?.(current, field);
+  });
 
 async function onFiles(files: FileList | null) {
   const onAttachments = props["onUpdate:attachments"];
@@ -268,34 +228,40 @@ function onSubmitClick() {
       </li>
     </ul>
 
-    <div class="chai-composer__field">
-      <textarea
-        ref="textarea"
-        :class="['chai-composer__input chai-composer__type', { 'chai-composer__input--revealing': animating }]"
+    <div v-if="view.world" class="chai-composer__world-fields">
+      <PromptField
         :value="modelValue"
         :placeholder="view.placeholder"
-        :aria-label="promptLabel ?? view.placeholder"
-        rows="1"
-        :disabled="disabled || animating"
-        @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+        heading="Environment"
+        note="(required)"
+        :hint="view.environmentHint"
+        :on-enhance="enhanceField('environment')"
+        :enhancing="Boolean(enhancing) && enhancingField === 'environment'"
+        :disabled="disabled"
+        @change="emit('update:modelValue', $event)"
       />
-      <!-- The Enhance reveal: decorative, so hidden from screen readers, which read the textarea's final text. -->
-      <div v-if="animating" class="chai-composer__reveal chai-composer__type" aria-hidden="true">
-        <span class="chai-composer__reveal-text">{{ animatingText!.slice(0, revealedLength) }}</span>
-      </div>
-      <!-- Optimize, or once a rewrite lands, undo it: until the prompt is edited by hand. -->
-      <button
-        v-if="onEnhance"
-        type="button"
-        :class="['chai-composer__optimize', { 'chai-composer__optimize--active': enhanceBusy }]"
-        :disabled="disabled || (isEnhanced ? false : !modelValue.trim() || enhanceBusy)"
-        :aria-label="isEnhanced ? 'Revert to original prompt' : 'Optimize prompt'"
-        :title="isEnhanced ? 'Revert to original prompt' : 'Optimize prompt'"
-        @click="onOptimizeClick"
-      >
-        <UndoIcon v-if="isEnhanced" /><OptimizeIcon v-else />
-      </button>
+      <PromptField
+        v-if="props['onUpdate:character']"
+        :value="character"
+        :placeholder="view.characterPlaceholder"
+        heading="Character"
+        note="(optional)"
+        :on-enhance="enhanceField('character')"
+        :enhancing="Boolean(enhancing) && enhancingField === 'character'"
+        :disabled="disabled"
+        @change="props['onUpdate:character']?.($event)"
+      />
     </div>
+    <PromptField
+      v-else
+      :value="modelValue"
+      :placeholder="view.placeholder"
+      :label="promptLabel"
+      :on-enhance="enhanceField('prompt')"
+      :enhancing="Boolean(enhancing)"
+      :disabled="disabled"
+      @change="emit('update:modelValue', $event)"
+    />
 
     <p v-if="submitError" class="chai-composer__error" role="alert"><ErrorIcon />{{ submitError }}</p>
 
@@ -349,6 +315,18 @@ function onSubmitClick() {
           trigger-variant="text"
           :disabled="disabled"
           @select="props['onUpdate:aspectRatio']?.($event.id)"
+        />
+
+        <SearchMenu
+          v-if="view.frameRateOptions.length > 0 && props['onUpdate:frameRate']"
+          :options="view.frameRateOptions.map((r) => ({ id: String(r), label: `${r}fps` }))"
+          :value="view.offeredFrameRate == null ? null : String(view.offeredFrameRate)"
+          :trigger-label="view.offeredFrameRate == null ? 'Frame rate' : `${view.offeredFrameRate}fps`"
+          menu-label="Frame rate"
+          :searchable="false"
+          trigger-variant="text"
+          :disabled="disabled"
+          @select="props['onUpdate:frameRate']?.(Number($event.id))"
         />
       </div>
 

@@ -593,6 +593,75 @@
   opacity: 0.6;
 }
 
+/* Create world's two prompts, side by side (stacked when narrow): each a
+   label and its own Enhance button above a filled box. */
+.chai-composer__world-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chai-space-4);
+}
+
+.chai-composer__world-field {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-2);
+}
+
+.chai-composer__world-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+}
+
+.chai-composer__world-field-label {
+  font-size: var(--chai-type-size-xs);
+  font-weight: var(--chai-type-weight-material-medium);
+  line-height: var(--chai-type-leading-label-small);
+  letter-spacing: var(--chai-type-tracking-label-small);
+  color: var(--chai-color-semantic-control-text-strong);
+}
+
+.chai-composer__world-field-label strong {
+  font-weight: var(--chai-type-weight-semibold);
+}
+
+/* In the heading row, not over the text: no absolute position. */
+.chai-composer__world-field-head .chai-composer__optimize {
+  position: static;
+  width: 24px;
+}
+
+.chai-composer__field--boxed {
+  min-height: 144px;
+  padding: var(--chai-space-3);
+  border-radius: var(--chai-radius-md);
+  background: var(--chai-color-semantic-control-field);
+}
+
+/* Smaller text than the bar's prompt, and no room kept for an Enhance button. */
+.chai-composer__field--boxed .chai-composer__type {
+  padding-right: 0;
+  font-size: var(--chai-type-size-body-medium);
+  line-height: var(--chai-type-leading-body-medium);
+  letter-spacing: var(--chai-type-tracking-body-medium);
+}
+
+/* Why submit can't go yet (a world with no environment). */
+.chai-composer__field-hint {
+  margin: 0;
+  font-size: var(--chai-type-size-xs);
+  line-height: var(--chai-type-leading-label-small);
+  letter-spacing: var(--chai-type-tracking-label-small);
+  color: var(--chai-composer-placeholder);
+}
+
+.chai-composer__field--boxed .chai-composer__reveal {
+  inset: var(--chai-space-3);
+}
+
 /* The optimize/undo reveal (Composer.tsx's own doc comment on the overlay
    for the full mechanics) — the real textarea's text goes fully
    transparent so only the overlay's progressive, gradient-lit copy shows
@@ -2339,7 +2408,9 @@
    draw `<md-focus-ring>`. The Composer's textarea is the one control that
    had none — its ring goes on the whole pill, matching MD3's ring width
    and color so every ring in a component reads as the same system. */
-.chai-composer:has(.chai-composer__input:focus-visible) {
+.chai-composer:has(.chai-composer__field:not(.chai-composer__field--boxed) .chai-composer__input:focus-visible),
+/* A world's two boxes: the ring marks the box being typed in, not the bar. */
+.chai-composer__field--boxed:has(.chai-composer__input:focus-visible) {
   outline: 3px solid var(--chai-color-semantic-accent);
   outline-offset: 2px;
 }
@@ -2365,6 +2436,7 @@
 }
 
 [data-chai-focus-ring="hidden"] .chai-composer:has(.chai-composer__input:focus-visible),
+[data-chai-focus-ring="hidden"] .chai-composer__field--boxed:has(.chai-composer__input:focus-visible),
 [data-chai-focus-ring="hidden"] :is(
     .chai-composer,
     .chai-media-analyzer,
