@@ -122,6 +122,38 @@ describe("Composer helpers", () => {
     expect(composerAttachMenuItems(["edit-media"], { canAddMedia: true, canSelect: true }).map((i) => i.action)).toEqual(["edit-media"]);
   });
 
+  it("shows Create world only when the builder lists it", () => {
+    const all = { canAddMedia: true, canSelect: true };
+    expect(composerAttachMenuItems(undefined, all).map((i) => i.action)).not.toContain("create-world");
+    expect(composerAttachMenuItems(["create-image", "create-world"], all).map((i) => i.action)).toEqual(["create-image", "create-world"]);
+  });
+
+  it("needs a world's environment, sends its character and only a frame rate the models share", () => {
+    const WORLD = { kind: "world" as const, label: "World" };
+    const a = { ...model("a"), frameRates: [16, 24] };
+    const b = { ...model("b"), frameRates: [24, 60] };
+    const blocked = composerView({ value: "", character: "a parrot", attachments: [photo], useCase: WORLD });
+    expect(blocked.isSubmitDisabled).toBe(true);
+    expect(blocked.environmentHint).toBe("Add an environment to create a world");
+    expect(blocked.placeholder).toMatch(/how to use the attached media/);
+    // Nothing to send yet: no hint.
+    expect(composerView({ value: "", useCase: WORLD }).environmentHint).toBeNull();
+    const view = composerView({ value: "a temple", character: "a parrot", useCase: WORLD, models: [a, b], frameRate: 16 });
+    expect(view.world).toBe(true);
+    expect(view.frameRateOptions).toEqual([24]);
+    expect(view.payload()).toMatchObject({ value: "a temple", character: "a parrot", frameRate: null });
+    expect(composerView({ value: "a temple", useCase: WORLD, models: [a, b], frameRate: 24 }).payload().frameRate).toBe(24);
+    // Other use cases send neither.
+    expect(composerView({ value: "a mug", character: "x", useCase: IMAGE }).payload()).not.toHaveProperty("character");
+  });
+
+  it("gives a world use case no suggested models and no aspect ratio", () => {
+    const view = composerView({ value: "a meadow", useCase: { kind: "world", label: "World" }, onModelChange: () => {} });
+    expect(view.modelSections).toEqual([]);
+    expect(view.showAspectRatio).toBe(false);
+    expect(view.isSubmitDisabled).toBe(false);
+  });
+
   it("adds picked files in order, and in an edit replaces the image with the first one picked", async () => {
     const png = new File(["x"], "a.png", { type: "image/png" });
     const mp4 = new File(["x"], "b.mp4", { type: "video/mp4" });

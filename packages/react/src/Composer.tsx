@@ -1,5 +1,5 @@
 import { StopIcon } from "./icons.js";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
@@ -12,8 +12,9 @@ import {
   regionColor,
   TEXT_USE_CASE,
   type ComposerAttachMenuAction,
+  type ComposerPromptField,
 } from "@chai-ui/core";
-import type { EditRegion, ModelOption, ParameterOption, MediaKind } from "@chai-ui/core";
+import type { EditRegion, ModelOption, ParameterOption, MediaKind, OutputKind } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
 import type { ComposerAttachment, ComposerSubmitPayload, ComposerUseCase } from "@chai-ui/core";
 
@@ -22,6 +23,7 @@ export {
   TEXT_USE_CASE,
   type ComposerAttachMenuAction,
   type ComposerAttachment,
+  type ComposerPromptField,
   type ComposerSelection,
   type ComposerSubmitPayload,
   type ComposerUseCase,
@@ -61,7 +63,7 @@ export interface ComposerProps {
   useCases?: ComposerUseCase[];
   onUseCasesChange?: (next: ComposerUseCase[]) => void;
   /** Models per use-case kind, for `multiSelectUseCases`. A kind left out gets Chai's suggested models (see `models`). */
-  modelsByKind?: Partial<Record<MediaKind, ModelOption[]>>;
+  modelsByKind?: Partial<Record<OutputKind, ModelOption[]>>;
   /**
    * Builder opt-in, off by default: the end user can pick several models,
    * each producing its own result (ResultCard pages through them). Uses
@@ -118,11 +120,24 @@ export interface ComposerProps {
    * runs the rewrite is still an open question at the design-doc level,
    * not just an implementation gap — see the design open question 5
    * ("Enhance model"). Receives the current prompt text so the handler is
-   * self-contained — doesn't need its own closure over `value`.
+   * self-contained — doesn't need its own closure over `value`. With a
+   * world use case each field has its own button: `field` is "environment"
+   * or "character" (otherwise "prompt"), so the rewrite can fit the field,
+   * and the handler calls `onChange` or `onCharacterChange` to match.
    */
-  onEnhance?: (value: string) => void;
-  /** True while the builder's own `onEnhance` handler is running its LLM call — shows the button's active state. */
+  onEnhance?: (value: string, field: ComposerPromptField) => void;
+  /** True while the builder's own `onEnhance` handler is running its LLM call — shows the active state on the button that was clicked. */
   enhancing?: boolean;
+  /**
+   * A world's character field (Create world), shown beside the environment
+   * while the use case is a world. `value` is the environment. Without
+   * `onCharacterChange`, only the environment shows.
+   */
+  character?: string;
+  onCharacterChange?: (value: string) => void;
+  /** A world's frame rate menu, from the selected models' `ModelOption.frameRates`. */
+  frameRate?: number | null;
+  onFrameRateChange?: (value: number) => void;
   /** Fires with everything Composer tracks — see `ComposerSubmitPayload`. Also what retry calls, with the same payload, when `submitError` is set. */
   onSubmit: (payload: ComposerSubmitPayload) => void;
   /**
@@ -206,6 +221,10 @@ export function Composer({
   onAspectRatioChange,
   onEnhance,
   enhancing = false,
+  character = "",
+  onCharacterChange,
+  frameRate = null,
+  onFrameRateChange,
   onSubmit,
   submitError = null,
   submitDisabled,
@@ -235,6 +254,8 @@ export function Composer({
     autoSelectModel,
     aspectRatios,
     aspectRatio,
+    character,
+    frameRate,
     submitError,
     submitDisabled,
     submitting,
@@ -271,79 +292,14 @@ export function Composer({
     wasAutoSelect.current = autoSelectModel;
   }, [autoSelectModel, multiModel, onModelChange, onModelIdsChange]);
 
-  // Auto-grows with wrapped content instead of a fixed row count — a
-  // static `rows` either hides wrapped lines behind a scrollbar (too
-  // short) or wastes space while empty (too tall). Starts at one line
-  // (matching the mock's compact minimal state) and grows only as typed
-  // text actually wraps.
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
-
-  // The optimize/undo cycle (§ its own button below). `value` is already
-  // the final rewritten text the instant `enhancing` drops back to false —
-  // the reveal below is a purely cosmetic overlay on top of it, not a
-  // delay, so nothing here ever gates what the real `<textarea>` holds.
-  const [originalValue, setOriginalValue] = useState<string | null>(null);
-  const [enhancedValue, setEnhancedValue] = useState<string | null>(null);
-  const [prevEnhancing, setPrevEnhancing] = useState(enhancing);
-  const [animatingText, setAnimatingText] = useState<string | null>(null);
-  const [revealedLength, setRevealedLength] = useState(0);
-
-  // React to `enhancing` dropping back to false while rendering, not in an
-  // effect (the rules of React): that's the moment the rewrite has landed.
-  if (prevEnhancing !== enhancing) {
-    setPrevEnhancing(enhancing);
-    if (prevEnhancing && !enhancing && originalValue != null && value !== originalValue) {
-      setEnhancedValue(value);
-      // Bails on length (see the constant's own comment) or on a real
-      // `prefers-reduced-motion` request — the reveal is itself motion, not
-      // just the shimmer the CSS `@media` query above separately turns off.
-      const reducedMotion =
-        typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      if (value.length <= MAX_ANIMATE_ENHANCE_LENGTH && !reducedMotion) {
-        setRevealedLength(0);
-        setAnimatingText(value);
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (animatingText == null) return;
-    const total = animatingText.length;
-    const duration = enhanceRevealDurationMs(total);
-    const start = performance.now();
-    let raf: number;
-    const tick = (now: number) => {
-      const elapsed = now - start;
-      const next = Math.min(total, Math.floor((elapsed / duration) * total));
-      setRevealedLength((prev) => (prev === next ? prev : next));
-      if (next < total) raf = requestAnimationFrame(tick);
-      else setAnimatingText(null);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [animatingText]);
-
-  const animating = animatingText != null;
-  const isEnhanced = !animating && enhancedValue != null && value === enhancedValue;
-  const enhanceBusy = enhancing || animating;
-
-  function handleOptimizeClick() {
-    if (isEnhanced) {
-      const original = originalValue;
-      setEnhancedValue(null);
-      setOriginalValue(null);
-      if (original != null) onChange(original);
-      return;
-    }
-    setOriginalValue(value); // snapshot now — before the rewrite lands, for undo
-    onEnhance?.(value);
-  }
+  // Which field's Enhance is running: `enhancing` is one flag for the bar.
+  const [enhancingField, setEnhancingField] = useState<ComposerPromptField>("prompt");
+  const enhanceField = (field: ComposerPromptField) =>
+    onEnhance &&
+    ((current: string) => {
+      setEnhancingField(field);
+      onEnhance(current, field);
+    });
 
   async function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || !onAttachmentsChange) return;
@@ -391,49 +347,43 @@ export function Composer({
         </ul>
       )}
 
-      <div className="chai-composer__field">
-        <textarea
-          ref={textareaRef}
-          className={`chai-composer__input chai-composer__type${animating ? " chai-composer__input--revealing" : ""}`}
+      {view.world ? (
+        <div className="chai-composer__world-fields">
+          <PromptField
+            value={value}
+            onChange={onChange}
+            placeholder={view.placeholder}
+            heading="Environment"
+            note="(required)"
+            hint={view.environmentHint}
+            onEnhance={enhanceField("environment")}
+            enhancing={enhancing && enhancingField === "environment"}
+            disabled={disabled}
+          />
+          {onCharacterChange && (
+            <PromptField
+              value={character}
+              onChange={onCharacterChange}
+              placeholder={view.characterPlaceholder}
+              heading="Character"
+              note="(optional)"
+              onEnhance={enhanceField("character")}
+              enhancing={enhancing && enhancingField === "character"}
+              disabled={disabled}
+            />
+          )}
+        </div>
+      ) : (
+        <PromptField
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={view.placeholder}
-          aria-label={promptLabel ?? view.placeholder}
-          rows={1}
-          disabled={disabled || animating}
+          label={promptLabel}
+          onEnhance={enhanceField("prompt")}
+          enhancing={enhancing}
+          disabled={disabled}
         />
-        {/* The optimize/undo reveal overlay — decorative only. The real
-            textarea above already holds the final text throughout (just
-            visually suppressed via `--revealing`); this div paints the
-            same text back in progressively with a gradient, then unmounts.
-            `aria-hidden` so a screen reader isn't told the text twice —
-            the textarea's own (already-final) value is what it reads. */}
-        {animating && (
-          <div className="chai-composer__reveal chai-composer__type" aria-hidden="true">
-            <span className="chai-composer__reveal-text">{animatingText!.slice(0, revealedLength)}</span>
-          </div>
-        )}
-        {/* "Optimize prompt" / "Revert to original prompt" — see
-            `onEnhance`'s own doc comment on `ComposerProps` for what the
-            rewrite itself actually does and why Composer doesn't run it.
-            Once a rewrite lands, this becomes an undo affordance instead —
-            an already-optimized prompt can't be re-optimized — and reverts
-            to a plain optimize button again the moment `value` no longer
-            matches that rewrite exactly, i.e. the person has since edited
-            it by hand. */}
-        {onEnhance && (
-          <button
-            type="button"
-            className={`chai-composer__optimize${enhanceBusy ? " chai-composer__optimize--active" : ""}`}
-            onClick={handleOptimizeClick}
-            disabled={disabled || (isEnhanced ? false : !value.trim() || enhanceBusy)}
-            aria-label={isEnhanced ? "Revert to original prompt" : "Optimize prompt"}
-            title={isEnhanced ? "Revert to original prompt" : "Optimize prompt"}
-          >
-            {isEnhanced ? <UndoIcon /> : <OptimizeIcon />}
-          </button>
-        )}
-      </div>
+      )}
 
       {submitError && (
         <p className="chai-composer__error" role="alert">
@@ -511,6 +461,19 @@ export function Composer({
               disabled={disabled}
             />
           )}
+
+          {view.frameRateOptions.length > 0 && onFrameRateChange && (
+            <SearchMenu
+              options={view.frameRateOptions.map((r) => ({ id: String(r), label: `${r}fps` }))}
+              value={view.offeredFrameRate == null ? null : String(view.offeredFrameRate)}
+              triggerLabel={view.offeredFrameRate == null ? "Frame rate" : `${view.offeredFrameRate}fps`}
+              menuLabel="Frame rate"
+              onSelect={(opt) => onFrameRateChange(Number(opt.id))}
+              searchable={false}
+              triggerVariant="text"
+              disabled={disabled}
+            />
+          )}
         </div>
 
         {/* MD3's `<md-fab>` has no `disabled` property of its own (FABs are
@@ -580,10 +543,190 @@ export function Composer({
   );
 }
 
+/**
+ * One prompt textarea with its Enhance button: grows with wrapped text,
+ * reveals a rewrite as it lands, and offers undo until the text is edited
+ * by hand. A `heading` gives it a visible label above a filled box (a
+ * world's Environment and Character); without one it's the bar's plain
+ * prompt.
+ */
+function PromptField({
+  value,
+  onChange,
+  placeholder,
+  label,
+  heading,
+  note,
+  hint,
+  onEnhance,
+  enhancing,
+  disabled,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  /** Accessible name for the plain prompt. Defaults to `placeholder`. */
+  label?: string;
+  heading?: string;
+  note?: string;
+  /** Shown under a headed field, e.g. why submit can't go yet. */
+  hint?: string | null;
+  onEnhance?: (value: string) => void;
+  enhancing: boolean;
+  disabled: boolean;
+}) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+
+  // Auto-grows with wrapped content instead of a fixed row count — a
+  // static `rows` either hides wrapped lines behind a scrollbar (too
+  // short) or wastes space while empty (too tall). Starts at one line
+  // (matching the mock's compact minimal state) and grows only as typed
+  // text actually wraps.
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  // The optimize/undo cycle (§ its own button below). `value` is already
+  // the final rewritten text the instant `enhancing` drops back to false —
+  // the reveal below is a purely cosmetic overlay on top of it, not a
+  // delay, so nothing here ever gates what the real `<textarea>` holds.
+  const [originalValue, setOriginalValue] = useState<string | null>(null);
+  const [enhancedValue, setEnhancedValue] = useState<string | null>(null);
+  const [prevEnhancing, setPrevEnhancing] = useState(enhancing);
+  const [animatingText, setAnimatingText] = useState<string | null>(null);
+  const [revealedLength, setRevealedLength] = useState(0);
+
+  // React to `enhancing` dropping back to false while rendering, not in an
+  // effect (the rules of React): that's the moment the rewrite has landed.
+  if (prevEnhancing !== enhancing) {
+    setPrevEnhancing(enhancing);
+    if (prevEnhancing && !enhancing && originalValue != null && value !== originalValue) {
+      setEnhancedValue(value);
+      // Bails on length (see the constant's own comment) or on a real
+      // `prefers-reduced-motion` request — the reveal is itself motion, not
+      // just the shimmer the CSS `@media` query above separately turns off.
+      const reducedMotion =
+        typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (value.length <= MAX_ANIMATE_ENHANCE_LENGTH && !reducedMotion) {
+        setRevealedLength(0);
+        setAnimatingText(value);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (animatingText == null) return;
+    const total = animatingText.length;
+    const duration = enhanceRevealDurationMs(total);
+    const start = performance.now();
+    let raf: number;
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const next = Math.min(total, Math.floor((elapsed / duration) * total));
+      setRevealedLength((prev) => (prev === next ? prev : next));
+      if (next < total) raf = requestAnimationFrame(tick);
+      else setAnimatingText(null);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [animatingText]);
+
+  const animating = animatingText != null;
+  const isEnhanced = !animating && enhancedValue != null && value === enhancedValue;
+  const enhanceBusy = enhancing || animating;
+
+  function handleOptimizeClick() {
+    if (isEnhanced) {
+      const original = originalValue;
+      setEnhancedValue(null);
+      setOriginalValue(null);
+      if (original != null) onChange(original);
+      return;
+    }
+    setOriginalValue(value); // snapshot now — before the rewrite lands, for undo
+    onEnhance?.(value);
+  }
+
+  const optimizeLabel = isEnhanced ? "Revert to original" : "Optimize";
+  const optimizeName = `${optimizeLabel} ${heading ? heading.toLowerCase() : "prompt"}`;
+  /* "Optimize prompt" / "Revert to original prompt" — see `onEnhance`'s own
+     doc comment on `ComposerProps` for what the rewrite itself actually
+     does and why Composer doesn't run it. Once a rewrite lands, this
+     becomes an undo affordance instead — an already-optimized prompt can't
+     be re-optimized — and reverts to a plain optimize button again the
+     moment `value` no longer matches that rewrite exactly, i.e. the person
+     has since edited it by hand. */
+  const optimize = onEnhance && (
+    <button
+      type="button"
+      className={`chai-composer__optimize${enhanceBusy ? " chai-composer__optimize--active" : ""}`}
+      onClick={handleOptimizeClick}
+      disabled={disabled || (isEnhanced ? false : !value.trim() || enhanceBusy)}
+      aria-label={optimizeName}
+      title={optimizeName}
+    >
+      {isEnhanced ? <UndoIcon /> : <OptimizeIcon />}
+    </button>
+  );
+
+  const field = (
+    <div className={`chai-composer__field${heading ? " chai-composer__field--boxed" : ""}`}>
+      <textarea
+        ref={textareaRef}
+        id={id}
+        className={`chai-composer__input chai-composer__type${animating ? " chai-composer__input--revealing" : ""}`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={heading ? undefined : (label ?? placeholder)}
+        aria-describedby={hint ? hintId : undefined}
+        rows={1}
+        disabled={disabled || animating}
+      />
+      {/* The optimize/undo reveal overlay — decorative only. The real
+          textarea above already holds the final text throughout (just
+          visually suppressed via `--revealing`); this div paints the
+          same text back in progressively with a gradient, then unmounts.
+          `aria-hidden` so a screen reader isn't told the text twice —
+          the textarea's own (already-final) value is what it reads. */}
+      {animating && (
+        <div className="chai-composer__reveal chai-composer__type" aria-hidden="true">
+          <span className="chai-composer__reveal-text">{animatingText!.slice(0, revealedLength)}</span>
+        </div>
+      )}
+      {!heading && optimize}
+    </div>
+  );
+
+  if (!heading) return field;
+  return (
+    <div className="chai-composer__world-field">
+      <div className="chai-composer__world-field-head">
+        <label htmlFor={id} className="chai-composer__world-field-label">
+          <strong>{heading}</strong> {note}
+        </label>
+        {optimize}
+      </div>
+      {field}
+      {hint && (
+        <p id={hintId} className="chai-composer__field-hint">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const ATTACH_MENU_ICONS: Record<ComposerAttachMenuAction, React.ReactNode> = {
   "add-media": <AttachFileIcon />,
   "create-image": <ImageIcon />,
   "create-video": <VideocamIcon />,
+  "create-world": <GlobeIcon />,
   "edit-media": <ContentCutIcon />,
 };
 
@@ -896,6 +1039,18 @@ function AttachFileIcon() {
     <svg viewBox="0 -960 960 960" aria-hidden="true">
       <path
         d="M728-326q0 103-72.18 174.5-72.17 71.5-175 71.5Q378-80 305.5-151.5T233-326v-380q0-72.5 51.5-123.25T408-880q72 0 123.5 50.75T583-706v360q0 42-30 72t-72.5 30q-42.5 0-72.5-29.67-30-29.68-30-72.33v-370h60v370q0 17 12.5 29.5t30.64 12.5q18.14 0 30-12.5T523-346v-360q0-48-33.5-81t-81.71-33q-48.21 0-81.5 33.06T293-706v380q0 78 54.97 132T481-140q77.92 0 132.46-54Q668-248 668-326v-390h60v390Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+// Material Symbols "globe" — the attach menu's Create world.
+function GlobeIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" aria-hidden="true">
+      <path
+        d="M480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm-.27-60q142.38 0 241.19-99.5T820-480v-13q-6 26-27.41 43.5Q771.19-432 742-432h-80q-33 0-56.5-23.5T582-512v-40H422v-80q0-33 23.5-56.5T502-712h40v-22q0-16 13.5-40t30.5-29q-25-8-51.36-12.5Q508.29-820 480-820q-141 0-240.5 98.81T140-480h150q66 0 113 47t47 113v40H330v105q34 17 71.7 26t78.3 9Z"
         fill="currentColor"
       />
     </svg>

@@ -23,6 +23,10 @@ export interface GenerationEngine {
     attachments: DroppedMedia[];
     /** The output aspect ratio the person picked, e.g. `"16:9"`. Only set for a model that lists it in `ModelOption.aspectRatios`. */
     aspectRatio?: string;
+    /** A world's character (Create world), when the person gave one. `prompt` is the environment. */
+    character?: string;
+    /** A world's frame rate, e.g. `16`. Only set for a model that lists it in `ModelOption.frameRates`. */
+    frameRate?: number;
     /**
      * Optional streaming hook for text output. An engine that can stream
      * calls this with the full text received so far (not a delta) each time

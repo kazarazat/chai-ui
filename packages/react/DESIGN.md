@@ -153,6 +153,7 @@ Rules:
 | Request in flight | Submit becomes a stop button (`submitting` + `onAbort`) | Pass `useComposer`'s `cancel` as `onAbort`; results show "Stopped" |
 | Prompt too thin | Optimize button rewrites the prompt, then offers undo (`onEnhance`) | Run the rewrite and call `onChange` with the new text |
 | No use case picked | The prompt is a text request and gets a text reply | Set `defaultUseCase` if your app's default should be image or video |
+| Create world | Two prompts, Environment (required) and Character (optional), each with its own Enhance; a frame rate menu from the models' `frameRates`; submit waits for an environment and says so | Add `"create-world"` to `attachMenuActions`, pass your world models, `character` + `onCharacterChange`, and route `engineByKind.world` to your world engine. Show the world in your own viewer. |
 | Result pending | `ResultCard` shows a spinner for `queued` / `running` | Nothing. `useComposer` sets the status. |
 | Long text answer | `ResultCard` keeps line breaks, scrolls past 400px with a visible scrollbar, and follows streaming text unless the person scrolls up | Change the height with `textMaxHeight` if needed |
 | Text streaming in | `ResultCard` renders partial text with a caret, marked `aria-busy` | Use an engine that calls `onText` (OpenRouter does, and so does the mock text engine). `useComposer` wires it. |

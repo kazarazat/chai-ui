@@ -28,7 +28,8 @@ import {
   type ResultStatus,
   type Run,
 } from "./run.js";
-import type { DroppedMedia, GenerationUseCase, MediaKind, ModelOption } from "./types.js";
+import type { ComposerPromptField } from "./composer-view.js";
+import type { DroppedMedia, GenerationUseCase, MediaKind, ModelOption, OutputKind } from "./types.js";
 
 export interface ComposerAttachment extends DroppedMedia {
   id: string;
@@ -43,7 +44,7 @@ export interface ComposerAttachment extends DroppedMedia {
  * the design). With none picked, `defaultUseCase` applies.
  */
 export interface ComposerUseCase {
-  kind: MediaKind;
+  kind: OutputKind;
   label: string;
   /**
    * An edit of the attached image rather than a new one: no aspect ratio,
@@ -87,6 +88,10 @@ export interface ComposerSubmitPayload {
   autoSelectModel: boolean;
   /** An edit's marked regions, each with its own instruction. Empty unless the use case is an edit. */
   regions?: EditRegion[];
+  /** A world's character, the person's own figure in it. With a world use case, `value` is the environment. Undefined for other use cases. */
+  character?: string;
+  /** The picked frame rate for a world, or null for the model's default. Undefined for other use cases. */
+  frameRate?: number | null;
 }
 
 /**
@@ -116,7 +121,7 @@ export interface ComposerOptions {
    * for multi-use-case select, since one Fal engine outputs one kind, e.g.
    * `{ image: createFalEngine({ outputKind: "image" }), video: createFalEngine({ outputKind: "video" }) }`.
    */
-  engineByKind?: Partial<Record<MediaKind, GenerationEngine>>;
+  engineByKind?: Partial<Record<OutputKind, GenerationEngine>>;
   /**
    * The engine for text requests (a Composer with no use case picked, or a
    * text use case). Defaults to `reasoningEngine`, and to a mock text engine
@@ -137,8 +142,12 @@ export interface ComposerOptions {
   reasoningEngine?: GenerationEngine;
   /** Set with `reasoningEngine` to override the provider's pair; used for every kind (§5.5). */
   reasoningModel?: string;
-  /** Overrides the instruction wrapping a raw prompt for Enhance. Defaults to a generic still/video-aware rewrite instruction. */
-  enhancePrompt?: (value: string, mode?: GenerationUseCase) => string;
+  /**
+   * Overrides the instruction wrapping a raw prompt for Enhance. Defaults to
+   * a rewrite instruction for the kind of prompt: still, video, text, or a
+   * world's environment or character (`field`).
+   */
+  enhancePrompt?: (value: string, mode?: GenerationUseCase, field?: ComposerPromptField) => string;
   /**
    * Auto-select: with `autoSelectModel` on in the payload, the reasoning
    * model picks one model per use case at submit, then these fire with the
@@ -195,7 +204,14 @@ export interface ComposerEdit {
 
 const mockTextEngine = createMockEngine({ outputKind: "text" });
 
-function defaultEnhancePrompt(value: string, mode?: GenerationUseCase): string {
+function defaultEnhancePrompt(value: string, mode?: GenerationUseCase, field: ComposerPromptField = "prompt"): string {
+  const reply = "Reply with only the rewritten description, nothing else.";
+  if (field === "environment") {
+    return `Rewrite the following description of an interactive world for a world model to be more detailed and specific, keeping the same intent: the setting, its look and lighting, and how the person moves through it. Don't add a character. ${reply}\n\n${value}`;
+  }
+  if (field === "character") {
+    return `Rewrite the following description of the character a person plays in an interactive world to be more detailed and specific, keeping the same intent: who or what they are, how they look, and how they move. Don't describe the world around them. ${reply}\n\n${value}`;
+  }
   const subject = mode?.includes("video")
     ? "a video-generation"
     : mode === "text-to-text" || mode === "vision"
@@ -293,6 +309,11 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
     const fallback = isText ? (opts.textModel ?? (r && reasoningModelFor(r, attachments))) : undefined;
     const params: Record<string, unknown> = payload.aspectRatio && !isEdit ? { aspectRatio: payload.aspectRatio } : {};
     if (isEdit) params.regions = payload.regions ?? [];
+    // A world's extra inputs, for a world engine to map to its model.
+    if (selection.useCase.kind === "world") {
+      if (payload.character?.trim()) params.character = payload.character;
+      if (payload.frameRate != null) params.frameRate = payload.frameRate;
+    }
     const request: Request = {
       mode: deriveGenerationUseCase(selection.useCase, attachments),
       prompt: payload.value,
@@ -359,6 +380,8 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
             prompt,
             attachments: newRun.request.attachments,
             aspectRatio: newRun.request.params.aspectRatio as string | undefined,
+            character: newRun.request.params.character as string | undefined,
+            frameRate: newRun.request.params.frameRate as number | undefined,
             // Text engines that stream fill `output` in while still "running".
             onText: (text) => update(newRun.id, (r) => streamResult(r, result.id, text)),
             signal,
@@ -462,13 +485,13 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
     set((s) => ({ routing: false, runs: cancelAll(s.runs), editRuns: cancelAll(s.editRuns) }));
   }
 
-  /** Rewrites a prompt with the reasoning model. Only offer it when `reasoning()` is set. */
-  async function enhance(value: string): Promise<string> {
+  /** Rewrites a prompt with the reasoning model, worded for its `field`. Only offer it when `reasoning()` is set. */
+  async function enhance(value: string, field?: ComposerPromptField): Promise<string> {
     const r = reasoning();
     if (!r) throw new Error("[chai-ui] Enhance needs a reasoning engine and model.");
     set(() => ({ enhancing: true }));
     try {
-      const prompt = (getOptions().enhancePrompt ?? defaultEnhancePrompt)(value, state.runs[0]?.request.mode);
+      const prompt = (getOptions().enhancePrompt ?? defaultEnhancePrompt)(value, state.runs[0]?.request.mode, field);
       const { src } = await r.engine.generate({ modelId: r.model, prompt, attachments: [] });
       return src;
     } finally {

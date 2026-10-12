@@ -40,6 +40,7 @@ export type {
   MediaAnalysisPromptLength,
   MediaKind,
   ModelOption,
+  OutputKind,
   ParameterOption,
   RegionBox,
   RegionFormat,

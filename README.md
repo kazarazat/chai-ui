@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/kazarazat/chai-ui/actions/workflows/ci.yml"><img src="https://github.com/kazarazat/chai-ui/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://codecov.io/gh/kazarazat/chai-ui"><img src="https://codecov.io/gh/kazarazat/chai-ui/graph/badge.svg" alt="Coverage" /></a>
-  <a href="https://www.npmjs.com/package/@chai-ui/react"><img src="https://img.shields.io/npm/v/@chai-ui/react?label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@chai-ui/react"><img src="https://badge.fury.io/js/@chai-ui%2Freact.svg" alt="npm version" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-009747" alt="MIT license" /></a>
   <a href="#install"><img src="https://img.shields.io/badge/React-18.3%20%7C%2019-61DAFB?logo=react&logoColor=white" alt="React 18.3 | 19" /></a>
   <a href="#install"><img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white" alt="Vue 3.5" /></a>
@@ -31,7 +31,8 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
   model menu comes filled with suggested models for each use case, the
   aspect-ratio menu offers only what the selected model takes, and the
   pick reaches the model in its own format, so you never write a model or
-  ratio list.
+  ratio list. Create world (opt-in) adds world model support: Environment
+  and Character prompts, each with its own Enhance, and a frame rate menu.
 - **MediaAnalyzer:** drop in an image, video or audio clip and get a
   generation-ready prompt back.
 - **ResultCard:** one prompt's results (image, video, audio or text), with
