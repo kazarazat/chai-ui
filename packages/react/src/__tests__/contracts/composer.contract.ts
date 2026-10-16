@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import {
   EDIT_IMAGE_USE_CASE,
@@ -173,6 +173,101 @@ export function composerContract(render: Render<ComposerProps>) {
     });
   });
 
+  describe("Composer voice input", () => {
+    /** A recorder that hands over one chunk when stopped, so no real microphone is needed. */
+    class FakeRecorder {
+      static isTypeSupported = () => true;
+      state = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable: ((e: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob(["sound"], { type: "audio/webm" }) });
+        this.onstop?.();
+      }
+    }
+    const fakeStream = { getTracks: () => [{ stop() {} }] };
+    function stubMic(getUserMedia: () => Promise<unknown> = async () => fakeStream) {
+      vi.stubGlobal("MediaRecorder", FakeRecorder);
+      vi.spyOn(navigator.mediaDevices, "getUserMedia").mockImplementation(getUserMedia as never);
+    }
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it("shows no mic unless voiceInput is set", async () => {
+      harness();
+      await expect.element(document.querySelector(".chai-composer")!).toBeInTheDocument();
+      expect(document.querySelector(".chai-composer__voice")).toBeNull();
+    });
+
+    it("records, transcribes, and adds the transcript to the prompt without submitting", async () => {
+      stubMic();
+      const onSubmit = vi.fn();
+      const transcribe = vi.fn().mockResolvedValue("on an oak table");
+      const screen = harness({ value: "a red mug", onSubmit, voiceInput: { transcribe } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await expect.element(screen.getByRole("status")).toHaveTextContent("Recording");
+      // While recording: a waveform stands in for the prompt, and there's no submit.
+      expect(document.querySelector(".chai-composer__waveform")).not.toBeNull();
+      await expect.element(screen.getByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await expect.element(screen.getByRole("textbox")).toHaveValue("a red mug on an oak table");
+      await expect.element(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
+      expect(transcribe).toHaveBeenCalledWith(expect.objectContaining({ kind: "audio" }), expect.anything());
+      expect(onSubmit).not.toHaveBeenCalled();
+      await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
+    });
+
+    it("fills an empty prompt with the transcript alone", async () => {
+      stubMic();
+      const screen = harness({ voiceInput: { transcribe: vi.fn().mockResolvedValue("a red mug") } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await expect.element(screen.getByRole("textbox")).toHaveValue("a red mug");
+    });
+
+    it("Escape discards a recording, and a click while transcribing cancels it", async () => {
+      stubMic();
+      const transcribe = vi.fn(
+        (_clip: unknown, { signal }: { signal: AbortSignal }) =>
+          new Promise<string>((_, reject) => signal.addEventListener("abort", () => reject(new DOMException("x", "AbortError"))))
+      );
+      const screen = harness({ value: "a mug", voiceInput: { transcribe } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await expect.element(screen.getByRole("button", { name: "Stop recording and transcribe" })).toBeVisible();
+      await userEvent.keyboard("{Escape}");
+      await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
+      expect(transcribe).not.toHaveBeenCalled();
+
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await screen.getByRole("button", { name: "Cancel transcription" }).click();
+      await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
+      await expect.element(screen.getByRole("textbox")).toHaveValue("a mug");
+    });
+
+    it("explains a blocked microphone inline", async () => {
+      stubMic(() => Promise.reject(Object.assign(new Error("denied"), { name: "NotAllowedError" })));
+      const screen = harness({ voiceInput: { transcribe: vi.fn() } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await expect.element(screen.getByRole("alert")).toHaveTextContent(/Microphone access is blocked/);
+    });
+
+    it("has no WCAG violations while recording", async () => {
+      stubMic();
+      const screen = harness({ voiceInput: { transcribe: vi.fn() } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await expect.element(screen.getByRole("button", { name: "Stop recording and transcribe" })).toBeVisible();
+      expect(await wcagViolations(document.querySelector(".chai-composer")!)).toEqual([]);
+    });
+  });
+
   describe("Composer creating a world", () => {
     const WORLD = { kind: "world" as const, label: "World" };
     const LINGBOT: ModelOption = { id: "lingbot", label: "LingBot-World", provider: "p", speed: "fast", frameRates: [16, 24] };
@@ -203,9 +298,16 @@ export function composerContract(render: Render<ComposerProps>) {
       const onEnhance = vi.fn();
       const screen = harness({ value: "a temple", useCase: WORLD, models: [], character: "a parrot", onCharacterChange: () => {}, onEnhance });
       await screen.getByRole("button", { name: "Optimize character" }).click();
-      expect(onEnhance).toHaveBeenCalledWith("a parrot", "character");
+      expect(onEnhance).toHaveBeenCalledWith("a parrot", "character", undefined);
       await screen.getByRole("button", { name: "Optimize environment" }).click();
-      expect(onEnhance).toHaveBeenCalledWith("a temple", "environment");
+      expect(onEnhance).toHaveBeenCalledWith("a temple", "environment", undefined);
+    });
+
+    it("tells Enhance it's a text request when no use case is picked", async () => {
+      const onEnhance = vi.fn();
+      const screen = harness({ value: "what is a mug", onEnhance });
+      await screen.getByRole("button", { name: "Optimize prompt" }).click();
+      expect(onEnhance).toHaveBeenCalledWith("what is a mug", "prompt", "text-to-text");
     });
 
     it("offers the models' frame rates and sends the pick", async () => {

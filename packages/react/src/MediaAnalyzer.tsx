@@ -14,7 +14,7 @@ import {
 } from "@chai-ui/core";
 import type { ModelOption, MediaKind, MediaAnalysisPromptLength } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
-import { StopIcon } from "./icons.js";
+import { ArrowForwardIcon, StopIcon } from "./icons.js";
 import type { MediaAnalyzerAttachment, MediaAnalyzerSubmitPayload } from "@chai-ui/core";
 
 export {
@@ -334,14 +334,6 @@ function MediaAnalyzerThumbnail({
 // --- Icons ---------------------------------------------------------------
 // Same "trace and inline as a currentColor component" convention Composer.tsx
 // documents — icons aren't shared across files yet in this codebase.
-
-function ArrowForwardIcon() {
-  return (
-    <svg viewBox="0 -960 960 960" aria-hidden="true">
-      <path d="M686-450H160v-60h526L438-758l42-42 320 320-320 320-42-42 248-248Z" fill="currentColor" />
-    </svg>
-  );
-}
 
 /**
  * A stroked X, not the filled-path Material Symbols "close" glyph the rest

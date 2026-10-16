@@ -12,7 +12,7 @@ import {
   type Result,
 } from "@chai-ui/core";
 import { Pagination } from "./primitives/Pagination.js";
-import { CheckSymbolIcon, DownloadIcon, ExpandIcon, ShareIcon } from "./icons.js";
+import { CheckIcon, CheckSymbolIcon, DownloadIcon, ExpandIcon, ShareIcon } from "./icons.js";
 import { PageSlide, usePageSlide } from "./page-slide.js";
 
 /**
@@ -881,18 +881,6 @@ function CopyIcon() {
     <svg viewBox="0 0 8.60253 11.6462" fill="none" aria-hidden="true">
       <path
         d="M1.01206 11.6462C0.733745 11.6462 0.495405 11.5323 0.29704 11.3044C0.0990134 11.0761 0 10.8019 0 10.4816V2.32924H1.01206V10.4816H6.57841V11.6462H1.01206ZM3.03619 9.31697C2.75787 9.31697 2.5197 9.20303 2.32167 8.97515C2.12331 8.74689 2.02413 8.47262 2.02413 8.15235V1.16462C2.02413 0.84435 2.12331 0.570082 2.32167 0.341816C2.5197 0.113939 2.75787 0 3.03619 0H7.59047C7.86879 0 8.10713 0.113939 8.30549 0.341816C8.50352 0.570082 8.60253 0.84435 8.60253 1.16462V8.15235C8.60253 8.47262 8.50352 8.74689 8.30549 8.97515C8.10713 9.20303 7.86879 9.31697 7.59047 9.31697H3.03619ZM3.03619 8.15235H7.59047V1.16462H3.03619V8.15235Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-/** MD3 "check" symbol — same traced glyph SearchMenu.tsx uses, marking a passed evaluation. */
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M7.1625 13.5L2.8875 9.225L3.95625 8.15625L7.1625 11.3625L14.0438 4.48125L15.1125 5.55L7.1625 13.5Z"
         fill="currentColor"
       />
     </svg>
