@@ -224,6 +224,14 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
     });
 
+    it("fills an empty prompt with the transcript alone", async () => {
+      stubMic();
+      const screen = harness({ voiceInput: { transcribe: vi.fn().mockResolvedValue("a red mug") } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await expect.element(screen.getByRole("textbox")).toHaveValue("a red mug");
+    });
+
     it("Escape discards a recording, and a click while transcribing cancels it", async () => {
       stubMic();
       const transcribe = vi.fn(
