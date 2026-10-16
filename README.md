@@ -18,8 +18,8 @@
 
 **A design system for AI model interactions.** Every component comes with
 its use case instructions built in, is built on Material Design 3 and
-styled by your design tokens, and runs on Fal.ai, OpenRouter or your own
-engine. For React and Vue.
+styled by your design tokens, and runs on Fal.ai, OpenRouter, Vercel AI
+Gateway or your own engine. For React and Vue.
 
 Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
 
@@ -39,8 +39,8 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
   like, retry, download, share, a details flip, and streaming text.
 - **EditCard:** edit an image by marking regions on it, each with its own
   instruction, then page through the edits as versions.
-- **Engines:** Fal.ai for media generation, OpenRouter for reasoning, or
-  your own. API keys stay on your server.
+- **Engines:** Fal.ai for media generation, OpenRouter for reasoning, Vercel
+  AI Gateway for both, or your own. API keys stay on your server.
 
 </details>
 
@@ -125,7 +125,7 @@ import { createChaiHandler } from "@chai-ui/core/server";
 export const { GET, POST, PUT } = createChaiHandler();
 ```
 
-Then set `FAL_KEY` and `OPENROUTER_API_KEY` on your server. React Router
+Then set `FAL_KEY`, `OPENROUTER_API_KEY` or `AI_GATEWAY_API_KEY` on your server. React Router
 (or Remix), Nuxt, and API servers behind a Vite app (Express, Hono,
 Cloudflare Workers, Bun, Deno), are covered in the [`@chai-ui/core` README](./packages/core/README.md#the-server-route-chai-uicoreserver),
 along with `authorize` and `allowedModels` for production.

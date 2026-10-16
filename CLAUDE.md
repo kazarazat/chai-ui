@@ -49,7 +49,7 @@ Browser tests need Chromium once:
   Call `fetch` through a wrapper, never as `obj.fetchImpl(...)`: browsers
   throw "Illegal invocation".
 - **API keys never reach the browser.** Engines call `/api/chai/*`, served
-  by `createChaiHandler`, which reads `FAL_KEY` / `OPENROUTER_API_KEY`.
+  by `createChaiHandler`, which reads `FAL_KEY` / `OPENROUTER_API_KEY` / `AI_GATEWAY_API_KEY`.
 - **Defaults are suggestions.** Ship working defaults (e.g. the reasoning
   models in `ChaiProvider`) and document how to swap them; never require a
   builder to pick before anything works.

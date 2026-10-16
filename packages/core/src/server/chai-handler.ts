@@ -11,8 +11,15 @@
 
 const FAL_QUEUE_BASE = "https://queue.fal.run";
 const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+const VERCEL_GATEWAY_BASE = "https://ai-gateway.vercel.sh/v1";
 
-export type ChaiProviderId = "fal" | "openrouter";
+export type ChaiProviderId = "fal" | "openrouter" | "vercel";
+
+const PROVIDER_LABEL: Record<ChaiProviderId, string> = {
+  fal: "Fal.ai",
+  openrouter: "OpenRouter",
+  vercel: "Vercel AI Gateway",
+};
 
 export interface ChaiHandlerOptions {
   /** Defaults to the `FAL_KEY` environment variable. */
@@ -20,13 +27,18 @@ export interface ChaiHandlerOptions {
   /** Defaults to the `OPENROUTER_API_KEY` environment variable. */
   openRouterKey?: string;
   /**
+   * Vercel AI Gateway key. Defaults to `AI_GATEWAY_API_KEY`, then to
+   * `VERCEL_OIDC_TOKEN`, which Vercel sets automatically on deployed apps.
+   */
+  aiGatewayKey?: string;
+  /**
    * Who may use this route. Return false to reject with 403. Without it,
    * anyone who can reach your site can spend your API credit: check your
    * own login or session here before going live.
    */
   authorize?: (request: Request) => boolean | Promise<boolean>;
   /**
-   * The only model ids this route will run, across both providers (e.g.
+   * The only model ids this route will run, across all providers (e.g.
    * `"fal-ai/flux/schnell"`, `"anthropic/claude-opus-5"`). Anything else is
    * rejected with 403, so nobody can run an expensive model through you.
    * Omit to allow every model.
@@ -79,6 +91,26 @@ export function createChaiHandler(options: ChaiHandlerOptions = {}): ChaiHandler
       });
     }
 
+    // Vercel AI Gateway is OpenAI-compatible: /chat for text, /images for image generation.
+    if (route.provider === "vercel") {
+      const upstream = route.rest === "chat" ? "chat/completions" : route.rest === "images" ? "images/generations" : null;
+      if (!upstream) return fail(404, `Unknown Vercel AI Gateway path "${route.rest}".`);
+      if (request.method !== "POST") return fail(405, "Use POST.");
+      const key = options.aiGatewayKey ?? readEnv("AI_GATEWAY_API_KEY") ?? readEnv("VERCEL_OIDC_TOKEN");
+      if (!key) return fail(500, "AI_GATEWAY_API_KEY isn't set on the server.");
+      const body = await request.text();
+      const model = readModel(body);
+      if (options.allowedModels && !(model && options.allowedModels.includes(model))) {
+        return fail(403, `Model "${model ?? "(none)"}" isn't allowed on this server.`);
+      }
+      return forward(fetchImpl, route.provider, `${VERCEL_GATEWAY_BASE}/${upstream}`, {
+        signal: request.signal,
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body,
+      });
+    }
+
     // Fal's queue API: POST /<model> submits, GET /<model>/requests/<id>[/status]
     // polls, PUT /<model>/requests/<id>/cancel cancels.
     const isCancel = request.method === "PUT" && route.rest.endsWith("/cancel");
@@ -102,7 +134,7 @@ export function createChaiHandler(options: ChaiHandlerOptions = {}): ChaiHandler
 /** Finds the provider segment anywhere in the path, so the route can be mounted at any prefix. */
 function parseRoute(pathname: string): { provider: ChaiProviderId; rest: string } | null {
   const parts = pathname.split("/").filter(Boolean);
-  const i = parts.findIndex((p) => p === "fal" || p === "openrouter");
+  const i = parts.findIndex((p) => p === "fal" || p === "openrouter" || p === "vercel");
   if (i === -1 || i === parts.length - 1) return null;
   return { provider: parts[i] as ChaiProviderId, rest: parts.slice(i + 1).join("/") };
 }
@@ -116,11 +148,11 @@ async function forward(fetchImpl: typeof fetch, provider: ChaiProviderId, url: s
       headers: { "Content-Type": upstream.headers.get("content-type") ?? "application/json" },
     });
   } catch (err) {
-    return errorResponse(provider, 502, `Couldn't reach ${provider === "fal" ? "Fal.ai" : "OpenRouter"}: ${err instanceof Error ? err.message : String(err)}`);
+    return errorResponse(provider, 502, `Couldn't reach ${PROVIDER_LABEL[provider]}: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
-/** Errors in the shape each engine already reads: Fal's `{ error }`, OpenRouter's `{ error: { message } }`. */
+/** Errors in the shape each engine already reads: Fal's `{ error }`, OpenRouter's and Vercel's `{ error: { message } }`. */
 function errorResponse(provider: ChaiProviderId, status: number, message: string): Response {
   const body = provider === "fal" ? { error: message } : { error: { message } };
   return Response.json(body, { status });

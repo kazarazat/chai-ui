@@ -55,7 +55,7 @@ type ChatContentPart =
   | { type: "video_url"; video_url: { url: string } }
   | { type: "input_audio"; input_audio: { data: string; format: string } };
 
-interface ChatCompletionResponse {
+export interface ChatCompletionResponse {
   choices?: { message?: { content?: string } }[];
   // OpenAI-compatible shape OpenRouter itself uses; absent on some
   // providers routed through it, hence all-optional.
@@ -69,7 +69,7 @@ interface ChatCompletionResponse {
 }
 
 /** Converts OpenRouter's raw `usage` into `Usage`, computing `costUsd` only when a real rate was supplied. */
-function toUsage(
+export function toUsage(
   usage: ChatCompletionResponse["usage"],
   pricePerMillionTokens?: { input: number; output: number }
 ): Usage | undefined {
@@ -90,7 +90,7 @@ function toUsage(
 }
 
 /** Prefers the upstream provider's own error message over OpenRouter's generic wrapper, when both are present. */
-function describeError(json: ChatCompletionResponse, fallback: string): string {
+export function describeError(json: ChatCompletionResponse, fallback: string): string {
   const base = json.error?.message ?? fallback;
   const raw = json.error?.metadata?.raw;
   if (!raw) return base;

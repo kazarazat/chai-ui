@@ -1,6 +1,6 @@
 /**
  * A pluggable generation engine — the one interface every model provider
- * (`createFalEngine`, `createOpenRouterEngine`, `mockEngine`, or your own)
+ * (`createFalEngine`, `createOpenRouterEngine`, `createVercelEngine`, `mockEngine`, or your own)
  * implements, and the one `useComposer` calls. One call = one model run:
  * a prompt plus any attached media in, one piece of output back.
  *

@@ -44,7 +44,7 @@ use these names: `Results`, `Compare`, `ModelPicker`,
 5. **API keys never reach the browser.** Engines call one same-origin
    route, `/api/chai/*`, served by `createChaiHandler` from
    `@chai-ui/core/server`, which adds the key. Never pass a key to
-   `createFalEngine` or `createOpenRouterEngine`. In production, set the
+   `createFalEngine`, `createOpenRouterEngine` or `createVercelEngine`. In production, set the
    handler's `authorize` and `allowedModels`.
 6. **Media generation and reasoning are separate choices.** `engine`
    generates media and defaults to Fal.ai. `ChaiProvider`'s

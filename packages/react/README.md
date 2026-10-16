@@ -308,9 +308,10 @@ Pass `ResultCard` the results of every run, as above: it pages through
 them, and each page shows its own kind (image, video, audio or text).
 Passing only `run.results` would hide every use case after the first.
 
-**The server route.** `createFalEngine()` and the OpenRouter reasoning
-engine call `/api/chai/*` on your server, which adds the API keys. Add it
-with one file, then set `FAL_KEY` and `OPENROUTER_API_KEY`:
+**The server route.** `createFalEngine()`, `createVercelEngine()` and the
+OpenRouter reasoning engine call `/api/chai/*` on your server, which adds
+the API keys. Add it with one file, then set `FAL_KEY`, `OPENROUTER_API_KEY`
+or `AI_GATEWAY_API_KEY`:
 
 ```ts
 // Next.js: app/api/chai/[...path]/route.ts

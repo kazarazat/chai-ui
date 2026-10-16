@@ -26,7 +26,9 @@ All three: `pnpm add @chai-ui/react @chai-ui/core @chai-ui/tokens`.
 `useComposer`, and wrap your app in `<ChaiProvider>`.
 
 **Which providers are supported?** Fal.ai (recommended for image, video
-and audio generation) and OpenRouter (reasoning and a full alternative).
+and audio generation), OpenRouter (reasoning and a full alternative) and
+Vercel AI Gateway (text and image models through one OpenAI-compatible
+endpoint; no video yet).
 Any other provider works through a custom engine: one `generate()` method.
 
 **Can I change the reasoning models?** Yes. The defaults are Claude Opus 5
@@ -40,10 +42,10 @@ variables on `:root`, or a component's own variables such as
 
 ## Troubleshooting
 
-**"FAL_KEY isn't set on the server" (or OPENROUTER_API_KEY).** The route
+**"FAL_KEY isn't set on the server" (or OPENROUTER_API_KEY, or AI_GATEWAY_API_KEY).** The route
 can't find the key. Set it in the server's environment and restart the
-server. On Cloudflare Workers, pass `falKey` / `openRouterKey` to
-`createChaiHandler` from `env`.
+server. On Cloudflare Workers, pass `falKey` / `openRouterKey` /
+`aiGatewayKey` to `createChaiHandler` from `env`.
 
 **Requests fail with 404.** The engines call `/api/chai/...`. Check the
 route is mounted there, or pass `endpoint` to the engine.

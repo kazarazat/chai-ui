@@ -4,6 +4,7 @@ export * from "./run.js";
 export * from "./media-analysis-prompts.js";
 export * from "./engines/openrouter.js";
 export * from "./engines/fal.js";
+export * from "./engines/vercel.js";
 export * from "./model-routing.js";
 export * from "./region-edit.js";
 export * from "./suggested-models.js";
