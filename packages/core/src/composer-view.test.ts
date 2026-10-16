@@ -147,6 +147,13 @@ describe("Composer helpers", () => {
     expect(composerView({ value: "a mug", character: "x", useCase: IMAGE }).payload()).not.toHaveProperty("character");
   });
 
+  it("tells Enhance the use case on screen: text with none picked, vision with media, an edit while editing", () => {
+    expect(composerView({ value: "hi" }).enhanceMode).toBe("text-to-text");
+    expect(composerView({ value: "hi", attachments: [photo] }).enhanceMode).toBe("vision");
+    expect(composerView({ value: "hi", useCase: VIDEO }).enhanceMode).toBe("text-to-video");
+    expect(composerView({ value: "hi", useCase: EDIT_IMAGE_USE_CASE, attachments: [photo] }).enhanceMode).toBe("image-edit");
+  });
+
   it("gives a world use case no suggested models and no aspect ratio", () => {
     const view = composerView({ value: "a meadow", useCase: { kind: "world", label: "World" }, onModelChange: () => {} });
     expect(view.modelSections).toEqual([]);

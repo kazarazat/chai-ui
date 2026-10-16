@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { MdOutlinedTextField } from "@material/web/textfield/outlined-text-field.js";
 import { MdCheckbox } from "@material/web/checkbox/checkbox.js";
 import { Toggle } from "./Toggle.js";
+import { CheckIcon } from "../icons.js";
 
 const MdOutlinedTextFieldElement = createComponent({
   react: React,
@@ -25,18 +26,6 @@ const MdCheckboxElement = createComponent({
   tagName: "md-checkbox",
   elementClass: MdCheckbox,
 });
-
-/** MD3 "check" symbol (Figma) — marking the selected row in any option list below. */
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path
-        d="M7.1625 13.5L2.8875 9.225L3.95625 8.15625L7.1625 11.3625L14.0438 4.48125L15.1125 5.55L7.1625 13.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 export interface SearchMenuOption {
   id: string;

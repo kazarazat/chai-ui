@@ -24,6 +24,7 @@
 import { abortError, abortableSleep, isAbortError, readEvaluations, type GenerationEngine } from "../engine.js";
 import type { DroppedMedia, MediaKind } from "../types.js";
 import { SUGGESTED_FAL_MODELS } from "../suggested-models.js";
+import type { Transcribe } from "../voice-input.js";
 
 /** Output kinds this engine can produce — text goes through a reasoning engine instead (see file doc comment). */
 type FalOutputKind = Exclude<MediaKind, "text">;
@@ -77,6 +78,9 @@ interface FalResultResponse {
   video?: { url: string };
   audio?: { url: string };
   audio_url?: string;
+  /** Speech-to-text models answer with the transcript in `text` or `output`. */
+  text?: string;
+  output?: string;
   error?: unknown;
   detail?: unknown;
 }
@@ -205,6 +209,12 @@ async function awaitFalJob(args: {
   return json;
 }
 
+/** The transcript in a Fal speech-to-text result: `text` (Wizper, Scribe, Cohere) or `output` (Fal's own, Nemotron). */
+export function extractFalTranscript(json: { text?: unknown; output?: unknown }): string | undefined {
+  const text = typeof json.text === "string" ? json.text : typeof json.output === "string" ? json.output : undefined;
+  return text?.trim();
+}
+
 /**
  * Asks Fal to drop a job (`PUT …/requests/<id>/cancel`). A queued job is
  * removed and never runs; a running one gets a cancel signal and may still
@@ -317,4 +327,49 @@ export async function pingFal(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+export interface FalTranscriberOptions {
+  /** A Fal speech-to-text model id, e.g. `"fal-ai/wizper"`. Required: Chai doesn't pick one for you. */
+  model: string;
+  /** Same proxy route `createFalEngine` uses. Defaults to `/api/chai/fal`. */
+  endpoint?: string;
+  fetchImpl?: typeof fetch;
+  pollIntervalMs?: number;
+  timeoutMs?: number;
+}
+
+/**
+ * A `Transcribe` function on a Fal speech-to-text model, through the same
+ * server route as `createFalEngine`, so the key stays on the server. The
+ * recording goes to the model as `audio_url`, a data URL, like images do.
+ * With `allowedModels` on the handler, list the transcription model too.
+ */
+export function createFalTranscriber(options: FalTranscriberOptions): Transcribe {
+  const endpoint = options.endpoint ?? "/api/chai/fal";
+  // Called through a wrapper: browsers throw "Illegal invocation" when fetch runs with an object as `this`.
+  const fetchImpl: typeof fetch = (input, init) => (options.fetchImpl ?? fetch)(input, init);
+  const { model } = options;
+  return async (audio, { signal } = {}) => {
+    if (signal?.aborted) throw abortError();
+    const { requestId, status } = await submitFalJob({ endpoint, model, body: { audio_url: audio.src }, fetchImpl });
+    if (signal?.aborted) {
+      await cancelFalJob({ endpoint, model, requestId, fetchImpl });
+      throw abortError();
+    }
+    const result = await awaitFalJob({
+      endpoint,
+      model,
+      requestId,
+      status,
+      fetchImpl,
+      pollIntervalMs: options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
+      timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      signal,
+    }).catch(async (err) => {
+      if (isAbortError(err)) await cancelFalJob({ endpoint, model, requestId, fetchImpl });
+      throw err;
+    });
+    return extractFalTranscript(result) ?? "";
+  };
 }

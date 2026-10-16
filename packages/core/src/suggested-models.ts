@@ -4,7 +4,8 @@ import { DEFAULT_MAX_REGIONS } from "./region-edit.js";
 /**
  * Suggested models, so builders don't have to write model lists. Composer
  * and MediaAnalyzer use them when no `models` is passed; passing `models`
- * still replaces them. The first model in each list is the default pick.
+ * still replaces them. Nothing is picked for the person: with a Model menu
+ * they pick or turn on auto-select; with no menu, the list's first runs.
  *
  * Generation runs on Fal (the default engine), analysis on OpenRouter (the
  * reasoning engine). Every entry was checked against the provider's own

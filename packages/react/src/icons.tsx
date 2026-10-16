@@ -127,3 +127,24 @@ export function StopIcon() {
     </svg>
   );
 }
+
+/** Material Symbols "arrow_forward": Composer's submit and Media Analyzer's. */
+export function ArrowForwardIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" aria-hidden="true">
+      <path d="M686-450H160v-60h526L438-758l42-42 320 320-320 320-42-42 248-248Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** MD3 "check" (traced from Figma): a selected option row, a passed evaluation. Not `CheckSymbolIcon`, the Material Symbols path. */
+export function CheckIcon() {
+  return (
+    <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path
+        d="M7.1625 13.5L2.8875 9.225L3.95625 8.15625L7.1625 11.3625L14.0438 4.48125L15.1125 5.55L7.1625 13.5Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}

@@ -16,6 +16,7 @@ export * from "./useMediaAnalyzer.js";
 // to import from @chai-ui/vue.
 export {
   createFalEngine,
+  createFalTranscriber,
   createOpenRouterEngine,
   createMockEngine,
   mockEngine,
@@ -64,6 +65,9 @@ export type {
   MediaKind,
   ModelOption,
   OutputKind,
+  Transcribe,
+  VoiceClip,
+  VoiceInputConfig,
   ParameterOption,
   Reasoning,
   RegionBox,

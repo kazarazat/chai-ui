@@ -751,6 +751,99 @@
   flex-wrap: wrap;
 }
 
+.chai-composer__controls-end {
+  display: flex;
+  align-items: center;
+  gap: var(--chai-space-2);
+}
+
+/* Voice input: the mic left of submit. While recording it becomes a stop
+   button (a filled square in a ringed circle) and a waveform replaces the
+   prompt; while transcribing, a spinner. */
+.chai-composer__voice {
+  display: flex;
+  align-items: center;
+}
+
+.chai-composer__voice-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--chai-radius-full);
+  background: transparent;
+  color: var(--chai-composer-text);
+  cursor: pointer;
+  transition: background-color var(--chai-motion-duration-fast) var(--chai-motion-easing-standard);
+}
+
+.chai-composer__voice-button:hover:not(:disabled) {
+  background: var(--chai-composer-hover);
+}
+
+.chai-composer__voice-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.chai-composer__voice-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.chai-composer__voice[data-status="recording"] .chai-composer__voice-button {
+  border-color: var(--chai-composer-text);
+  background: var(--chai-composer-hover);
+}
+
+.chai-composer__voice[data-status="recording"] .chai-composer__voice-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Same row height as the prompt it stands in for. */
+.chai-composer__waveform {
+  display: flex;
+  align-items: center;
+  gap: var(--chai-space-3);
+  min-height: var(--chai-type-leading-body-large);
+}
+
+.chai-composer__waveform-bars {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--chai-type-leading-body-large);
+  min-width: 0;
+}
+
+.chai-composer__waveform-bar {
+  width: 2px;
+  border-radius: var(--chai-radius-full);
+  background: var(--chai-composer-text);
+}
+
+.chai-composer__waveform-time {
+  color: var(--chai-composer-text);
+  font-family: var(--chai-type-family-material);
+  font-size: var(--chai-type-size-label-large);
+  font-weight: var(--chai-type-weight-material-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.chai-composer__voice-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--chai-color-semantic-control-border-faint);
+  border-top-color: var(--chai-color-semantic-accent);
+  animation: chai-spin var(--chai-motion-duration-steep) linear infinite;
+}
+
 /* Neutral trigger text, not `--md-sys-color-primary` green (account
    holder correction: "don't make dropdown select menu buttons green when
    they don't need to be"). */

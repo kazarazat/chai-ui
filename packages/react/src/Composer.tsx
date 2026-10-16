@@ -1,5 +1,5 @@
-import { StopIcon } from "./icons.js";
-import { useEffect, useId, useRef, useState, type ChangeEvent } from "react";
+import { AddIcon, ArrowForwardIcon, CloseSymbolIcon, StopIcon } from "./icons.js";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
@@ -7,14 +7,19 @@ import {
   composerAttachmentsFromFiles,
   composerAttachMenuItems,
   composerView,
+  createVoiceInput,
   enhanceRevealDurationMs,
+  formatVoiceElapsed,
+  VOICE_LEVEL_COUNT,
   MAX_ANIMATE_ENHANCE_LENGTH,
   regionColor,
   TEXT_USE_CASE,
   type ComposerAttachMenuAction,
   type ComposerPromptField,
+  type VoiceInputConfig,
 } from "@chai-ui/core";
-import type { EditRegion, ModelOption, ParameterOption, MediaKind, OutputKind } from "@chai-ui/core";
+import { useLatest } from "./use-latest.js";
+import type { EditRegion, GenerationUseCase, ModelOption, ParameterOption, MediaKind, OutputKind } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
 import type { ComposerAttachment, ComposerSubmitPayload, ComposerUseCase } from "@chai-ui/core";
 
@@ -124,8 +129,10 @@ export interface ComposerProps {
    * world use case each field has its own button: `field` is "environment"
    * or "character" (otherwise "prompt"), so the rewrite can fit the field,
    * and the handler calls `onChange` or `onCharacterChange` to match.
+   * `mode` is the use case on screen, e.g. "text-to-text" with none picked:
+   * rewrite a text request as one, not as a media prompt.
    */
-  onEnhance?: (value: string, field: ComposerPromptField) => void;
+  onEnhance?: (value: string, field: ComposerPromptField, mode?: GenerationUseCase) => void;
   /** True while the builder's own `onEnhance` handler is running its LLM call — shows the active state on the button that was clicked. */
   enhancing?: boolean;
   /**
@@ -179,6 +186,14 @@ export interface ComposerProps {
    */
   regions?: EditRegion[];
   onRegionsChange?: (next: EditRegion[]) => void;
+  /**
+   * Turns on the mic, left of submit: the person speaks, and the transcript
+   * is added to the prompt (never submitted). Name a Fal speech-to-text
+   * model, e.g. `{ model: "fal-ai/wizper" }`, and the clip goes through your
+   * `/api/chai/fal` route; or pass `{ transcribe }` for any other provider.
+   * Off by default, and there's no default model.
+   */
+  voiceInput?: VoiceInputConfig;
   disabled?: boolean;
 }
 
@@ -234,6 +249,7 @@ export function Composer({
   attachMenuActions,
   regions = [],
   onRegionsChange,
+  voiceInput,
   disabled = false,
 }: ComposerProps) {
   const view = composerView({
@@ -298,8 +314,15 @@ export function Composer({
     onEnhance &&
     ((current: string) => {
       setEnhancingField(field);
-      onEnhance(current, field);
+      onEnhance(current, field, view.enhanceMode);
     });
+
+  // Voice input: a transcript is added to the prompt, never submitted.
+  const latestPrompt = useLatest({ value, onChange });
+  const voice = useVoice(voiceInput, (text) => {
+    const { value: current, onChange: change } = latestPrompt.current;
+    change(current.trim() ? `${current.trimEnd()} ${text}` : text);
+  });
 
   async function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || !onAttachmentsChange) return;
@@ -347,7 +370,9 @@ export function Composer({
         </ul>
       )}
 
-      {view.world ? (
+      {voiceInput && voice.state.status === "recording" ? (
+        <VoiceWaveform levels={voice.state.levels} elapsedMs={voice.state.elapsedMs} />
+      ) : view.world ? (
         <div className="chai-composer__world-fields">
           <PromptField
             value={value}
@@ -389,6 +414,13 @@ export function Composer({
         <p className="chai-composer__error" role="alert">
           <ErrorIcon />
           {submitError}
+        </p>
+      )}
+
+      {voiceInput && voice.state.status === "error" && (
+        <p className="chai-composer__error" role="alert">
+          <ErrorIcon />
+          {voice.state.error}
         </p>
       )}
 
@@ -512,6 +544,11 @@ export function Composer({
             (same filled look — reads as "in progress," not "empty/error"),
             clickable regardless of `isSubmitDisabled` since a request
             already in flight isn't gated on the field having content. */}
+        <div className="chai-composer__controls-end">
+        {voiceInput && <VoiceButton voice={voice} disabled={disabled} />}
+        {/* No submit while a recording is being made or transcribed: the
+            person sends the transcript once it's in the prompt to check. */}
+        {!(voiceInput && (voice.state.status === "recording" || voice.state.status === "transcribing")) && (
         <MdFabElement
           className="chai-composer__submit"
           size="small"
@@ -538,7 +575,88 @@ export function Composer({
             {showStop ? <StopIcon /> : submitError ? <RefreshIcon /> : <ArrowForwardIcon />}
           </span>
         </MdFabElement>
+        )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** The core recorder, created once, with the latest config and transcript handler. */
+function useVoice(config: VoiceInputConfig | undefined, onTranscript: (text: string) => void) {
+  const latest = useLatest({ config, onTranscript });
+  const [voice] = useState(() =>
+    createVoiceInput(
+      () => latest.current.config ?? { transcribe: async () => "" },
+      (text) => latest.current.onTranscript(text)
+    )
+  );
+  const state = useSyncExternalStore(voice.subscribe, voice.getState, voice.getState);
+  useEffect(() => () => voice.dispose(), [voice]);
+  return { ...voice, state };
+}
+
+/**
+ * What replaces the prompt while recording: the mic's recent loudness as
+ * bars, newest on the right, and how long it's run. Decorative: the mic
+ * button's label and the status line say it's recording.
+ */
+function VoiceWaveform({ levels, elapsedMs }: { levels: number[]; elapsedMs: number }) {
+  const bars = [...Array<number>(Math.max(0, VOICE_LEVEL_COUNT - levels.length)).fill(0), ...levels];
+  return (
+    <div className="chai-composer__waveform" aria-hidden="true">
+      <div className="chai-composer__waveform-bars">
+        {bars.map((level, i) => (
+          <span key={i} className="chai-composer__waveform-bar" style={{ height: `${Math.max(20, level * 100)}%` }} />
+        ))}
+      </div>
+      <span className="chai-composer__waveform-time">{formatVoiceElapsed(elapsedMs)}</span>
+    </div>
+  );
+}
+
+/**
+ * The mic: click to record; while recording it's a stop button that ends
+ * the recording and transcribes it; while transcribing, a spinner, and a
+ * click cancels.
+ */
+function VoiceButton({ voice, disabled }: { voice: ReturnType<typeof useVoice>; disabled: boolean }) {
+  const { status } = voice.state;
+  const label =
+    status === "recording" ? "Stop recording and transcribe" : status === "transcribing" ? "Cancel transcription" : "Start voice input";
+  function handleClick() {
+    if (status === "recording") voice.stop();
+    else if (status === "transcribing") voice.cancel();
+    else {
+      voice.dismiss();
+      void voice.start();
+    }
+  }
+  return (
+    <div className="chai-composer__voice" data-status={status}>
+      <button
+        type="button"
+        className="chai-composer__voice-button"
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && status === "recording") voice.cancel();
+        }}
+        disabled={disabled}
+        aria-label={label}
+        title={label}
+      >
+        {status === "transcribing" ? (
+          <span className="chai-composer__voice-spinner" aria-hidden="true" />
+        ) : status === "recording" ? (
+          <StopIcon />
+        ) : (
+          <MicIcon />
+        )}
+      </button>
+      {/* Announces each change of state once, not every tick of the timer. */}
+      <span className="chai-visually-hidden" role="status">
+        {status === "recording" ? "Recording" : status === "transcribing" ? "Transcribing" : ""}
+      </span>
     </div>
   );
 }
@@ -788,7 +906,7 @@ function ComposerAttachMenu({
         aria-haspopup="menu"
         aria-label={open ? "Close attach menu" : "Add media"}
       >
-        {open ? <CloseIcon /> : <PlusIcon />}
+        {open ? <CloseSymbolIcon /> : <AddIcon />}
       </button>
 
       {open && (
@@ -836,7 +954,7 @@ function ComposerThumbnail({ attachment, onRemove }: { attachment: ComposerAttac
       )}
       {onRemove && (
         <button type="button" className="chai-composer__thumb-remove" onClick={onRemove} aria-label="Remove attachment">
-          <CloseIcon />
+          <CloseSymbolIcon />
         </button>
       )}
     </div>
@@ -875,7 +993,7 @@ function UseCaseChip({
           disabled={disabled}
           aria-label={`Remove ${useCase.label}`}
         >
-          <CloseIcon />
+          <CloseSymbolIcon />
         </button>
       )}
     </span>
@@ -914,7 +1032,7 @@ function RegionChip({
           disabled={disabled}
           aria-label={`Remove ${name}`}
         >
-          <CloseIcon />
+          <CloseSymbolIcon />
         </button>
       )}
     </span>
@@ -955,32 +1073,6 @@ function kindIcon(kind: MediaKind) {
 // inactive) — collapsed here to one currentColor path set,
 // themed via the active/inactive CSS class instead of two hardcoded-color
 // SVGs. See its button's own doc comment above for what it actually does.
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 -960 960 960" aria-hidden="true">
-      <path d="M450-450H200v-60h250v-250h60v250h250v60H510v250h-60v-250Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-// Material Symbols "close" — reproduced here since icons aren't shared
-// across files yet in this codebase.
-function CloseIcon() {
-  return (
-    <svg viewBox="0 -960 960 960" aria-hidden="true">
-      <path d="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function ArrowForwardIcon() {
-  return (
-    <svg viewBox="0 -960 960 960" aria-hidden="true">
-      <path d="M686-450H160v-60h526L438-758l42-42 320 320-320 320-42-42 248-248Z" fill="currentColor" />
-    </svg>
-  );
-}
 
 // Material Symbols "refresh" — the submit FAB's retry state.
 function RefreshIcon() {
@@ -1039,6 +1131,18 @@ function AttachFileIcon() {
     <svg viewBox="0 -960 960 960" aria-hidden="true">
       <path
         d="M728-326q0 103-72.18 174.5-72.17 71.5-175 71.5Q378-80 305.5-151.5T233-326v-380q0-72.5 51.5-123.25T408-880q72 0 123.5 50.75T583-706v360q0 42-30 72t-72.5 30q-42.5 0-72.5-29.67-30-29.68-30-72.33v-370h60v370q0 17 12.5 29.5t30.64 12.5q18.14 0 30-12.5T523-346v-360q0-48-33.5-81t-81.71-33q-48.21 0-81.5 33.06T293-706v380q0 78 54.97 132T481-140q77.92 0 132.46-54Q668-248 668-326v-390h60v390Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+// Material Symbols "mic" — voice input.
+function MicIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" aria-hidden="true">
+      <path
+        d="M408-453.92q-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423t-72-30.92ZM480-651Zm-30 531v-136q-106-11-178-89t-72-184h60q0 91 64.29 153t155.5 62q91.21 0 155.71-62Q700-438 700-529h60q0 106-72 184t-178 89v136h-60Zm59.5-376.5Q521-510 521-529v-251q0-17-11.79-28.5T480-820q-17.42 0-29.21 11.5T439-780v251q0 19 11.5 32.5T480-483q18 0 29.5-13.5Z"
         fill="currentColor"
       />
     </svg>
