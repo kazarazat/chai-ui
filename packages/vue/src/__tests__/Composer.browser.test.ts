@@ -4,6 +4,8 @@ import { renderWith } from "./render.js";
 
 /** React's `value`/`onXChange` pairs are Vue's `v-model` props and `update:x` events. */
 const V_MODEL: Record<string, string> = {
+  // Vue's root gets `class` and `style` through attribute fallthrough, the same as React's `className` and `style`.
+  className: "class",
   onChange: "onUpdate:modelValue",
   onAttachmentsChange: "onUpdate:attachments",
   onUseCasesChange: "onUpdate:useCases",

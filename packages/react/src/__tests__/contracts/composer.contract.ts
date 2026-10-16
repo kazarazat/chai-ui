@@ -200,6 +200,15 @@ export function composerContract(render: Render<ComposerProps>) {
       vi.restoreAllMocks();
     });
 
+    it("puts className and style on the root, so a builder can size the bar", async () => {
+      harness({ className: "my-bar", style: { maxWidth: "720px" } });
+      const root = document.querySelector<HTMLElement>(".chai-composer")!;
+      await expect.element(root).toBeInTheDocument();
+      expect(root.classList.contains("chai-composer")).toBe(true);
+      expect(root.classList.contains("my-bar")).toBe(true);
+      expect(root.style.maxWidth).toBe("720px");
+    });
+
     it("shows no mic unless voiceInput is set", async () => {
       harness();
       await expect.element(document.querySelector(".chai-composer")!).toBeInTheDocument();
