@@ -11,6 +11,7 @@ export * from "./useMediaAnalyzer.js";
 // to import from @chai-ui/react.
 export {
   createFalEngine,
+  createFalTranscriber,
   createOpenRouterEngine,
   createMockEngine,
   mockEngine,
@@ -41,6 +42,9 @@ export type {
   MediaKind,
   ModelOption,
   OutputKind,
+  Transcribe,
+  VoiceClip,
+  VoiceInputConfig,
   ParameterOption,
   RegionBox,
   RegionFormat,

@@ -308,6 +308,13 @@ describe("createComposerStore", () => {
     expect(reason.mock.calls[1]![0].prompt).toContain("an AI assistant prompt");
   });
 
+  it("words Enhance's instruction for the mode it's given, before any run", async () => {
+    const reason = vi.fn().mockResolvedValue({ src: "better", kind: "text" });
+    const { result } = setup({ reasoningEngine: fakeEngine(reason), reasoningModel: "m" });
+    await result.current.enhance!("what is a mug", "prompt", "text-to-text");
+    expect(reason.mock.calls[0]![0].prompt).toContain("an AI assistant prompt");
+  });
+
   it("words Enhance's instruction for a world's environment and character, each about its own field", async () => {
     const reason = vi.fn().mockResolvedValue({ src: "better", kind: "text" });
     const { result } = setup({ reasoningEngine: fakeEngine(reason), reasoningModel: "m" });

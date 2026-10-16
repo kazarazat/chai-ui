@@ -485,13 +485,17 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
     set((s) => ({ routing: false, runs: cancelAll(s.runs), editRuns: cancelAll(s.editRuns) }));
   }
 
-  /** Rewrites a prompt with the reasoning model, worded for its `field`. Only offer it when `reasoning()` is set. */
-  async function enhance(value: string, field?: ComposerPromptField): Promise<string> {
+  /**
+   * Rewrites a prompt with the reasoning model, worded for its `field` and
+   * `mode` (the Composer passes both to `onEnhance`, so `onEnhance={enhance}`
+   * rewrites for the use case on screen). Only offer it when `reasoning()` is set.
+   */
+  async function enhance(value: string, field?: ComposerPromptField, mode?: GenerationUseCase): Promise<string> {
     const r = reasoning();
     if (!r) throw new Error("[chai-ui] Enhance needs a reasoning engine and model.");
     set(() => ({ enhancing: true }));
     try {
-      const prompt = (getOptions().enhancePrompt ?? defaultEnhancePrompt)(value, state.runs[0]?.request.mode, field);
+      const prompt = (getOptions().enhancePrompt ?? defaultEnhancePrompt)(value, mode ?? state.runs[0]?.request.mode, field);
       const { src } = await r.engine.generate({ modelId: r.model, prompt, attachments: [] });
       return src;
     } finally {

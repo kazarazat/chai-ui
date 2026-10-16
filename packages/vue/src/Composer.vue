@@ -9,20 +9,22 @@
  * Some controls show only with somewhere for them to go, so these listeners
  * are props, checked for: `@update:attachments` (add and remove media),
  * `@update:model-id` / `@update:model-ids` (the Model menu),
- * `@update:aspect-ratio`, `@update:character` and `@update:frame-rate` (a
+ * `voiceInput` (the mic), `@update:aspect-ratio`, `@update:character` and `@update:frame-rate` (a
  * world's fields), `@update:use-cases` and `@clear-use-case` (chip
  * remove), `@update:regions`, `@enhance` (the Enhance button), `@abort` (stop
  * while submitting) and `@attach-menu-select` (the + menu's use cases).
  */
 import "@material/web/fab/fab.js";
-import { computed, ref, watch } from "vue";
+import { computed, onScopeDispose, ref, shallowRef, watch } from "vue";
 import {
   composerAttachmentsFromFiles,
   composerAttachMenuItems,
   composerView,
+  createVoiceInput,
   type ComposerAttachment,
   type ComposerAttachMenuAction,
   type ComposerPromptField,
+  type GenerationUseCase,
   type ComposerSubmitPayload,
   type ComposerUseCase,
   type EditRegion,
@@ -30,10 +32,13 @@ import {
   type ModelOption,
   type OutputKind,
   type ParameterOption,
+  type VoiceInputConfig,
 } from "@chai-ui/core";
 import AttachMenu from "./composer/AttachMenu.vue";
 import Chip from "./composer/Chip.vue";
 import PromptField from "./composer/PromptField.vue";
+import VoiceButton from "./composer/VoiceButton.vue";
+import VoiceWaveform from "./composer/VoiceWaveform.vue";
 import { ArrowForwardIcon, CloseSymbolIcon, ErrorIcon, ImageIcon, MusicNoteIcon, RetryIcon, StopIcon, VideocamIcon } from "./icons.js";
 import SearchMenu from "./primitives/SearchMenu.vue";
 
@@ -75,8 +80,8 @@ const props = withDefaults(
     aspectRatios?: ParameterOption<string>[];
     aspectRatio?: string | null;
     "onUpdate:aspectRatio"?: (value: string) => void;
-    /** Shows the Enhance button; your handler runs the rewrite and updates the prompt. Gets the current text, and with a world which field it's for. */
-    onEnhance?: (value: string, field: ComposerPromptField) => void;
+    /** Shows the Enhance button; your handler runs the rewrite and updates the prompt. Gets the current text, which field, and the use case on screen (`mode`). */
+    onEnhance?: (value: string, field: ComposerPromptField, mode?: GenerationUseCase) => void;
     /** True while your Enhance handler is running. */
     enhancing?: boolean;
     /** A world's character field (Create world), beside the environment (`v-model`). Shows with `v-model:character`. */
@@ -98,6 +103,13 @@ const props = withDefaults(
     /** An edit's regions (from `useComposer`'s `edit`), shown as colored chips while editing. */
     regions?: EditRegion[];
     "onUpdate:regions"?: (next: EditRegion[]) => void;
+    /**
+     * The mic, left of submit: the transcript is added to the prompt, never
+     * submitted. `{ model: "fal-ai/wizper" }` goes through your
+     * `/api/chai/fal` route; `{ transcribe }` uses any provider. Off by
+     * default, with no default model.
+     */
+    voiceInput?: VoiceInputConfig;
     disabled?: boolean;
   }>(),
   {
@@ -175,8 +187,23 @@ const enhanceField = (field: ComposerPromptField) =>
   props.onEnhance &&
   ((current: string) => {
     enhancingField.value = field;
-    props.onEnhance?.(current, field);
+    props.onEnhance?.(current, field, view.value.enhanceMode);
   });
+
+// Voice input: a transcript is added to the prompt, never submitted.
+const voice = createVoiceInput(
+  () => props.voiceInput ?? { transcribe: async () => "" },
+  (text) => {
+    const current = props.modelValue;
+    emit("update:modelValue", current.trim() ? `${current.trimEnd()} ${text}` : text);
+  }
+);
+const voiceState = shallowRef(voice.getState());
+const stopVoice = voice.subscribe(() => (voiceState.value = voice.getState()));
+onScopeDispose(() => {
+  stopVoice();
+  voice.dispose();
+});
 
 async function onFiles(files: FileList | null) {
   const onAttachments = props["onUpdate:attachments"];
@@ -228,7 +255,8 @@ function onSubmitClick() {
       </li>
     </ul>
 
-    <div v-if="view.world" class="chai-composer__world-fields">
+    <VoiceWaveform v-if="voiceInput && voiceState.status === 'recording'" :levels="voiceState.levels" :elapsed-ms="voiceState.elapsedMs" />
+    <div v-else-if="view.world" class="chai-composer__world-fields">
       <PromptField
         :value="modelValue"
         :placeholder="view.placeholder"
@@ -264,6 +292,7 @@ function onSubmitClick() {
     />
 
     <p v-if="submitError" class="chai-composer__error" role="alert"><ErrorIcon />{{ submitError }}</p>
+    <p v-if="voiceInput && voiceState.status === 'error'" class="chai-composer__error" role="alert"><ErrorIcon />{{ voiceState.error }}</p>
 
     <div class="chai-composer__controls">
       <div class="chai-composer__controls-start">
@@ -330,8 +359,12 @@ function onSubmitClick() {
         />
       </div>
 
-      <!-- MD3's md-fab has no disabled state of its own; Chai's unfilled-until-ready look comes from `data-ready` in style.css. `label=""` keeps it a plain icon FAB. -->
+      <div class="chai-composer__controls-end">
+      <VoiceButton v-if="voiceInput" :voice="voice" :state="voiceState" :disabled="disabled" />
+      <!-- MD3's md-fab has no disabled state of its own; Chai's unfilled-until-ready look comes from `data-ready` in style.css. `label=""` keeps it a plain icon FAB.
+           Hidden while a recording is made or transcribed: the transcript is sent once it's in the prompt to check. -->
       <md-fab
+        v-if="!(voiceInput && (voiceState.status === 'recording' || voiceState.status === 'transcribing'))"
         class="chai-composer__submit"
         size="small"
         variant="secondary"
@@ -345,6 +378,7 @@ function onSubmitClick() {
       >
         <span slot="icon"><StopIcon v-if="view.showStop" /><RetryIcon v-else-if="submitError" /><ArrowForwardIcon v-else /></span>
       </md-fab>
+      </div>
     </div>
   </div>
 </template>

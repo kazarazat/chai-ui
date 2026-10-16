@@ -33,6 +33,8 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
   pick reaches the model in its own format, so you never write a model or
   ratio list. Create world (opt-in) adds world model support: Environment
   and Character prompts, each with its own Enhance, and a frame rate menu.
+  Voice input (opt-in) adds a mic: name a speech-to-text model, and the
+  transcript lands in the prompt to check before sending.
 - **MediaAnalyzer:** drop in an image, video or audio clip and get a
   generation-ready prompt back.
 - **ResultCard:** one prompt's results (image, video, audio or text), with

@@ -15,3 +15,4 @@ export * from "./media-actions.js";
 export * from "./result-format.js";
 export * from "./composer-view.js";
 export * from "./edit-card.js";
+export * from "./voice-input.js";

@@ -221,6 +221,12 @@ export function composerView(props: ComposerViewInput) {
     selectedAspect,
     world,
     /**
+     * What an Enhance click rewrites for: the active use case, derived like
+     * a submit's `mode` ("text-to-text" with no use case picked, "vision"
+     * with media attached, "image-edit" while editing). Undefined for a world.
+     */
+    enhanceMode: editing ? ("image-edit" as const) : deriveGenerationUseCase(activeUseCases[0], attachments),
+    /**
      * Why submit can't go yet, shown under the environment: there's
      * something to send (a character or an attachment) but no environment.
      */
