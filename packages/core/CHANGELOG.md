@@ -1,5 +1,11 @@
 # @chai-ui/core
 
+## 0.10.0
+
+### Minor Changes
+
+- 7b7180b: Vercel AI Gateway as a supported engine. `createVercelEngine()` runs text (streamed, with usage, like OpenRouter) and image generation through Vercel's AI Gateway. It has no video output, since the gateway has no video endpoint yet, so use Fal.ai for video. `pingVercel()` is the connection check. `createChaiHandler` gains a `vercel` route, keyed on `AI_GATEWAY_API_KEY` (or `VERCEL_OIDC_TOKEN` on Vercel), and an `aiGatewayKey` option.
+
 ## 0.9.0
 
 ### Minor Changes
