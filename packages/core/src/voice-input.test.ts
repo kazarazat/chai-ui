@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { abortError } from "./engine.js";
 import { createFalTranscriber, extractFalTranscript } from "./engines/fal.js";
-import { createVoiceInput, describeMicError, formatVoiceElapsed, type VoiceInputConfig } from "./voice-input.js";
+import { createVoiceInput, describeMicError, formatVoiceElapsed, voiceTranscriber, type VoiceInputConfig } from "./voice-input.js";
 
 /** A MediaRecorder stand-in: `stop()` delivers one chunk, then fires onstop. */
 class FakeRecorder {
@@ -125,6 +125,53 @@ describe("createVoiceInput", () => {
     expect(voice.getState().levels).toEqual([]);
   });
 
+  it("handles the edges: a second start, no preferred format, an empty clip, dispose mid-transcription", async () => {
+    // Naming a model gives a Fal transcriber; passing one keeps it.
+    const own = vi.fn();
+    expect(voiceTranscriber({ transcribe: own })).toBe(own);
+    expect(typeof voiceTranscriber({ model: "fal-ai/wizper" })).toBe("function");
+
+    const getUserMedia = vi.fn(async () => stream);
+    const twice = setup({ transcribe: vi.fn().mockResolvedValue("x") }, { getUserMedia });
+    await twice.voice.start();
+    await twice.voice.start();
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    twice.voice.cancel();
+
+    // A browser that supports none of the preferred formats records its own default.
+    class PlainRecorder extends FakeRecorder {
+      static isTypeSupported = () => false;
+    }
+    const transcribe = vi.fn().mockResolvedValue("x");
+    const plain = setup({ transcribe }, { MediaRecorder: PlainRecorder });
+    await plain.voice.start();
+    plain.voice.stop();
+    await vi.waitFor(() => expect(transcribe).toHaveBeenCalledWith(expect.objectContaining({ mimeType: "audio/webm" }), expect.anything()));
+
+    class SilentRecorder extends FakeRecorder {
+      stop() {
+        this.state = "inactive";
+        this.onstop?.();
+      }
+    }
+    const silent = setup({ transcribe: vi.fn() }, { MediaRecorder: SilentRecorder });
+    await silent.voice.start();
+    silent.voice.stop();
+    expect(silent.voice.getState().error).toBe("Nothing was recorded. Try again.");
+
+    const hanging = vi.fn(
+      (_clip, { signal }: { signal: AbortSignal }) =>
+        new Promise<string>((_, reject) => signal.addEventListener("abort", () => reject(abortError())))
+    );
+    const disposing = setup({ transcribe: hanging });
+    await disposing.voice.start();
+    disposing.voice.stop();
+    await vi.waitFor(() => expect(disposing.voice.getState().status).toBe("transcribing"));
+    disposing.voice.dispose();
+    await vi.waitFor(() => expect(disposing.voice.getState().status).toBe("idle"));
+    expect(disposing.onTranscript).not.toHaveBeenCalled();
+  });
+
   it("names every other microphone problem", () => {
     expect(describeMicError({ name: "OverconstrainedError" })).toBe("No microphone found.");
     expect(describeMicError({ name: "NotReadableError" })).toBe("The microphone is in use by another app.");
@@ -216,6 +263,15 @@ describe("createFalTranscriber", () => {
     const aborted = new AbortController();
     aborted.abort();
     await expect(createFalTranscriber({ model: "m" })(clip, { signal: aborted.signal })).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("returns empty text for a result with no transcript, polling at Fal's default pace", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ request_id: "r1", status: "COMPLETED" }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+    const text = await createFalTranscriber({ model: "fal-ai/wizper", fetchImpl })({ src: "data:,", kind: "audio", mimeType: "audio/webm" });
+    expect(text).toBe("");
   });
 
   it("reads `output` too, the field some models use", () => {
