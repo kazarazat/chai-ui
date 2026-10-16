@@ -23,6 +23,39 @@ describe("createChaiHandler", () => {
     expect(JSON.parse(init.body).model).toBe("anthropic/claude-opus-5");
   });
 
+  it("forwards Vercel AI Gateway chat and image calls with the key added", async () => {
+    const fetch = vi.fn().mockResolvedValue(ok({ choices: [] }));
+    const chai = createChaiHandler({ aiGatewayKey: "gw-key", fetch });
+    await chai.POST(post("/api/chai/vercel/chat", { model: "anthropic/claude-opus-5" }));
+    await chai.POST(post("/api/chai/vercel/images", { model: "bfl/flux-pro-1.1" }));
+
+    expect(fetch.mock.calls[0]![0]).toBe("https://ai-gateway.vercel.sh/v1/chat/completions");
+    expect(fetch.mock.calls[0]![1].headers.Authorization).toBe("Bearer gw-key");
+    expect(fetch.mock.calls[1]![0]).toBe("https://ai-gateway.vercel.sh/v1/images/generations");
+  });
+
+  it("reads the Vercel key from AI_GATEWAY_API_KEY, then from VERCEL_OIDC_TOKEN", async () => {
+    const fetch = vi.fn().mockResolvedValue(ok({}));
+    vi.stubEnv("AI_GATEWAY_API_KEY", "gw-env");
+    await createChaiHandler({ fetch }).POST(post("/api/chai/vercel/chat", { model: "m" }));
+    expect(fetch.mock.calls[0]![1].headers.Authorization).toBe("Bearer gw-env");
+
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    vi.stubEnv("VERCEL_OIDC_TOKEN", "oidc-token");
+    await createChaiHandler({ fetch }).POST(post("/api/chai/vercel/chat", { model: "m" }));
+    expect(fetch.mock.calls[1]![1].headers.Authorization).toBe("Bearer oidc-token");
+  });
+
+  it("applies allowedModels to Vercel calls and rejects other paths", async () => {
+    const fetch = vi.fn();
+    const chai = createChaiHandler({ aiGatewayKey: "k", fetch, allowedModels: ["anthropic/claude-opus-5"] });
+    const denied = await chai.POST(post("/api/chai/vercel/chat", { model: "openai/gpt-6-astra" }));
+    expect(denied.status).toBe(403);
+    const unknown = await chai.POST(post("/api/chai/vercel/video", { model: "anthropic/claude-opus-5" }));
+    expect(unknown.status).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("forwards Fal queue submits and polls to queue.fal.run with the key", async () => {
     const fetch = vi.fn().mockResolvedValue(ok({ request_id: "r1" }));
     const chai = createChaiHandler({ falKey: "fal-key", fetch });

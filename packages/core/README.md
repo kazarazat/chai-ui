@@ -63,8 +63,8 @@ OpenRouter's from `openrouter.ai/api/v1/models`.
 
 The built-in engines never hold an API key. They call one route on your
 server, `/api/chai/*`, and `createChaiHandler` serves it: it adds the key
-and forwards the request to Fal.ai or OpenRouter, streaming replies
-through.
+and forwards the request to Fal.ai, OpenRouter or Vercel AI Gateway,
+streaming replies through.
 
 ```ts
 // Next.js: app/api/chai/[...path]/route.ts
@@ -73,8 +73,9 @@ import { createChaiHandler } from "@chai-ui/core/server";
 export const { GET, POST, PUT } = createChaiHandler();
 ```
 
-Set `FAL_KEY` and `OPENROUTER_API_KEY` in the server's environment (never
-with a `VITE_` or `NEXT_PUBLIC_` prefix). A missing key comes back as a
+Set `FAL_KEY`, `OPENROUTER_API_KEY` or `AI_GATEWAY_API_KEY` in the server's
+environment (never with a `VITE_` or `NEXT_PUBLIC_` prefix). On Vercel,
+`VERCEL_OIDC_TOKEN` is set for you and works in place of the gateway key. A missing key comes back as a
 clear error, e.g. "FAL_KEY isn't set on the server."
 
 **Where it runs.** The route lives in your app's framework (React or Vue)
@@ -91,7 +92,7 @@ disconnects, the provider call is aborted too.
 | Nuxt | `export default defineEventHandler((event) => chai.handle(toWebRequest(event)));` in `server/api/chai/[...path].ts` |
 | Hono | `app.all("/api/chai/*", (c) => chai.handle(c.req.raw))` |
 | Bun, Deno | route `/api/chai/*` to `chai.handle` in `Bun.serve` / `Deno.serve` |
-| Cloudflare Workers | `createChaiHandler({ falKey: env.FAL_KEY, openRouterKey: env.OPENROUTER_API_KEY }).handle(request)` |
+| Cloudflare Workers | `createChaiHandler({ falKey: env.FAL_KEY, openRouterKey: env.OPENROUTER_API_KEY, aiGatewayKey: env.AI_GATEWAY_API_KEY }).handle(request)` |
 | Express, plain Node | `app.use("/api/chai", toNodeHandler(createChaiHandler()))` |
 
 **Before going live**, limit who can use the route and what it runs.
