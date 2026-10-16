@@ -224,6 +224,26 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
     });
 
+    it("Escape discards a recording, and a click while transcribing cancels it", async () => {
+      stubMic();
+      const transcribe = vi.fn(
+        (_clip: unknown, { signal }: { signal: AbortSignal }) =>
+          new Promise<string>((_, reject) => signal.addEventListener("abort", () => reject(new DOMException("x", "AbortError"))))
+      );
+      const screen = harness({ value: "a mug", voiceInput: { transcribe } });
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await expect.element(screen.getByRole("button", { name: "Stop recording and transcribe" })).toBeVisible();
+      await userEvent.keyboard("{Escape}");
+      await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
+      expect(transcribe).not.toHaveBeenCalled();
+
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await screen.getByRole("button", { name: "Cancel transcription" }).click();
+      await expect.element(screen.getByRole("button", { name: "Start voice input" })).toBeVisible();
+      await expect.element(screen.getByRole("textbox")).toHaveValue("a mug");
+    });
+
     it("explains a blocked microphone inline", async () => {
       stubMic(() => Promise.reject(Object.assign(new Error("denied"), { name: "NotAllowedError" })));
       const screen = harness({ voiceInput: { transcribe: vi.fn() } });

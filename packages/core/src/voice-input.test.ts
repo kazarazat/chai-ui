@@ -125,6 +125,39 @@ describe("createVoiceInput", () => {
     expect(voice.getState().levels).toEqual([]);
   });
 
+  it("names every other microphone problem", () => {
+    expect(describeMicError({ name: "OverconstrainedError" })).toBe("No microphone found.");
+    expect(describeMicError({ name: "NotReadableError" })).toBe("The microphone is in use by another app.");
+    expect(describeMicError(new Error("?"))).toBe("The microphone couldn't start.");
+    expect(describeMicError(null)).toBe("The microphone couldn't start.");
+  });
+
+  it("still records with no waveform when Web Audio fails", async () => {
+    class BrokenAudio {
+      constructor() {
+        throw new Error("no audio");
+      }
+    }
+    const { voice } = setup({ transcribe: vi.fn().mockResolvedValue("x") }, { AudioContext: BrokenAudio });
+    await voice.start();
+    expect(voice.getState()).toMatchObject({ status: "recording", levels: [] });
+  });
+
+  it("dispose stops a recording without a transcript, and unsubscribe stops updates", async () => {
+    const transcribe = vi.fn();
+    const { voice } = setup({ transcribe });
+    const listener = vi.fn();
+    const unsubscribe = voice.subscribe(listener);
+    await voice.start();
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
+    listener.mockClear();
+    voice.dispose();
+    expect(listener).not.toHaveBeenCalled();
+    expect(stopTrack).toHaveBeenCalled();
+    expect(transcribe).not.toHaveBeenCalled();
+  });
+
   it("stops and transcribes on its own at the longest recording", async () => {
     vi.useFakeTimers();
     const transcribe = vi.fn().mockResolvedValue("hello");
@@ -151,6 +184,38 @@ describe("createFalTranscriber", () => {
     expect(text).toBe("hi there");
     expect(fetchImpl.mock.calls[0]![0]).toBe("/api/chai/fal/fal-ai/wizper");
     expect(JSON.parse(fetchImpl.mock.calls[0]![1].body)).toEqual({ audio_url: "data:audio/webm;base64,AAA" });
+  });
+
+  it("cancels the Fal job when stopped after submitting or while waiting", async () => {
+    const submitted = { ok: true, status: 200, json: async () => ({ request_id: "r1", status: "IN_QUEUE" }) };
+    const clip = { src: "data:audio/webm;base64,AAA", kind: "audio" as const, mimeType: "audio/webm" };
+
+    const early = new AbortController();
+    const fetchEarly = vi.fn(async (url: string) => {
+      if (url.endsWith("/cancel")) return { ok: true, status: 200, json: async () => ({}) };
+      early.abort();
+      return submitted;
+    });
+    const t1 = createFalTranscriber({ model: "fal-ai/wizper", fetchImpl: fetchEarly as never, pollIntervalMs: 0 });
+    await expect(t1(clip, { signal: early.signal })).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchEarly.mock.calls.at(-1)![0]).toBe("/api/chai/fal/fal-ai/wizper/requests/r1/cancel");
+
+    const waiting = new AbortController();
+    const fetchWaiting = vi.fn(async (url: string) => {
+      if (url.endsWith("/cancel")) return { ok: true, status: 200, json: async () => ({}) };
+      if (url.endsWith("/status")) {
+        waiting.abort();
+        return { ok: true, status: 200, json: async () => ({ status: "IN_PROGRESS" }) };
+      }
+      return submitted;
+    });
+    const t2 = createFalTranscriber({ model: "fal-ai/wizper", fetchImpl: fetchWaiting as never, pollIntervalMs: 1 });
+    await expect(t2(clip, { signal: waiting.signal })).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchWaiting.mock.calls.some(([u]) => String(u).endsWith("/cancel"))).toBe(true);
+
+    const aborted = new AbortController();
+    aborted.abort();
+    await expect(createFalTranscriber({ model: "m" })(clip, { signal: aborted.signal })).rejects.toMatchObject({ name: "AbortError" });
   });
 
   it("reads `output` too, the field some models use", () => {
