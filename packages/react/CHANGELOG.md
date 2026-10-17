@@ -1,5 +1,15 @@
 # @chai-ui/react
 
+## 0.10.1
+
+### Patch Changes
+
+- 41aafd0: Package descriptions and READMEs use the name "Chai UI" throughout, and each README opens with the product name. Adds the `chai-ui` npm keyword. No code changes.
+- 43267d9: Bug fix: React's `Composer` had no way to size the bar. It now takes `className` and `style` and applies them to its root element. Vue already passed both through to the root.
+- Updated dependencies [41aafd0]
+  - @chai-ui/core@0.10.1
+  - @chai-ui/tokens@0.10.1
+
 ## 0.10.0
 
 ### Patch Changes

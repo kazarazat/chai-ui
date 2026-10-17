@@ -1,5 +1,11 @@
 # @chai-ui/tokens
 
+## 0.10.1
+
+### Patch Changes
+
+- 41aafd0: Package descriptions and READMEs use the name "Chai UI" throughout, and each README opens with the product name. Adds the `chai-ui` npm keyword. No code changes.
+
 ## 0.10.0
 
 No changes in this release.
