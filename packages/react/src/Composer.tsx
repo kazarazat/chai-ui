@@ -195,6 +195,10 @@ export interface ComposerProps {
    */
   voiceInput?: VoiceInputConfig;
   disabled?: boolean;
+  /** Extra class names for the root element, added after `chai-composer`. */
+  className?: string;
+  /** Inline styles for the root element, e.g. `{ maxWidth: 720 }` to size the bar. */
+  style?: React.CSSProperties;
 }
 
 /**
@@ -251,6 +255,8 @@ export function Composer({
   onRegionsChange,
   voiceInput,
   disabled = false,
+  className,
+  style,
 }: ComposerProps) {
   const view = composerView({
     value,
@@ -343,7 +349,7 @@ export function Composer({
   }
 
   return (
-    <div className="chai-composer">
+    <div className={className ? `chai-composer ${className}` : "chai-composer"} style={style}>
       {attachments.length > 0 && (
         <div className="chai-composer__thumbnails">
           {attachments.map((a) => (
