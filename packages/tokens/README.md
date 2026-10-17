@@ -13,7 +13,7 @@
 # @chai-ui/tokens
 
 The single source of truth for color, space, radius, type, and motion values
-across CHAI UI. One JSON file in, three consumers out:
+across Chai UI. One JSON file in, three consumers out:
 
 ```
 src/tokens.json  →  dist/css/tokens.css        (CSS custom properties)

@@ -12,8 +12,8 @@
 
 # @chai-ui/react
 
-React components for the input and output surfaces of generative-media
-apps. Everything here is controlled — you own the state, these components
+Chai UI for React: drop-in components for the input and output surfaces of
+generative-media apps. Everything here is controlled — you own the state, these components
 render it and tell you when it changes.
 
 Building with it, or pointing a coding agent at it? Read

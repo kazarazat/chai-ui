@@ -12,7 +12,7 @@
 
 # @chai-ui/core
 
-The headless core behind CHAI's components: the data types, the
+The headless core behind Chai UI's components: the data types, the
 Request → Run → Result model a submitted prompt flows through, and the
 pluggable generation engines that actually call models, and the components'
 behavior as small framework-free stores. No framework, no rendering:

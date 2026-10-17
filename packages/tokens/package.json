@@ -1,7 +1,7 @@
 {
   "name": "@chai-ui/tokens",
   "version": "0.10.0",
-  "description": "CHAI UI design tokens — single source of truth, built to CSS variables, TypeScript, and a Figma Tokens/Variables-plugin JSON.",
+  "description": "Chai UI design tokens — single source of truth, built to CSS variables, TypeScript, and a Figma Tokens/Variables-plugin JSON.",
   "license": "MIT",
   "author": "kazarazat",
   "homepage": "https://chai-ui.com",
@@ -14,6 +14,7 @@
     "url": "https://github.com/kazarazat/chai-ui/issues"
   },
   "keywords": [
+    "chai-ui",
     "ai",
     "generative-ai",
     "design-system",
