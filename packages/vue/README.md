@@ -12,8 +12,8 @@
 
 # @chai-ui/vue
 
-Vue components for the input and output surfaces of generative-media
-apps: a prompt composer, a media-to-prompt analyzer, a result card and an
+Chai UI for Vue: drop-in components for the input and output surfaces of
+generative-media apps: a prompt composer, a media-to-prompt analyzer, a result card and an
 edit card, with the AI work built in and wired to Fal.ai, OpenRouter, Vercel
 AI Gateway or your own engine. Everything is controlled: you own the state with
 `v-model`, and the components render it.
