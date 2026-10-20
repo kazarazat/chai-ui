@@ -186,6 +186,21 @@ If routing can't run (no `ChaiProvider`, a failed reasoning call, an
 unlisted reply), the request runs on the first listed model and
 `onRoutingFallback` says why.
 
+### Where the bar sits: `menuPlacement`
+
+Every menu in the bar (the `+` menu, Model, Aspect ratio, Voice, Genre,
+Frame rate) opens the same way. Tell `Composer` where the bar is docked:
+
+```tsx
+<Composer menuPlacement="above" {...props} /> // docked to the bottom of the screen, like a chat app
+<Composer menuPlacement="below" {...props} /> // docked to the top
+```
+
+Leave it out (`"auto"`) for a bar that sits in the page: each menu is
+measured when it opens and goes below if it fits, else above if that fits,
+else toward the side with more room, so it's never cut off by the edge of
+the screen.
+
 ## What else this package ships
 
 - **`MediaAnalyzer`** — drop in an image, video, or audio clip and get a
@@ -373,7 +388,7 @@ const model = SUGGESTED_EDIT_MODELS.find((m) => m.id === modelId) ?? SUGGESTED_E
   // ...your other Composer props
   useCase={useCase}
   onAttachMenuSelect={(action) => {
-    if (action === "edit-media") setUseCase(EDIT_IMAGE_USE_CASE);
+    if (action === "edit-image") setUseCase(EDIT_IMAGE_USE_CASE);
   }}
   regions={edit?.regions}
   onRegionsChange={edit?.onRegionsChange}

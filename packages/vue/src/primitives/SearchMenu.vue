@@ -10,6 +10,7 @@ import "@material/web/textfield/outlined-text-field.js";
 import { computed, nextTick, ref, watch } from "vue";
 import { useDismiss } from "../dismiss.js";
 import { CheckIcon } from "../icons.js";
+import { menuOpensAbove, type MenuPlacement } from "@chai-ui/core";
 import Toggle from "./Toggle.vue";
 import type { SearchMenuOption, SearchMenuSection, SearchMenuToggleHeader } from "./search-menu.js";
 
@@ -35,12 +36,15 @@ const props = withDefaults(
     triggerVariant?: "outlined" | "text";
     /** Panel width in px; longer labels ellipsize. */
     panelWidth?: number;
+    /** Which way the panel opens: "auto" (default) below when it fits, else above when that fits, else toward the side with more room. */
+    placement?: MenuPlacement;
   }>(),
-  { searchable: true, triggerVariant: "outlined", panelWidth: 280 }
+  { searchable: true, triggerVariant: "outlined", panelWidth: 280, placement: "auto" }
 );
 const emit = defineEmits<{ select: [option: T] }>();
 
 const open = ref(false);
+const above = ref(false);
 const search = ref("");
 const root = ref<HTMLElement>();
 const panel = ref<HTMLElement>();
@@ -60,6 +64,8 @@ watch(open, async (isOpen) => {
   const rect = el.getBoundingClientRect();
   const over = rect.right - (document.documentElement.clientWidth - 16);
   if (over > 0) el.style.left = `${-Math.min(over, Math.max(0, rect.left - 16))}px`;
+  // Up or down, before the first paint, so it never flashes on the wrong side.
+  above.value = menuOpensAbove(props.placement, root.value!.getBoundingClientRect(), el.offsetHeight, document.documentElement.clientHeight);
 });
 
 useDismiss(root, open, close);
@@ -101,7 +107,7 @@ function pick(option: T) {
       </svg>
     </button>
 
-    <div v-if="open" ref="panel" class="chai-search-menu__panel" role="group" :aria-label="menuLabel" :style="{ width: `${panelWidth}px` }">
+    <div v-if="open" ref="panel" class="chai-search-menu__panel" :class="{ 'chai-search-menu__panel--above': above }" role="group" :aria-label="menuLabel" :style="{ width: `${panelWidth}px` }">
       <div v-if="toggleHeader" class="chai-search-menu__toggle-header">
         <span class="chai-search-menu__toggle-header-label">{{ menuLabel }}</span>
         <span class="chai-search-menu__toggle-header-row">
@@ -113,7 +119,7 @@ function pick(option: T) {
         v-if="searchable"
         class="chai-search-menu__search"
         :label="menuLabel"
-        placeholder="Input"
+        placeholder="Search"
         :value.prop="search"
         @input="search = ($event.target as HTMLInputElement).value"
       >

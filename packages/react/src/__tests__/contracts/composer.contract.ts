@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import {
+  CREATE_MUSIC_USE_CASE,
+  CREATE_SPEECH_USE_CASE,
   EDIT_IMAGE_USE_CASE,
   suggestedModels,
   TEXT_USE_CASE,
@@ -333,6 +335,38 @@ export function composerContract(render: Render<ComposerProps>) {
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ frameRate: 24 }));
     });
 
+    it("offers the picked speech model's voices and sends the pick", async () => {
+      const KOKORO: ModelOption = { id: "kokoro", label: "Kokoro", provider: "p", speed: "fast", voices: [{ value: "af_heart", label: "Heart" }, { value: "am_adam", label: "Adam" }] };
+      const onSubmit = vi.fn();
+      const screen = controlled<ComposerProps>(
+        render,
+        { value: "Welcome back", onChange: () => {}, onSubmit, useCase: CREATE_SPEECH_USE_CASE, models: [KOKORO], modelId: "kokoro", onModelChange: () => {}, speechVoice: null, onSpeechVoiceChange: () => {} },
+        { onSpeechVoiceChange: "speechVoice" }
+      );
+      await screen.getByRole("button", { name: "Voice", exact: true }).click();
+      await screen.getByRole("button", { name: "Adam" }).click();
+      await expect.element(screen.getByRole("button", { name: "Adam", expanded: false })).toBeVisible();
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ speechVoice: "am_adam" }));
+    });
+
+    it("offers the picked music model's genres, several at once, and sends them", async () => {
+      const LYRIA: ModelOption = { id: "lyria", label: "Lyria", provider: "p", speed: "fast", genres: [{ value: "lo-fi", label: "Lo-fi" }, { value: "jazz", label: "Jazz" }] };
+      const onSubmit = vi.fn();
+      const screen = controlled<ComposerProps>(
+        render,
+        { value: "a rainy night", onChange: () => {}, onSubmit, useCase: CREATE_MUSIC_USE_CASE, models: [LYRIA], modelId: "lyria", onModelChange: () => {}, genres: [], onGenresChange: () => {} },
+        { onGenresChange: "genres" }
+      );
+      await screen.getByRole("button", { name: "Genre", exact: true }).click();
+      await screen.getByRole("button", { name: "Lo-fi" }).click();
+      await screen.getByRole("button", { name: "Jazz" }).click();
+      await expect.element(screen.getByRole("button", { name: "2 genres" })).toBeVisible();
+      await userEvent.keyboard("{Escape}");
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ genres: ["lo-fi", "jazz"] }));
+    });
+
     it("has no WCAG violations", async () => {
       harness({ value: "a temple", useCase: WORLD, models: [], character: "", onCharacterChange: () => {}, onEnhance: () => {} });
       expect(await wcagViolations(document.querySelector(".chai-composer")!)).toEqual([]);
@@ -453,10 +487,23 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(bare.getByRole("button", { name: "Add media" })).not.toBeInTheDocument();
       bare.unmount();
 
-      const narrowed = harness({ onAttachMenuSelect: () => {}, onAttachmentsChange: () => {}, attachMenuActions: ["add-media", "edit-media"] });
+      const narrowed = harness({ onAttachMenuSelect: () => {}, onAttachmentsChange: () => {}, attachMenuActions: ["add-media", "edit-image"] });
       await narrowed.getByRole("button", { name: "Add media" }).click();
       await expect.element(narrowed.getByRole("menuitem", { name: "Edit image" })).toBeVisible();
       await expect.element(narrowed.getByRole("menuitem", { name: "Create video" })).not.toBeInTheDocument();
+    });
+
+    it("opens its menus the way menuPlacement says", async () => {
+      for (const placement of ["above", "below"] as const) {
+        const screen = harness({ onAttachMenuSelect: () => {}, menuPlacement: placement, models: MODELS });
+        await screen.getByRole("button", { name: "Add media" }).click();
+        const opensAbove = (el: Element | null) => el!.className.includes("--above");
+        expect(opensAbove(document.querySelector(".chai-composer__attach-menu"))).toBe(placement === "above");
+        await userEvent.keyboard("{Escape}");
+        await screen.getByRole("button", { name: "Select model" }).click();
+        expect(opensAbove(document.querySelector(".chai-search-menu__panel"))).toBe(placement === "above");
+        screen.unmount();
+      }
     });
 
     it("shows Create world only when attachMenuActions lists it", async () => {

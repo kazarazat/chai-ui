@@ -16,6 +16,8 @@ const V_MODEL: Record<string, string> = {
   onRegionsChange: "onUpdate:regions",
   onCharacterChange: "onUpdate:character",
   onFrameRateChange: "onUpdate:frameRate",
+  onSpeechVoiceChange: "onUpdate:speechVoice",
+  onGenresChange: "onUpdate:genres",
 };
 
 composerContract(

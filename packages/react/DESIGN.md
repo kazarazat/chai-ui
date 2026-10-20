@@ -60,6 +60,11 @@ use these names: `Results`, `Compare`, `ModelPicker`,
 8. **Only show what's real.** Show cost only when the engine reports it.
    Don't show model rankings or leaderboard positions you can't keep up to
    date. Don't show a control the selected model can't honor.
+9. **Say where the bar is docked.** A `Composer` fixed to the bottom of
+   the screen gets `menuPlacement="above"`, one fixed to the top
+   `menuPlacement="below"`, so its menus always open into the page. Leave
+   it out for a bar in the page flow: `"auto"` picks the side with room
+   each time a menu opens.
 
 ### In Vue
 
@@ -155,6 +160,7 @@ Rules:
 | No use case picked | The prompt is a text request and gets a text reply | Set `defaultUseCase` if your app's default should be image or video |
 | Voice input | A mic left of submit; while recording, a live waveform replaces the prompt and the mic becomes stop; the transcript is added to the prompt, never sent; submit hides until it's in; inline messages for a blocked or missing mic | Pass `voiceInput={{ model: "fal-ai/wizper" }}` (any Fal speech-to-text model, through your `/api/chai/fal` route) or `voiceInput={{ transcribe }}` for another provider. Chai never picks the model. |
 | Create world | Two prompts, Environment (required) and Character (optional), each with its own Enhance; a frame rate menu from the models' `frameRates`; submit waits for an environment and says so | Add `"create-world"` to `attachMenuActions`, pass your world models, `character` + `onCharacterChange`, and route `engineByKind.world` to your world engine. Show the world in your own viewer. |
+| Create speech, Create music | The attach menu's audio group, under a divider; speech asks for the words to speak, music for a description; Enhance keeps a speech script's words and only makes them read aloud well; once one model is picked, a Voice menu from its `voices` (speech), or a multi-select Genre menu from the picked models' `genres` (music, written into the prompt) | Add `"create-speech"` / `"create-music"` to `attachMenuActions`, set `CREATE_SPEECH_USE_CASE` / `CREATE_MUSIC_USE_CASE` on the pick, pass your audio models (with `voices` or `genres`) and `engineByKind.audio`, and wire `speechVoice` / `genres`. No duration, instrumental or reference-audio controls yet |
 | Result pending | `ResultCard` shows a spinner for `queued` / `running` | Nothing. `useComposer` sets the status. |
 | Long text answer | `ResultCard` keeps line breaks, scrolls past 400px with a visible scrollbar, and follows streaming text unless the person scrolls up | Change the height with `textMaxHeight` if needed |
 | Text streaming in | `ResultCard` renders partial text with a caret, marked `aria-busy` | Use an engine that calls `onText` (OpenRouter does, and so does the mock text engine). `useComposer` wires it. |

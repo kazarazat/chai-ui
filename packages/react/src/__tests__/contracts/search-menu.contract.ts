@@ -25,12 +25,12 @@ export function searchMenuContract(render: Render<SearchMenuProps>) {
       const screen = render({ options, value: null, triggerLabel: "Pick fruit", menuLabel: "Fruit", onSelect });
       await screen.getByText("Pick fruit").click();
       // The Material text field labels both its host and its inner <input>; type into the input.
-      await userEvent.fill(screen.getByPlaceholder("Input").last(), "ban");
+      await userEvent.fill(screen.getByPlaceholder("Search").last(), "ban");
       await expect.element(screen.getByText("Apple")).not.toBeInTheDocument();
 
       await userEvent.keyboard("{Escape}");
       await screen.getByText("Pick fruit").click();
-      await expect.element(screen.getByPlaceholder("Input").last()).toHaveValue("");
+      await expect.element(screen.getByPlaceholder("Search").last()).toHaveValue("");
       await screen.getByText("Apple").click();
       expect(onSelect).toHaveBeenCalledWith(options[0]);
     });
@@ -38,7 +38,7 @@ export function searchMenuContract(render: Render<SearchMenuProps>) {
     it("says when nothing matches, and closes from its trigger", async () => {
       const screen = render({ options, value: null, triggerLabel: "Pick fruit", menuLabel: "Fruit", onSelect: () => {} });
       await screen.getByText("Pick fruit").click();
-      await userEvent.fill(screen.getByPlaceholder("Input").last(), "kiwi");
+      await userEvent.fill(screen.getByPlaceholder("Search").last(), "kiwi");
       await expect.element(screen.getByText("No matches.")).toBeVisible();
       await screen.getByRole("button", { name: "Pick fruit" }).click();
       await expect.element(screen.getByRole("group", { name: "Fruit" })).not.toBeInTheDocument();

@@ -5,6 +5,7 @@ import { MdOutlinedTextField } from "@material/web/textfield/outlined-text-field
 import { MdCheckbox } from "@material/web/checkbox/checkbox.js";
 import { Toggle } from "./Toggle.js";
 import { CheckIcon } from "../icons.js";
+import { menuOpensAbove, type MenuPlacement } from "@chai-ui/core";
 
 const MdOutlinedTextFieldElement = createComponent({
   react: React,
@@ -84,6 +85,8 @@ interface SearchMenuProps<T extends SearchMenuOption> {
   triggerVariant?: "outlined" | "text";
   /** Panel width in px (default 280) — widen for a menu whose option labels run long; anything still too long past that ellipsizes rather than wrapping or overflowing. */
   panelWidth?: number;
+  /** Which way the panel opens: `"auto"` (default) below when it fits, else above when that fits, else toward the side with more room. */
+  placement?: MenuPlacement;
 }
 
 /**
@@ -109,8 +112,10 @@ export function SearchMenu<T extends SearchMenuOption>({
   searchable = true,
   triggerVariant = "outlined",
   panelWidth = 280,
+  placement = "auto",
 }: SearchMenuProps<T>) {
   const [open, setOpen] = useState(false);
+  const [above, setAbove] = useState(false);
   const [search, setSearch] = useState("");
   // Closing also clears the search, so the menu reopens on the full list.
   const close = useCallback(() => {
@@ -130,7 +135,10 @@ export function SearchMenu<T extends SearchMenuOption>({
     const rect = panel.getBoundingClientRect();
     const over = rect.right - (document.documentElement.clientWidth - 16);
     if (over > 0) panel.style.left = `${-Math.min(over, Math.max(0, rect.left - 16))}px`;
-  }, [open]);
+    // Up or down, before the first paint, so it never flashes on the wrong side.
+    const trigger = rootRef.current!.getBoundingClientRect();
+    setAbove(menuOpensAbove(placement, trigger, panel.offsetHeight, document.documentElement.clientHeight));
+  }, [open, placement]);
 
   useEffect(() => {
     if (!open) return;
@@ -195,7 +203,7 @@ export function SearchMenu<T extends SearchMenuOption>({
       {open && (
         <div
           ref={panelRef}
-          className="chai-search-menu__panel"
+          className={`chai-search-menu__panel${above ? " chai-search-menu__panel--above" : ""}`}
           role="group"
           aria-label={menuLabel}
           style={{ width: panelWidth }}
@@ -213,7 +221,7 @@ export function SearchMenu<T extends SearchMenuOption>({
             <MdOutlinedTextFieldElement
               className="chai-search-menu__search"
               label={menuLabel}
-              placeholder="Input"
+              placeholder="Search"
               value={search}
               onInput={(e) => setSearch((e.target as MdOutlinedTextField).value)}
             >

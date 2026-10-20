@@ -29,6 +29,7 @@ export {
   SUGGESTED_EDIT_MODELS,
   SUGGESTED_ANALYSIS_MODELS,
   suggestedModels,
+  promptWithGenres,
   checkSuggestedModels,
 } from "@chai-ui/core";
 export type {
@@ -40,11 +41,13 @@ export type {
   MediaAnalysisKind,
   MediaAnalysisPromptLength,
   MediaKind,
+  MenuPlacement,
   ModelOption,
   OutputKind,
   Transcribe,
   VoiceClip,
   VoiceInputConfig,
+  VoiceOption,
   ParameterOption,
   RegionBox,
   RegionFormat,

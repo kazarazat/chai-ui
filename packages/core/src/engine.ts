@@ -27,6 +27,8 @@ export interface GenerationEngine {
     character?: string;
     /** A world's frame rate, e.g. `16`. Only set for a model that lists it in `ModelOption.frameRates`. */
     frameRate?: number;
+    /** A text-to-speech voice, the model's own id for it. Only set for a model that lists it in `ModelOption.voices`. */
+    voice?: string;
     /**
      * Optional streaming hook for text output. An engine that can stream
      * calls this with the full text received so far (not a delta) each time

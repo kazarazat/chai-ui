@@ -13,6 +13,13 @@ export type MediaKind = "image" | "video" | "audio" | "text";
 export type OutputKind = MediaKind | "world";
 
 /**
+ * Which audio an `"audio"` use case creates: spoken words (Create speech) or
+ * music (Create music). Each needs its own models and result surface, so a
+ * new kind of audio (e.g. sound effects) gets its own value, not a reuse.
+ */
+export type AudioUseCase = "speech" | "music";
+
+/**
  * A piece of media a person attached (or an engine received) — just enough
  * to know its kind and where it lives.
  */
@@ -119,12 +126,33 @@ export interface ModelOption {
    * a model with one fixed rate it doesn't take as an input: no menu shows.
    */
   frameRates?: number[];
+  /**
+   * The voices a text-to-speech model speaks in, from its schema. Composer's
+   * Voice menu offers them once this is the one model picked, and the
+   * engine sends the pick as the model's `voice` input. Leave it out for a
+   * model with no voice to choose.
+   */
+  voices?: VoiceOption[];
+  /**
+   * The genres offered with a music model. Composer's Genre menu offers the
+   * ones every picked model lists, several at once. Music models take genre
+   * as part of the description, so the picks are written into the prompt
+   * (see `promptWithGenres`).
+   */
+  genres?: ParameterOption<string>[];
+}
+
+/** One voice in `ModelOption.voices`: the model's own id for it, its name, and an optional menu section (e.g. "Female"). */
+export interface VoiceOption extends ParameterOption<string> {
+  group?: string;
 }
 
 /** See `ModelOption.falInput`. */
 export interface FalInputFormat {
   image?: "image_url" | "image_urls" | "start_image_url";
   aspectRatio?: "aspect_ratio" | "image_size";
+  /** Which field the prompt goes in. Most models take `prompt`; some text-to-speech models take the words as `text`. */
+  prompt?: "prompt" | "text";
 }
 
 /** How an edit's regions reach the model — see `ModelOption.regionFormat`. */
@@ -135,8 +163,8 @@ export type RegionFormat = "flux-3-boxes" | "text";
  * leaderboard categories at github.com/oolong-tea-2026/arena-ai-leaderboards,
  * so a future model-ranking lookup can join on it directly, plus
  * "text-to-text" for a plain text request (a Composer with no use case
- * picked). That repo has no audio-generation category at all, a real gap
- * for any future audio use case.
+ * picked). That repo has no audio-generation category, so "text-to-speech"
+ * and "text-to-music" have nothing to join on yet.
  */
 export type GenerationUseCase =
   | "text-to-image"
@@ -145,4 +173,6 @@ export type GenerationUseCase =
   | "image-to-video"
   | "video-edit"
   | "vision"
-  | "text-to-text";
+  | "text-to-text"
+  | "text-to-speech"
+  | "text-to-music";

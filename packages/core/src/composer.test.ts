@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createComposerStore,
+  CREATE_MUSIC_USE_CASE,
+  CREATE_SPEECH_USE_CASE,
   DEFAULT_MODEL_ID,
   EDIT_IMAGE_USE_CASE,
   TEXT_USE_CASE,
@@ -79,6 +81,20 @@ describe("createComposerStore", () => {
     result.current.submit(payload({ aspectRatio: "16:9" }));
     await vi.waitFor(() => expect(result.current.run?.results[0]!.status).toBe("done"));
     expect(generate.mock.calls[0]![0].aspectRatio).toBe("16:9");
+  });
+
+  it("sends speech's voice to the engine, and writes music's genres into the prompt", async () => {
+    const generate = vi.fn().mockResolvedValue({ src: "https://x/a.mp3", kind: "audio" as const });
+    const { result } = setup({ engineByKind: { audio: fakeEngine(generate) } });
+
+    result.current.submit(payload({ value: "Welcome back", useCase: CREATE_SPEECH_USE_CASE, speechVoice: "af_heart" }));
+    await vi.waitFor(() => expect(generate).toHaveBeenCalledTimes(1));
+    expect(generate.mock.calls[0]![0]).toMatchObject({ prompt: "Welcome back", voice: "af_heart" });
+
+    result.current.submit(payload({ value: "a rainy night", useCase: CREATE_MUSIC_USE_CASE, genres: ["lo-fi", "jazz"] }));
+    await vi.waitFor(() => expect(generate).toHaveBeenCalledTimes(2));
+    expect(generate.mock.calls[1]![0].prompt).toBe("a rainy night\n\nGenre: lo-fi, jazz");
+    expect(generate.mock.calls[1]![0].voice).toBeUndefined();
   });
 
   it("sends a world to the world engine with its character and frame rate", async () => {
@@ -313,6 +329,16 @@ describe("createComposerStore", () => {
     const { result } = setup({ reasoningEngine: fakeEngine(reason), reasoningModel: "m" });
     await result.current.enhance!("what is a mug", "prompt", "text-to-text");
     expect(reason.mock.calls[0]![0].prompt).toContain("an AI assistant prompt");
+  });
+
+  it("words Enhance's instruction for music, and keeps a speech script's words", async () => {
+    const reason = vi.fn().mockResolvedValue({ src: "better", kind: "text" });
+    const { result } = setup({ reasoningEngine: fakeEngine(reason), reasoningModel: "m" });
+    await result.current.enhance!("lo-fi rain", "prompt", "text-to-music");
+    expect(reason.mock.calls[0]![0].prompt).toContain("a music-generation prompt");
+    await result.current.enhance!("Welcome back, Dr. Lee", "prompt", "text-to-speech");
+    expect(reason.mock.calls[1]![0].prompt).toMatch(/spoken aloud.*Keep the same words/s);
+    expect(reason.mock.calls[1]![0].prompt).not.toContain("image-generation");
   });
 
   it("words Enhance's instruction for a world's environment and character, each about its own field", async () => {

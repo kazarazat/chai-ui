@@ -18,6 +18,17 @@ describe("buildFalRequestBody", () => {
     expect(buildFalRequestBody({ prompt: "a red mug" })).toEqual({ prompt: "a red mug" });
   });
 
+  it("sends the words as `text` for a model whose schema asks for it, with the voice", () => {
+    expect(buildFalRequestBody({ prompt: "Hello", model: "xai/tts/v1", voice: "eve", input: { prompt: "text" } })).toEqual({
+      text: "Hello",
+      voice: "eve",
+    });
+    expect(buildFalRequestBody({ prompt: "Hello", model: "fal-ai/kokoro/american-english", voice: "af_heart" })).toEqual({
+      prompt: "Hello",
+      voice: "af_heart",
+    });
+  });
+
   it("sends the aspect ratio as aspect_ratio", () => {
     expect(buildFalRequestBody({ prompt: "a red mug", model: "fal-ai/nano-banana-pro", aspectRatio: "16:9" })).toEqual({
       prompt: "a red mug",
