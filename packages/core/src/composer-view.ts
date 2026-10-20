@@ -14,25 +14,37 @@ import type { ModelOption, OutputKind, ParameterOption } from "./types.js";
 /** Which prompt field an Enhance click is for: the bar's prompt, or a world's environment or character. */
 export type ComposerPromptField = "prompt" | "environment" | "character";
 
-export type ComposerAttachMenuAction = "add-media" | "create-image" | "create-video" | "create-world" | "edit-media";
+export type ComposerAttachMenuAction =
+  | "add-media"
+  | "create-image"
+  | "create-video"
+  | "create-world"
+  | "edit-image"
+  | "create-speech"
+  | "create-music";
 
 /**
- * The `+` menu, in order. "Add media" is the only item with a divider after
- * it. An `optIn` item shows only when `attachMenuActions` lists it.
+ * The `+` menu, in order, in groups: attaching, then visual media, then
+ * audio. A divider separates two groups that both have items showing. An
+ * `optIn` item shows only when `attachMenuActions` lists it.
  */
 export const COMPOSER_ATTACH_MENU_ITEMS: {
   action: ComposerAttachMenuAction;
   label: string;
-  divider?: boolean;
+  group: "attach" | "visual" | "audio";
   optIn?: boolean;
 }[] = [
-  { action: "add-media", label: "Add media", divider: true },
-  { action: "create-image", label: "Create image" },
-  { action: "create-video", label: "Create video" },
+  { action: "add-media", label: "Add media", group: "attach" },
+  { action: "create-image", label: "Create image", group: "visual" },
+  { action: "create-video", label: "Create video", group: "visual" },
   // No suggested world models or shipped world engine yet: a builder adds
   // this with their own models and `engineByKind.world`.
-  { action: "create-world", label: "Create world", optIn: true },
-  { action: "edit-media", label: "Edit image" },
+  { action: "create-world", label: "Create world", group: "visual", optIn: true },
+  { action: "edit-image", label: "Edit image", group: "visual" },
+  // No suggested audio models yet: a builder adds these with their own
+  // models and `engineByKind.audio`.
+  { action: "create-speech", label: "Create speech", group: "audio", optIn: true },
+  { action: "create-music", label: "Create music", group: "audio", optIn: true },
 ];
 
 /**
@@ -68,6 +80,10 @@ export interface ComposerViewInput {
   /** A world's character field. */
   character?: string;
   frameRate?: number | null;
+  /** Create speech's voice. */
+  speechVoice?: string | null;
+  /** Create music's genres. */
+  genres?: string[];
   submitError?: string | null;
   submitDisabled?: boolean;
   submitting?: boolean;
@@ -94,6 +110,8 @@ export function composerView(props: ComposerViewInput) {
     aspectRatio = null,
     character = "",
     frameRate = null,
+    speechVoice = null,
+    genres = [],
     submitError = null,
     submitting = false,
     regions = [],
@@ -111,6 +129,7 @@ export function composerView(props: ComposerViewInput) {
   // character the person plays (optional). An image can start the world,
   // but the environment is still needed.
   const world = activeUseCases.some((u) => u.kind === "world");
+  const audio = activeUseCases.find((u) => u.kind === "audio")?.audio;
   const hasImage = attachments.some((a) => a.kind === "image");
   const hasContent = editing
     ? hasImage && (value.trim().length > 0 || regions.length > 0)
@@ -127,7 +146,11 @@ export function composerView(props: ComposerViewInput) {
         ? attachments.length > 0
           ? "Describe the world, and how to use the attached media"
           : "Describe the world and how you move through it"
-        : "Describe media to create");
+        : audio === "speech"
+          ? "Type the words to speak"
+          : audio === "music"
+            ? "Describe the music to create"
+            : "Describe media to create");
   // The stop icon only appears with somewhere for its click to go.
   const showStop = submitting && Boolean(props.onAbort);
 
@@ -141,7 +164,7 @@ export function composerView(props: ComposerViewInput) {
   };
   // One menu section per use case with multi-use-case select; otherwise one flat roster.
   const modelSections = (multiSelectUseCases ? activeUseCases : activeUseCases.slice(0, 1))
-    .map((u) => ({ label: multiSelectUseCases ? u.label : "", kind: u.kind, ...rosterFor(u) }))
+    .map((u) => ({ label: multiSelectUseCases ? u.label : "", kind: u.kind, useCase: u, ...rosterFor(u) }))
     .filter((s) => s.options.length > 0);
   const allModels = modelSections.flatMap((s) => s.options);
   // No menu that can't change anything: without its handler, the Model menu hides.
@@ -166,12 +189,23 @@ export function composerView(props: ComposerViewInput) {
   const needsModel = canPickModel && modelSections.length > 0 && !autoSelectModel && pickedModelIds.length === 0;
   const isSubmitDisabled = submitError ? disabled : (props.submitDisabled ?? (disabled || !hasContent || needsModel));
 
+  // The models a control is for: only those of the use cases it applies to,
+  // so with Image and Music picked together, Music's models don't empty the
+  // Aspect ratio menu and Image's don't empty the Genre menu. `offered` is
+  // what might run: the picks, or with none picked (or auto-select on) the
+  // whole list.
+  const modelsFor = (applies: (u: ComposerUseCase) => boolean) => {
+    const ids = new Set(modelSections.filter((s) => applies(s.useCase)).flatMap((s) => s.options.map((o) => o.id)));
+    const picked = pickedModels.filter((m) => ids.has(m.id));
+    return { picked, offered: picked.length > 0 && !autoSelectModel ? picked : allModels.filter((m) => ids.has(m.id)) };
+  };
+
   // An edit keeps the source image's shape.
-  const showAspectRatio = activeUseCases.some((u) => !u.edit && (u.kind === "image" || u.kind === "video"));
-  // Only ratios every model that might run takes: the picked ones, or with
-  // none picked (or auto-select on) the whole list, so whichever runs can
+  const isVisual = (u: ComposerUseCase) => !u.edit && (u.kind === "image" || u.kind === "video");
+  const showAspectRatio = activeUseCases.some(isVisual);
+  // Only ratios every model that might run takes, so whichever runs can
   // honor it. A model with no `aspectRatios` sets its own shape: no menu.
-  const ratioModels = pickedModels.length > 0 && !autoSelectModel ? pickedModels : allModels;
+  const ratioModels = modelsFor(isVisual).offered;
   const sharedRatios =
     ratioModels.reduce<string[] | null>((shared, m) => (shared ?? m.aspectRatios ?? []).filter((r) => m.aspectRatios?.includes(r)), null) ??
     [];
@@ -185,9 +219,40 @@ export function composerView(props: ComposerViewInput) {
   // A world's frame rate works like aspect ratio: only rates every model
   // that might run takes, and a pick outside them is never sent.
   const frameRateOptions = world
-    ? (ratioModels.reduce<number[] | null>((shared, m) => (shared ?? m.frameRates ?? []).filter((r) => m.frameRates?.includes(r)), null) ?? [])
+    ? (modelsFor((u) => u.kind === "world").offered.reduce<number[] | null>((shared, m) => (shared ?? m.frameRates ?? []).filter((r) => m.frameRates?.includes(r)), null) ?? [])
     : [];
   const offeredFrameRate = frameRate != null && frameRateOptions.includes(frameRate) ? frameRate : null;
+
+  // A voice belongs to one model: the Voice menu shows once exactly one is
+  // picked, never under auto-select (no model yet to take voices from).
+  const speechPicks = modelsFor((u) => u.audio === "speech").picked;
+  const voiceModel = audio === "speech" && !autoSelectModel && speechPicks.length === 1 ? speechPicks[0] : undefined;
+  const voiceOptions = voiceModel?.voices ?? [];
+  const offeredVoice = voiceOptions.some((v) => v.value === speechVoice) ? speechVoice : null;
+  const voiceSections = voiceOptions.some((v) => v.group)
+    ? [...new Set(voiceOptions.map((v) => v.group ?? ""))].map((label) => ({
+        label,
+        options: voiceOptions.filter((v) => (v.group ?? "") === label),
+      }))
+    : null;
+
+  // Genres every picked music model lists, once one is picked. A pick the
+  // current models don't list is shown as unpicked and never sent.
+  const genreModels = audio === "music" && !autoSelectModel ? modelsFor((u) => u.audio === "music").picked : [];
+  const genreOptions =
+    genreModels.length > 0
+      ? (genreModels.reduce<ParameterOption<string>[] | null>(
+          (shared, m) => (shared ?? m.genres ?? []).filter((g) => m.genres?.some((o) => o.value === g.value)),
+          null
+        ) ?? [])
+      : [];
+  const offeredGenres = genres.filter((g) => genreOptions.some((o) => o.value === g));
+  const genreTriggerLabel =
+    offeredGenres.length === 0
+      ? "Genre"
+      : offeredGenres.length === 1
+        ? genreOptions.find((o) => o.value === offeredGenres[0])!.label
+        : `${offeredGenres.length} genres`;
 
   const selections = (): ComposerSelection[] =>
     activeUseCases.map((u) => ({
@@ -204,7 +269,7 @@ export function composerView(props: ComposerViewInput) {
      * belongs to the Model menu it was turned on in, so a new use case
      * starts with its model picked by hand.
      */
-    useCaseKey: pickedUseCases.map((u) => `${u.kind}${u.edit ? ":edit" : ""}`).join(","),
+    useCaseKey: pickedUseCases.map((u) => `${u.kind}${u.edit ? ":edit" : ""}${u.audio ? `:${u.audio}` : ""}`).join(","),
     activeUseCases,
     editing,
     isSubmitDisabled,
@@ -237,6 +302,20 @@ export function composerView(props: ComposerViewInput) {
     characterPlaceholder: "Describe who you play as, or leave this empty",
     frameRateOptions,
     offeredFrameRate,
+    /** Create speech's Voice menu: the one picked model's voices, in sections when they have groups. */
+    voiceOptions,
+    voiceSections,
+    offeredVoice,
+    voiceTriggerLabel: voiceOptions.find((v) => v.value === offeredVoice)?.label ?? "Voice",
+    /** Create music's Genre menu, several at once. */
+    genreOptions,
+    offeredGenres,
+    genreTriggerLabel,
+    /** The genres after a row click: that one toggled. */
+    toggledGenres: (value: string) =>
+      offeredGenres.includes(value) ? offeredGenres.filter((g) => g !== value) : [...offeredGenres, value],
+    /** Past this many options, a Voice or Genre menu gets a search field. */
+    searchableAt: 10,
     /** The model ids after a row click: the one picked, or with multi-select that one toggled. */
     toggledModelIds: (id: string) => (modelIds.includes(id) ? modelIds.filter((m) => m !== id) : [...modelIds, id]),
     /** Everything a submit sends. */
@@ -250,6 +329,8 @@ export function composerView(props: ComposerViewInput) {
       autoSelectModel,
       regions: editing ? regions : [],
       ...(world && { character, frameRate: offeredFrameRate }),
+      ...(audio === "speech" && { speechVoice: offeredVoice }),
+      ...(audio === "music" && { genres: offeredGenres }),
     }),
   };
 }
@@ -259,17 +340,19 @@ export type ComposerView = ReturnType<typeof composerView>;
 /**
  * The `+` menu items that can work: "Add media" needs somewhere to put
  * files, the use-case items a handler. With no `actions`, every item that
- * isn't opt-in.
+ * isn't opt-in. `divider` marks the last showing item of a group with
+ * another group after it.
  */
 export function composerAttachMenuItems(
   actions: ComposerAttachMenuAction[] | undefined,
   { canAddMedia, canSelect }: { canAddMedia: boolean; canSelect: boolean }
 ) {
-  return COMPOSER_ATTACH_MENU_ITEMS.filter(
+  const shown = COMPOSER_ATTACH_MENU_ITEMS.filter(
     (item) =>
       (actions ? actions.includes(item.action) : !item.optIn) &&
       (item.action === "add-media" ? canAddMedia : canSelect)
   );
+  return shown.map((item, i) => ({ ...item, divider: i < shown.length - 1 && shown[i + 1]!.group !== item.group }));
 }
 
 /**

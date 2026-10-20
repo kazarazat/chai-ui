@@ -209,8 +209,17 @@
   gap: var(--chai-space-2);
 }
 
+/* Opens upward: `placement="above"`, or `"auto"` with no room below. */
+.chai-search-menu__panel--above {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+/* 44px tall, not Material's 56px: the field sits inside a compact menu. */
 .chai-search-menu__search {
   width: 100%;
+  --md-outlined-text-field-top-space: 10px;
+  --md-outlined-text-field-bottom-space: 10px;
 }
 
 .chai-search-menu__search-icon {
@@ -249,9 +258,13 @@
   border: none;
   border-radius: var(--chai-radius-sm);
   background: transparent;
-  color: var(--chai-color-semantic-control-text-strong);
+  /* The same grey and 14px label type as the menu triggers and the rest
+     of the controls: 40px rows, the attach menu's density. */
+  color: var(--chai-color-semantic-control-text);
   font-family: var(--chai-type-family-material);
-  font-size: var(--chai-type-size-body-large);
+  font-size: var(--chai-type-size-label-large);
+  line-height: var(--chai-type-leading-label-large);
+  letter-spacing: var(--chai-type-tracking-label-large);
   text-align: left;
   cursor: pointer;
 }
@@ -296,6 +309,9 @@
 .chai-search-menu__checkbox {
   flex: none;
   pointer-events: none;
+  /* 16px, not MD3's 18px, beside 14px labels. */
+  --md-checkbox-container-size: 16px;
+  --md-checkbox-icon-size: 16px;
 }
 
 .chai-search-menu__option svg {
@@ -339,11 +355,13 @@
   gap: var(--chai-space-3);
 }
 
+/* The menu triggers' type: 14px medium, the controls' grey. */
 .chai-search-menu__toggle-header-text {
   font-family: var(--chai-type-family-material);
-  font-size: var(--chai-type-size-body-large);
+  font-size: var(--chai-type-size-label-large);
   font-weight: var(--chai-type-weight-material-medium);
-  color: var(--chai-color-semantic-control-text-strong);
+  letter-spacing: var(--chai-type-tracking-label-large);
+  color: var(--chai-color-semantic-control-text);
 }
 
 .chai-search-menu__empty {
@@ -870,18 +888,26 @@
   position: relative;
 }
 
+/* A 40px rounded square, the size of the mic button's target, with
+   -8px margins so the 24px icon and the row's layout stay where they were. */
 .chai-composer__attach-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
+  margin: -8px;
   padding: 0;
   border: none;
-  border-radius: var(--chai-radius-full);
+  border-radius: var(--chai-radius-sm);
   background: transparent;
   color: var(--chai-composer-text);
   cursor: pointer;
+  transition: background-color var(--chai-motion-duration-fast) var(--chai-motion-easing-standard);
+}
+
+.chai-composer__attach-toggle:hover:not(:disabled) {
+  background: var(--chai-composer-hover);
 }
 
 .chai-composer__attach-toggle svg {
@@ -901,7 +927,7 @@
 .chai-composer__attach-menu {
   position: absolute;
   z-index: 10;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   left: 0;
   min-width: 180px;
   margin: 0;
@@ -912,12 +938,21 @@
   box-shadow: var(--chai-shadow-menu);
 }
 
+/* Opens upward: `menuPlacement="above"`, or `"auto"` with no room below. */
+.chai-composer__attach-menu--above {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+/* MD3 menu density -2: 40px items (48px at density 0, 4px less per step),
+   so the longer menu with the audio group stays compact. */
 .chai-composer__attach-menu-item {
   display: flex;
   align-items: center;
   gap: var(--chai-space-3);
   width: 100%;
-  padding: var(--chai-space-2) var(--chai-space-4);
+  min-height: 40px;
+  padding: 0 var(--chai-space-4);
   border: none;
   background: transparent;
   color: var(--chai-color-semantic-control-text-strong);
@@ -946,9 +981,9 @@
   height: 100%;
 }
 
-/* Reference: "Add media" (`MenuListItem1`) is the only item with a divider
-   under it in the source (`showDivider: true`), separating the real
-   attach action from the three generation-mode actions below it. */
+/* Between menu groups (see `COMPOSER_ATTACH_MENU_ITEMS`): under "Add media",
+   separating the real attach action from the visual use cases, and above
+   the audio use cases. */
 .chai-composer__attach-menu-divider {
   margin: var(--chai-space-2) 0;
   border: none;

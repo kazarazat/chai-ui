@@ -111,6 +111,12 @@ describe("deriveGenerationUseCase", () => {
     expect(deriveGenerationUseCase(null, [])).toBeUndefined();
   });
 
+  it("maps audio to speech or music by its audio field, and to nothing without one", () => {
+    expect(deriveGenerationUseCase({ kind: "audio", audio: "speech" }, [])).toBe("text-to-speech");
+    expect(deriveGenerationUseCase({ kind: "audio", audio: "music" }, [])).toBe("text-to-music");
+    expect(deriveGenerationUseCase({ kind: "audio" }, [])).toBeUndefined();
+  });
+
   it("maps video + no attachments to text-to-video", () => {
     expect(deriveGenerationUseCase({ kind: "video" }, [])).toBe("text-to-video");
   });

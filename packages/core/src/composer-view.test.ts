@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { EDIT_IMAGE_USE_CASE, TEXT_USE_CASE } from "./composer.js";
+import { CREATE_MUSIC_USE_CASE, CREATE_SPEECH_USE_CASE, EDIT_IMAGE_USE_CASE, TEXT_USE_CASE } from "./composer.js";
 import {
   composerAttachmentsFromFiles,
   composerAttachMenuItems,
@@ -119,7 +119,26 @@ describe("composerView", () => {
 describe("Composer helpers", () => {
   it("lists the + menu items that can work", () => {
     expect(composerAttachMenuItems(undefined, { canAddMedia: true, canSelect: false }).map((i) => i.action)).toEqual(["add-media"]);
-    expect(composerAttachMenuItems(["edit-media"], { canAddMedia: true, canSelect: true }).map((i) => i.action)).toEqual(["edit-media"]);
+    expect(composerAttachMenuItems(["edit-image"], { canAddMedia: true, canSelect: true }).map((i) => i.action)).toEqual(["edit-image"]);
+  });
+
+  it("shows Create speech and Create music only when the builder lists them", () => {
+    const all = { canAddMedia: true, canSelect: true };
+    const actions = composerAttachMenuItems(undefined, all).map((i) => i.action);
+    expect(actions).not.toContain("create-speech");
+    expect(actions).not.toContain("create-music");
+  });
+
+  it("draws a divider only between two groups that both show", () => {
+    const all = { canAddMedia: true, canSelect: true };
+    const dividers = (actions?: Parameters<typeof composerAttachMenuItems>[0]) =>
+      composerAttachMenuItems(actions, all).filter((i) => i.divider).map((i) => i.action);
+    // Attach | visual | audio.
+    expect(dividers(["add-media", "create-image", "edit-image", "create-speech", "create-music"])).toEqual(["add-media", "edit-image"]);
+    // Edit image hidden: the visual group's last showing item takes the divider.
+    expect(dividers(["create-image", "create-video", "create-music"])).toEqual(["create-video"]);
+    // No audio: nothing after the visual group, so no divider dangles.
+    expect(dividers(["add-media", "create-image", "edit-image"])).toEqual(["add-media"]);
   });
 
   it("shows Create world only when the builder lists it", () => {
@@ -152,6 +171,74 @@ describe("Composer helpers", () => {
     expect(composerView({ value: "hi", attachments: [photo] }).enhanceMode).toBe("vision");
     expect(composerView({ value: "hi", useCase: VIDEO }).enhanceMode).toBe("text-to-video");
     expect(composerView({ value: "hi", useCase: EDIT_IMAGE_USE_CASE, attachments: [photo] }).enhanceMode).toBe("image-edit");
+    expect(composerView({ value: "hi", useCase: CREATE_SPEECH_USE_CASE }).enhanceMode).toBe("text-to-speech");
+    expect(composerView({ value: "hi", useCase: CREATE_MUSIC_USE_CASE }).enhanceMode).toBe("text-to-music");
+  });
+
+  it("offers the one picked speech model's voices, in sections when grouped, and sends only an offered voice", () => {
+    const kokoro = { ...model("kokoro"), voices: [{ value: "af_heart", label: "Heart", group: "Female" }, { value: "am_adam", label: "Adam", group: "Male" }] };
+    const xai = { ...model("xai"), voices: [{ value: "eve", label: "Eve" }] };
+    const base = { value: "hi", useCase: CREATE_SPEECH_USE_CASE, models: [kokoro, xai], onModelChange: () => {} };
+    // No model picked yet: no Voice menu.
+    expect(composerView(base).voiceOptions).toEqual([]);
+    const picked = composerView({ ...base, modelId: "kokoro", speechVoice: "am_adam" });
+    expect(picked.voiceSections?.map((s) => s.label)).toEqual(["Female", "Male"]);
+    expect(picked.voiceTriggerLabel).toBe("Adam");
+    expect(picked.payload().speechVoice).toBe("am_adam");
+    // Another model's voice is shown as unpicked and never sent.
+    const other = composerView({ ...base, modelId: "xai", speechVoice: "am_adam" });
+    expect(other.voiceSections).toBeNull();
+    expect(other.voiceTriggerLabel).toBe("Voice");
+    expect(other.payload().speechVoice).toBeNull();
+    // Auto-select: no model to take voices from.
+    expect(composerView({ ...base, autoSelectModel: true }).voiceOptions).toEqual([]);
+  });
+
+  it("offers the genres every picked music model lists, several at once", () => {
+    const pop = { value: "pop", label: "Pop" };
+    const jazz = { value: "jazz", label: "Jazz" };
+    const a = { ...model("a"), genres: [pop, jazz] };
+    const b = { ...model("b"), genres: [jazz] };
+    const base = { value: "rainy night", useCase: CREATE_MUSIC_USE_CASE, models: [a, b], multiSelectModels: true, onModelIdsChange: () => {} };
+    expect(composerView(base).genreOptions).toEqual([]);
+    const one = composerView({ ...base, modelIds: ["a"], genres: ["pop", "jazz"] });
+    expect(one.genreTriggerLabel).toBe("2 genres");
+    expect(one.toggledGenres("pop")).toEqual(["jazz"]);
+    expect(one.payload().genres).toEqual(["pop", "jazz"]);
+    const both = composerView({ ...base, modelIds: ["a", "b"], genres: ["pop", "jazz"] });
+    expect(both.genreOptions).toEqual([jazz]);
+    expect(both.genreTriggerLabel).toBe("Jazz");
+    expect(both.payload().genres).toEqual(["jazz"]);
+    // Speech sends no genres, music no voice.
+    expect(one.payload()).not.toHaveProperty("speechVoice");
+  });
+
+  it("keeps Image's Aspect ratio menu and Music's Genre menu when both are picked together", () => {
+    const flux = model("flux", ["1:1", "16:9"]);
+    const lyria = { ...model("lyria"), genres: [{ value: "jazz", label: "Jazz" }] };
+    const view = composerView({
+      value: "a rainy night",
+      multiSelectUseCases: true,
+      useCases: [IMAGE, CREATE_MUSIC_USE_CASE],
+      modelsByKind: { image: [flux], audio: [lyria] },
+      modelIds: ["flux", "lyria"],
+      genres: ["jazz"],
+      onModelIdsChange: () => {},
+    });
+    expect(view.showAspectRatio).toBe(true);
+    expect(view.aspectOptions.map((o) => o.value)).toEqual(["1:1", "16:9"]);
+    expect(view.genreOptions.map((o) => o.value)).toEqual(["jazz"]);
+    expect(view.payload().genres).toEqual(["jazz"]);
+  });
+
+  it("gives speech and music their own placeholder, no aspect ratio, no suggested models, and a use-case key each", () => {
+    const speech = composerView({ value: "", useCase: CREATE_SPEECH_USE_CASE, onModelChange: () => {} });
+    const music = composerView({ value: "", useCase: CREATE_MUSIC_USE_CASE, onModelChange: () => {} });
+    expect(speech.placeholder).toBe("Type the words to speak");
+    expect(music.placeholder).toBe("Describe the music to create");
+    expect(speech.showAspectRatio).toBe(false);
+    expect(speech.modelSections).toEqual([]);
+    expect(speech.useCaseKey).not.toBe(music.useCaseKey);
   });
 
   it("gives a world use case no suggested models and no aspect ratio", () => {

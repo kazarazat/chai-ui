@@ -29,6 +29,7 @@ import {
   type ComposerUseCase,
   type EditRegion,
   type MediaKind,
+  type MenuPlacement,
   type ModelOption,
   type OutputKind,
   type ParameterOption,
@@ -90,6 +91,19 @@ const props = withDefaults(
     /** A world's frame rate menu, from the selected models' `frameRates`. */
     frameRate?: number | null;
     "onUpdate:frameRate"?: (value: number) => void;
+    /** Create speech's Voice menu, from the one picked model's `voices` (`v-model:speech-voice`). Not `voiceInput`, which is dictation. */
+    speechVoice?: string | null;
+    "onUpdate:speechVoice"?: (value: string) => void;
+    /** Create music's Genre menu, several at once, from the picked models' `genres` (`v-model:genres`). */
+    genres?: string[];
+    "onUpdate:genres"?: (values: string[]) => void;
+    /**
+     * Which way the bar's menus open. "above" for a bar docked to the bottom
+     * of the screen, "below" for one docked to the top. "auto" (default)
+     * measures when a menu opens: below if it fits, else above if that fits,
+     * else toward the side with more room.
+     */
+    menuPlacement?: MenuPlacement;
     /** The last submit's failure: submit becomes retry, and the message shows inline. */
     submitError?: string | null;
     /** Overrides the built-in "empty prompt and no attachments" check. Ignored while `submitError` is set. */
@@ -121,6 +135,9 @@ const props = withDefaults(
     aspectRatio: null,
     character: "",
     frameRate: null,
+    speechVoice: null,
+    genres: () => [],
+    menuPlacement: "auto",
     submitError: null,
     // Left undefined unless set: Vue would make an absent boolean `false`,
     // which reads as "never disable".
@@ -153,6 +170,12 @@ const modelMenuOptions = computed(() =>
   props.multiSelectUseCases
     ? { sections: view.value.modelSections.map((s) => ({ label: s.label, options: s.options })) }
     : { options: view.value.modelSections[0]?.options }
+);
+const toMenuOption = (o: { value: string; label: string }) => ({ id: o.value, label: o.label });
+const voiceMenuOptions = computed(() =>
+  view.value.voiceSections
+    ? { sections: view.value.voiceSections.map((s) => ({ label: s.label, options: s.options.map(toMenuOption) })) }
+    : { options: view.value.voiceOptions.map(toMenuOption) }
 );
 
 // Auto-select chooses at submit, so turning it on clears the current pick
@@ -301,6 +324,7 @@ function onSubmitClick() {
           :items="menuItems"
           :images-only="view.editing"
           :disabled="disabled"
+          :placement="menuPlacement"
           @select="onAttachMenuSelect?.($event)"
           @files="onFiles"
         />
@@ -316,6 +340,7 @@ function onSubmitClick() {
 
         <!-- The auto-select switch lives inside the Model menu, so with it shown the trigger stays enabled: it's the only way back to the switch. -->
         <SearchMenu
+          :placement="menuPlacement"
           v-if="view.modelSections.length > 0 && view.canPickModel"
           v-bind="modelMenuOptions"
           :value="view.multiModel ? view.pickedModelIds : modelId"
@@ -335,6 +360,7 @@ function onSubmitClick() {
         />
 
         <SearchMenu
+          :placement="menuPlacement"
           v-if="view.showAspectRatio && view.aspectOptions.length > 0 && props['onUpdate:aspectRatio']"
           :options="view.aspectOptions.map((o) => ({ id: o.value, label: o.label }))"
           :value="view.offeredAspect"
@@ -347,6 +373,34 @@ function onSubmitClick() {
         />
 
         <SearchMenu
+          :placement="menuPlacement"
+          v-if="view.voiceOptions.length > 0 && props['onUpdate:speechVoice']"
+          v-bind="voiceMenuOptions"
+          :value="view.offeredVoice"
+          :trigger-label="view.voiceTriggerLabel"
+          menu-label="Voice"
+          :searchable="view.voiceOptions.length > view.searchableAt"
+          trigger-variant="text"
+          :disabled="disabled"
+          @select="props['onUpdate:speechVoice']?.($event.id)"
+        />
+
+        <SearchMenu
+          :placement="menuPlacement"
+          v-if="view.genreOptions.length > 0 && props['onUpdate:genres']"
+          :options="view.genreOptions.map(toMenuOption)"
+          :value="view.offeredGenres"
+          multiple
+          :trigger-label="view.genreTriggerLabel"
+          menu-label="Genre"
+          :searchable="view.genreOptions.length > view.searchableAt"
+          trigger-variant="text"
+          :disabled="disabled"
+          @select="props['onUpdate:genres']?.(view.toggledGenres($event.id))"
+        />
+
+        <SearchMenu
+          :placement="menuPlacement"
           v-if="view.frameRateOptions.length > 0 && props['onUpdate:frameRate']"
           :options="view.frameRateOptions.map((r) => ({ id: String(r), label: `${r}fps` }))"
           :value="view.offeredFrameRate == null ? null : String(view.offeredFrameRate)"

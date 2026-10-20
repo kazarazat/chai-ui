@@ -29,7 +29,7 @@ import {
   type Run,
 } from "./run.js";
 import type { ComposerPromptField } from "./composer-view.js";
-import type { DroppedMedia, GenerationUseCase, MediaKind, ModelOption, OutputKind } from "./types.js";
+import type { AudioUseCase, DroppedMedia, GenerationUseCase, MediaKind, ModelOption, OutputKind } from "./types.js";
 
 export interface ComposerAttachment extends DroppedMedia {
   id: string;
@@ -52,6 +52,8 @@ export interface ComposerUseCase {
    * either a prompt or a region. Images only for now.
    */
   edit?: boolean;
+  /** For an `"audio"` use case, which audio it creates: spoken words or music. */
+  audio?: AudioUseCase;
 }
 
 /** A plain text request — what a submit means when no use case is picked, unless the builder sets `defaultUseCase`. */
@@ -59,6 +61,12 @@ export const TEXT_USE_CASE: ComposerUseCase = { kind: "text", label: "Text" };
 
 /** Editing the attached image, the attach menu's "Edit image". Pair it with `useComposer`'s `editImage` and an `EditCard`. */
 export const EDIT_IMAGE_USE_CASE: ComposerUseCase = { kind: "image", label: "Edit image", edit: true };
+
+/** Spoken audio from text, the attach menu's "Create speech". */
+export const CREATE_SPEECH_USE_CASE: ComposerUseCase = { kind: "audio", label: "Speech", audio: "speech" };
+
+/** Music from a description, the attach menu's "Create music". */
+export const CREATE_MUSIC_USE_CASE: ComposerUseCase = { kind: "audio", label: "Music", audio: "music" };
 
 /** One use case to run and the models picked for it. Empty `modelIds` means the engine's default model. */
 export interface ComposerSelection {
@@ -92,6 +100,15 @@ export interface ComposerSubmitPayload {
   character?: string;
   /** The picked frame rate for a world, or null for the model's default. Undefined for other use cases. */
   frameRate?: number | null;
+  /** The picked voice for Create speech, or null for the model's default. Undefined for other use cases. */
+  speechVoice?: string | null;
+  /** The picked genres for Create music, written into the prompt at submit. Undefined for other use cases. */
+  genres?: string[];
+}
+
+/** A music prompt with the picked genres written in: music models take genre as part of the description. */
+export function promptWithGenres(prompt: string, genres: string[]): string {
+  return genres.length > 0 ? `${prompt.trim()}\n\nGenre: ${genres.join(", ")}` : prompt;
 }
 
 /**
@@ -212,7 +229,13 @@ function defaultEnhancePrompt(value: string, mode?: GenerationUseCase, field: Co
   if (field === "character") {
     return `Rewrite the following description of the character a person plays in an interactive world to be more detailed and specific, keeping the same intent: who or what they are, how they look, and how they move. Don't describe the world around them. ${reply}\n\n${value}`;
   }
-  const subject = mode?.includes("video")
+  // The prompt is the script itself: keep the words, only make them read aloud well.
+  if (mode === "text-to-speech") {
+    return `Edit the following text so it reads naturally when spoken aloud: fix punctuation, and spell out numbers, symbols and abbreviations. Keep the same words and meaning. Reply with only the edited text, nothing else.\n\n${value}`;
+  }
+  const subject = mode === "text-to-music"
+    ? "a music-generation"
+    : mode?.includes("video")
     ? "a video-generation"
     : mode === "text-to-text" || mode === "vision"
       ? "an AI assistant"
@@ -314,9 +337,10 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
       if (payload.character?.trim()) params.character = payload.character;
       if (payload.frameRate != null) params.frameRate = payload.frameRate;
     }
+    if (selection.useCase.audio === "speech" && payload.speechVoice) params.voice = payload.speechVoice;
     const request: Request = {
       mode: deriveGenerationUseCase(selection.useCase, attachments),
-      prompt: payload.value,
+      prompt: selection.useCase.audio === "music" ? promptWithGenres(payload.value, payload.genres ?? []) : payload.value,
       attachments,
       modelIds: selection.modelIds.length > 0 ? selection.modelIds : [fallback ?? DEFAULT_MODEL_ID],
       params,
@@ -382,6 +406,7 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
             aspectRatio: newRun.request.params.aspectRatio as string | undefined,
             character: newRun.request.params.character as string | undefined,
             frameRate: newRun.request.params.frameRate as number | undefined,
+            voice: newRun.request.params.voice as string | undefined,
             // Text engines that stream fill `output` in while still "running".
             onText: (text) => update(newRun.id, (r) => streamResult(r, result.id, text)),
             signal,

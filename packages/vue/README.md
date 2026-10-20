@@ -91,6 +91,10 @@ The props are React's, with Vue's conventions:
 Some controls show only with a listener, as in React: the optimize button
 with `@enhance`, stop with `@abort`, the Model menu with `@update:model-id`.
 
+Docked the bar? Set `menu-placement="above"` for a bar fixed to the bottom
+of the screen, or `"below"` for one fixed to the top, so every menu opens
+into the page. Left out, it's `"auto"`: each menu goes where it fits.
+
 ## What's in the package
 
 - **`Composer`**: prompt, attachments, use cases, model and aspect-ratio

@@ -22,7 +22,7 @@
  */
 
 import { abortError, abortableSleep, isAbortError, readEvaluations, type GenerationEngine } from "../engine.js";
-import type { DroppedMedia, MediaKind } from "../types.js";
+import type { DroppedMedia, FalInputFormat, MediaKind, ModelOption } from "../types.js";
 import { SUGGESTED_FAL_MODELS } from "../suggested-models.js";
 import type { Transcribe } from "../voice-input.js";
 
@@ -38,6 +38,12 @@ export interface FalEngineOptions {
   modelByKind?: Partial<Record<FalOutputKind, string>>;
   /** Which kind of media this engine instance produces. Defaults to "image". */
   outputKind?: FalOutputKind;
+  /**
+   * Your own models, so the engine sends each one's inputs in the fields its
+   * Fal schema names (`ModelOption.falInput`). Chai's suggested models are
+   * already known.
+   */
+  models?: ModelOption[];
   /** Poll interval while a queued job is in progress. Defaults to 1500ms. */
   pollIntervalMs?: number;
   /** Give up waiting after this long. Defaults to 120000ms (2 min) — video/audio jobs run longer than image ones. */
@@ -48,9 +54,9 @@ export interface FalEngineOptions {
 
 /**
  * Fal model ids verified live against fal.ai's own docs/catalog
- * 2026-09-24, not invented. No default for "audio": CHAI has no audio
- * `GenerationUseCase` yet, so guessing one
- * here would be ahead of any real use case that needs it.
+ * 2026-09-24, not invented. No default for "audio": Create speech and
+ * Create music are opt-in, so the builder names the model when they turn
+ * one on.
  */
 const DEFAULT_MODEL_BY_KIND: Partial<Record<FalOutputKind, string>> = {
   image: "fal-ai/flux/schnell",
@@ -132,9 +138,13 @@ export function buildFalRequestBody(args: {
   attachments?: DroppedMedia[];
   model?: string;
   aspectRatio?: string;
+  voice?: string;
+  /** The model's input format when the caller knows it (see `FalEngineOptions.models`); else a suggested model's, else guessed. */
+  input?: FalInputFormat;
 }): Record<string, unknown> {
-  const body: Record<string, unknown> = { prompt: args.prompt };
-  const known = args.model ? SUGGESTED_FAL_MODELS.get(args.model)?.falInput : undefined;
+  const known = args.input ?? (args.model ? SUGGESTED_FAL_MODELS.get(args.model)?.falInput : undefined);
+  const body: Record<string, unknown> = { [known?.prompt ?? "prompt"]: args.prompt };
+  if (args.voice) body.voice = args.voice;
   if (args.aspectRatio) {
     const sizes = args.model?.startsWith("fal-ai/gpt-image")
       ? GPT_IMAGE_1_SIZES
@@ -241,7 +251,7 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
-    async generate({ modelId, prompt, attachments, aspectRatio, signal }) {
+    async generate({ modelId, prompt, attachments, aspectRatio, voice, signal }) {
       const model =
         modelId ?? options.modelByKind?.[outputKind] ?? options.model ?? DEFAULT_MODEL_BY_KIND[outputKind];
       if (!model) {
@@ -250,7 +260,8 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
         );
       }
 
-      const body = buildFalRequestBody({ prompt, attachments, model, aspectRatio });
+      const input = options.models?.find((m) => m.id === model)?.falInput;
+      const body = buildFalRequestBody({ prompt, attachments, model, aspectRatio, voice, input });
       if (signal?.aborted) throw abortError();
 
       try {

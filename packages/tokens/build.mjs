@@ -103,8 +103,15 @@ function md3CssLines(flat) {
     if (!ref) throw new Error(`${name} must reference a Chai token, e.g. "{color.semantic.accent}"`);
     lines.push(`  --md-sys-color-${name.slice("color.material.".length)}: var(${toCssVarName(ref[1])});`);
   }
+  // Material's typeface defaults to a bare "Roboto" with no fallback, so a
+  // failed font load renders its text fields in the browser's serif. Chai's
+  // Material family keeps the fallbacks.
+  if (!flat.has("type.family.material")) throw new Error("type.family.material is missing: Material's typeface bridge needs it");
+  for (const role of ["brand", "plain"]) {
+    lines.push(`  --md-ref-typeface-${role}: var(${toCssVarName("type.family.material")});`);
+  }
   return [
-    "/* Material Design 3 roles, driven by Chai tokens (color.material in src/tokens.json). */",
+    "/* Material Design 3 roles and typeface, driven by Chai tokens (color.material and type.family.material in src/tokens.json). */",
     ":root {",
     ...lines,
     "}",

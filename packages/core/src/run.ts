@@ -4,7 +4,7 @@
  * (`@chai-ui/react`) is the thin React binding on top.
  */
 
-import type { DroppedMedia, Evaluation, GenerationUseCase, MediaKind, OutputKind, Usage } from "./types.js";
+import type { AudioUseCase, DroppedMedia, Evaluation, GenerationUseCase, MediaKind, OutputKind, Usage } from "./types.js";
 
 export interface Request {
   /** The specific generation use case, when one could be derived — see `deriveGenerationUseCase`. Undefined when the use case (or its kind) has no `GenerationUseCase` match yet, e.g. audio. */
@@ -134,16 +134,20 @@ export function cancelResult(run: Run, resultId: string): Run {
  * Derives a `GenerationUseCase` from Composer's own `{ kind, label }` use
  * case plus whether anything is attached — this is real derivation logic,
  * not just plumbing: the same `kind: "video"` means `"text-to-video"` with
- * nothing attached but `"image-to-video"` once an image is. Returns
- * `undefined` for "audio" and "world" (no `GenerationUseCase` member exists
- * yet; audio generation is planned, world models await provider specs). `"text"` is a text request: a reply to
+ * nothing attached but `"image-to-video"` once an image is. An `"audio"`
+ * use case is `"text-to-speech"` or `"text-to-music"` by its `audio` field,
+ * and `undefined` without one. Returns `undefined` for "world" (world
+ * models await provider specs). `"text"` is a text request: a reply to
  * the prompt, or a description of the attached media ("vision").
  */
 export function deriveGenerationUseCase(
-  useCase: { kind: OutputKind } | null | undefined,
+  useCase: { kind: OutputKind; audio?: AudioUseCase } | null | undefined,
   attachments: DroppedMedia[]
 ): GenerationUseCase | undefined {
   if (!useCase) return undefined;
+  if (useCase.kind === "audio") {
+    return useCase.audio === "speech" ? "text-to-speech" : useCase.audio === "music" ? "text-to-music" : undefined;
+  }
   const hasMedia = attachments.length > 0;
   if (useCase.kind === "video") return hasMedia ? "image-to-video" : "text-to-video";
   if (useCase.kind === "image") return hasMedia ? "image-edit" : "text-to-image";

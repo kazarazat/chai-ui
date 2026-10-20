@@ -1,5 +1,5 @@
 import { AddIcon, ArrowForwardIcon, CloseSymbolIcon, StopIcon } from "./icons.js";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ChangeEvent } from "react";
 import { createComponent } from "@lit/react";
 import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
@@ -14,8 +14,10 @@ import {
   MAX_ANIMATE_ENHANCE_LENGTH,
   regionColor,
   TEXT_USE_CASE,
+  menuOpensAbove,
   type ComposerAttachMenuAction,
   type ComposerPromptField,
+  type MenuPlacement,
   type VoiceInputConfig,
 } from "@chai-ui/core";
 import { useLatest } from "./use-latest.js";
@@ -24,8 +26,11 @@ import { SearchMenu } from "./primitives/SearchMenu.js";
 import type { ComposerAttachment, ComposerSubmitPayload, ComposerUseCase } from "@chai-ui/core";
 
 export {
+  CREATE_MUSIC_USE_CASE,
+  CREATE_SPEECH_USE_CASE,
   EDIT_IMAGE_USE_CASE,
   TEXT_USE_CASE,
+  type AudioUseCase,
   type ComposerAttachMenuAction,
   type ComposerAttachment,
   type ComposerPromptField,
@@ -62,7 +67,10 @@ export interface ComposerProps {
    * Builder opt-in, off by default: several use cases at once (e.g. an image
    * and a video from one prompt), at most one per kind. Uses `useCases`,
    * `onUseCasesChange` and `modelsByKind` instead of `useCase` and `models`;
-   * the model menu shows one section per picked use case.
+   * the model menu shows one section per picked use case. Edit image and
+   * Create speech run alone: an edit works on one image, and speech's prompt
+   * is the words to say, which no other use case can share. Create music
+   * can join Image and Video.
    */
   multiSelectUseCases?: boolean;
   useCases?: ComposerUseCase[];
@@ -145,6 +153,20 @@ export interface ComposerProps {
   /** A world's frame rate menu, from the selected models' `ModelOption.frameRates`. */
   frameRate?: number | null;
   onFrameRateChange?: (value: number) => void;
+  /** Create speech's Voice menu, from the one picked model's `ModelOption.voices`. Not `voiceInput`, which is dictation. */
+  speechVoice?: string | null;
+  onSpeechVoiceChange?: (value: string) => void;
+  /** Create music's Genre menu, several at once, from the picked models' `ModelOption.genres`. */
+  genres?: string[];
+  onGenresChange?: (values: string[]) => void;
+  /**
+   * Which way the bar's menus open (the + menu, Model, Aspect ratio and the
+   * rest). `"above"` for a bar docked to the bottom of the screen, `"below"`
+   * for one docked to the top. `"auto"` (default) measures when a menu opens:
+   * below if it fits, else above if that fits, else toward the side with
+   * more room.
+   */
+  menuPlacement?: MenuPlacement;
   /** Fires with everything Composer tracks — see `ComposerSubmitPayload`. Also what retry calls, with the same payload, when `submitError` is set. */
   onSubmit: (payload: ComposerSubmitPayload) => void;
   /**
@@ -244,6 +266,11 @@ export function Composer({
   onCharacterChange,
   frameRate = null,
   onFrameRateChange,
+  speechVoice = null,
+  onSpeechVoiceChange,
+  genres = [],
+  onGenresChange,
+  menuPlacement = "auto",
   onSubmit,
   submitError = null,
   submitDisabled,
@@ -278,6 +305,8 @@ export function Composer({
     aspectRatio,
     character,
     frameRate,
+    speechVoice,
+    genres,
     submitError,
     submitDisabled,
     submitting,
@@ -439,6 +468,7 @@ export function Composer({
               onAddMediaFiles={handleFilesSelected}
               imagesOnly={editing}
               disabled={disabled}
+              placement={menuPlacement}
             />
           )}
 
@@ -463,6 +493,7 @@ export function Composer({
               itself while auto-select is on. */}
           {modelSections.length > 0 && view.canPickModel && (
             <SearchMenu
+              placement={menuPlacement}
               {...(multiSelectUseCases
                 ? { sections: modelSections.map((s) => ({ label: s.label, options: s.options })) }
                 : { options: modelSections[0]!.options })}
@@ -489,6 +520,7 @@ export function Composer({
 
           {view.showAspectRatio && aspectOptions.length > 0 && onAspectRatioChange && (
             <SearchMenu
+              placement={menuPlacement}
               options={aspectOptions.map((o) => ({ id: o.value, label: o.label }))}
               value={offeredAspect}
               triggerLabel={view.selectedAspect?.label ?? "Aspect ratio"}
@@ -500,8 +532,45 @@ export function Composer({
             />
           )}
 
+          {view.voiceOptions.length > 0 && onSpeechVoiceChange && (
+            <SearchMenu
+              placement={menuPlacement}
+              {...(view.voiceSections
+                ? {
+                    sections: view.voiceSections.map((s) => ({
+                      label: s.label,
+                      options: s.options.map((v) => ({ id: v.value, label: v.label })),
+                    })),
+                  }
+                : { options: view.voiceOptions.map((v) => ({ id: v.value, label: v.label })) })}
+              value={view.offeredVoice}
+              triggerLabel={view.voiceTriggerLabel}
+              menuLabel="Voice"
+              onSelect={(opt) => onSpeechVoiceChange(opt.id)}
+              searchable={view.voiceOptions.length > view.searchableAt}
+              triggerVariant="text"
+              disabled={disabled}
+            />
+          )}
+
+          {view.genreOptions.length > 0 && onGenresChange && (
+            <SearchMenu
+              placement={menuPlacement}
+              options={view.genreOptions.map((g) => ({ id: g.value, label: g.label }))}
+              value={view.offeredGenres}
+              multiple
+              triggerLabel={view.genreTriggerLabel}
+              menuLabel="Genre"
+              onSelect={(opt) => onGenresChange(view.toggledGenres(opt.id))}
+              searchable={view.genreOptions.length > view.searchableAt}
+              triggerVariant="text"
+              disabled={disabled}
+            />
+          )}
+
           {view.frameRateOptions.length > 0 && onFrameRateChange && (
             <SearchMenu
+              placement={menuPlacement}
               options={view.frameRateOptions.map((r) => ({ id: String(r), label: `${r}fps` }))}
               value={view.offeredFrameRate == null ? null : String(view.offeredFrameRate)}
               triggerLabel={view.offeredFrameRate == null ? "Frame rate" : `${view.offeredFrameRate}fps`}
@@ -851,7 +920,9 @@ const ATTACH_MENU_ICONS: Record<ComposerAttachMenuAction, React.ReactNode> = {
   "create-image": <ImageIcon />,
   "create-video": <VideocamIcon />,
   "create-world": <GlobeIcon />,
-  "edit-media": <ContentCutIcon />,
+  "edit-image": <ContentCutIcon />,
+  "create-speech": <VolumeUpIcon />,
+  "create-music": <MusicNoteIcon />,
 };
 
 /**
@@ -867,6 +938,7 @@ function ComposerAttachMenu({
   onAddMediaFiles,
   imagesOnly,
   disabled,
+  placement,
 }: {
   items: ReturnType<typeof composerAttachMenuItems>;
   onSelect?: (action: ComposerAttachMenuAction) => void;
@@ -874,9 +946,19 @@ function ComposerAttachMenu({
   /** Edit mode: one image file at a time. */
   imagesOnly?: boolean;
   disabled?: boolean;
+  placement: MenuPlacement;
 }) {
   const [open, setOpen] = useState(false);
+  const [above, setAbove] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
+
+  // Up or down, before the first paint, so it never flashes on the wrong side.
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!open || !menu) return;
+    setAbove(menuOpensAbove(placement, rootRef.current!.getBoundingClientRect(), menu.offsetHeight, document.documentElement.clientHeight));
+  }, [open, placement]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -916,7 +998,7 @@ function ComposerAttachMenu({
       </button>
 
       {open && (
-        <ul className="chai-composer__attach-menu" role="menu">
+        <ul ref={menuRef} className={`chai-composer__attach-menu${above ? " chai-composer__attach-menu--above" : ""}`} role="menu">
           {items.map((item, i) => (
             <li key={item.action} role="none">
               <button
@@ -1050,7 +1132,7 @@ function kindIcon(kind: MediaKind) {
     case "video":
       return <VideocamIcon />;
     case "audio":
-      return <AudioIcon />;
+      return <MusicNoteIcon />;
     default:
       return <ImageIcon />;
   }
@@ -1066,11 +1148,11 @@ function kindIcon(kind: MediaKind) {
 // codebase's existing "trace and inline as a currentColor component"
 // convention). Fixes an earlier pass
 // that hand-approximated several of these (Add media/Create image/Create
-// video/Edit media's icons, plus/close/arrow) because `get_design_context`
+// video/Edit image's icons, plus/close/arrow) because `get_design_context`
 // couldn't resolve their specific instance-swap nodes — those
 // approximations read as visibly off-brand, not real MD3, correctly
 // flagged and replaced with the genuine glyphs (add, close, arrow_forward,
-// attach_file, image, videocam, content_cut, music_note).
+// attach_file, image, videocam, content_cut, music_note, volume_up).
 //
 // `OptimizeIcon` is the one exception, still traced exactly from the real
 // exported design asset ("Optimize_icon") — not a Material Symbol at all, this is CHAI's own "prompt
@@ -1200,11 +1282,22 @@ function ContentCutIcon() {
   );
 }
 
-function AudioIcon() {
+function MusicNoteIcon() {
   return (
     <svg viewBox="0 -960 960 960" aria-hidden="true">
       <path
         d="M286.5-163.5Q243-207 243-270t43.5-106.5Q330-420 393-420q28 0 50.5 8t39.5 22v-450h234v135H543v435q0 63-43.5 106.5T393-120q-63 0-106.5-43.5Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function VolumeUpIcon() {
+  return (
+    <svg viewBox="0 -960 960 960" aria-hidden="true">
+      <path
+        d="M560-131v-62q97-28 158.5-107.5T780-481q0-101-61-181T560-769v-62q124 28 202 125.5T840-481q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm420 48v-337q55 17 87.5 64T660-480q0 57-33 104t-87 64ZM420-648 307-540H180v120h127l113 109v-337Zm-94 168Z"
         fill="currentColor"
       />
     </svg>
