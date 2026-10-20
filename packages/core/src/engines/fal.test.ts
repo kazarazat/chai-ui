@@ -163,6 +163,17 @@ describe("createFalEngine", () => {
     expect(result).toEqual({ src: "https://x/img.png", kind: "image" });
   });
 
+  it("sends a builder's own model its inputs in the fields its falInput names, with the voice", async () => {
+    const fetchImpl = mockThreeCallSequence({ result: { audio: { url: "https://x/a.mp3" } } });
+    const xai = { id: "xai/tts/v1", label: "xAI TTS", provider: "xAI", speed: "standard" as const, falInput: { prompt: "text" as const } };
+    const engine = createFalEngine({ fetchImpl, pollIntervalMs: 0, outputKind: "audio", models: [xai] });
+
+    const result = await engine.generate({ modelId: "xai/tts/v1", prompt: "Welcome back", attachments: [], voice: "eve" });
+
+    expect(JSON.parse(fetchImpl.mock.calls[0]![1].body)).toEqual({ text: "Welcome back", voice: "eve" });
+    expect(result).toEqual({ src: "https://x/a.mp3", kind: "audio" });
+  });
+
   it("passes through verdicts the backend proxy appended to the result", async () => {
     const fetchImpl = mockThreeCallSequence({
       result: {
