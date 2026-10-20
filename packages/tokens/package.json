@@ -1,6 +1,6 @@
 {
   "name": "@chai-ui/tokens",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Chai UI design tokens — single source of truth, built to CSS variables, TypeScript, and a Figma Tokens/Variables-plugin JSON.",
   "license": "MIT",
   "author": "kazarazat",
