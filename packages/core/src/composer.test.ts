@@ -95,6 +95,11 @@ describe("createComposerStore", () => {
     await vi.waitFor(() => expect(generate).toHaveBeenCalledTimes(2));
     expect(generate.mock.calls[1]![0].prompt).toBe("a rainy night\n\nGenre: lo-fi, jazz");
     expect(generate.mock.calls[1]![0].voice).toBeUndefined();
+
+    // No genres picked: the prompt goes as typed.
+    result.current.submit(payload({ value: "a rainy night", useCase: CREATE_MUSIC_USE_CASE }));
+    await vi.waitFor(() => expect(generate).toHaveBeenCalledTimes(3));
+    expect(generate.mock.calls[2]![0].prompt).toBe("a rainy night");
   });
 
   it("sends a world to the world engine with its character and frame rate", async () => {

@@ -335,8 +335,29 @@ export function composerContract(render: Render<ComposerProps>) {
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ frameRate: 24 }));
     });
 
-    it("offers the picked speech model's voices and sends the pick", async () => {
-      const KOKORO: ModelOption = { id: "kokoro", label: "Kokoro", provider: "p", speed: "fast", voices: [{ value: "af_heart", label: "Heart" }, { value: "am_adam", label: "Adam" }] };
+    it("shows Create speech and Create music in their own group, under a divider, when listed", async () => {
+      const onAttachMenuSelect = vi.fn();
+      const screen = harness({ onAttachMenuSelect, attachMenuActions: ["create-image", "edit-image", "create-speech", "create-music"] });
+      await screen.getByRole("button", { name: "Add media" }).click();
+      await expect.element(screen.getByRole("menuitem", { name: "Create speech" })).toBeVisible();
+      await expect.element(screen.getByRole("menuitem", { name: "Create music" })).toBeVisible();
+      // Visual | audio: one divider, between Edit image and Create speech.
+      expect(document.querySelectorAll(".chai-composer__attach-menu-divider")).toHaveLength(1);
+      await screen.getByRole("menuitem", { name: "Create music" }).click();
+      expect(onAttachMenuSelect).toHaveBeenCalledWith("create-music");
+    });
+
+    it("offers the picked speech model's voices, in sections when grouped, and sends the pick", async () => {
+      const KOKORO: ModelOption = {
+        id: "kokoro",
+        label: "Kokoro",
+        provider: "p",
+        speed: "fast",
+        voices: [
+          { value: "af_heart", label: "Heart", group: "Female" },
+          { value: "am_adam", label: "Adam", group: "Male" },
+        ],
+      };
       const onSubmit = vi.fn();
       const screen = controlled<ComposerProps>(
         render,
@@ -344,10 +365,20 @@ export function composerContract(render: Render<ComposerProps>) {
         { onSpeechVoiceChange: "speechVoice" }
       );
       await screen.getByRole("button", { name: "Voice", exact: true }).click();
+      await expect.element(screen.getByText("Female", { exact: true })).toBeVisible();
+      await expect.element(screen.getByText("Male", { exact: true })).toBeVisible();
       await screen.getByRole("button", { name: "Adam" }).click();
       await expect.element(screen.getByRole("button", { name: "Adam", expanded: false })).toBeVisible();
       await screen.getByRole("button", { name: "Submit" }).click();
       expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ speechVoice: "am_adam" }));
+    });
+
+    it("lists ungrouped voices as one plain list", async () => {
+      const XAI: ModelOption = { id: "xai", label: "xAI", provider: "p", speed: "fast", voices: [{ value: "eve", label: "Eve" }, { value: "leo", label: "Leo" }] };
+      const screen = harness({ value: "Hi", useCase: CREATE_SPEECH_USE_CASE, models: [XAI], modelId: "xai", speechVoice: null, onSpeechVoiceChange: () => {} });
+      await screen.getByRole("button", { name: "Voice", exact: true }).click();
+      await expect.element(screen.getByRole("button", { name: "Leo" })).toBeVisible();
+      expect(document.querySelectorAll(".chai-search-menu__section-label")).toHaveLength(0);
     });
 
     it("offers the picked music model's genres, several at once, and sends them", async () => {
