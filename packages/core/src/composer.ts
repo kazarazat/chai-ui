@@ -112,6 +112,22 @@ export function promptWithGenres(prompt: string, genres: string[]): string {
 }
 
 /**
+ * The inputs one engine call takes from a submit, for one selection: the
+ * prompt as the model reads it (music's genres written in) and the model,
+ * aspect ratio and voice when set. The store builds its requests from this,
+ * and a builder can show it, so what's displayed is what's sent.
+ */
+export function engineCallInputs(payload: ComposerSubmitPayload, selection: ComposerSelection) {
+  const audio = selection.useCase.audio;
+  return {
+    modelId: selection.modelIds[0] ?? null,
+    prompt: audio === "music" ? promptWithGenres(payload.value, payload.genres ?? []) : payload.value,
+    aspectRatio: payload.aspectRatio ?? null,
+    ...(audio === "speech" && payload.speechVoice ? { voice: payload.speechVoice } : {}),
+  };
+}
+
+/**
  * One version of the image being edited: the original, or the result of an
  * edit. The composer's `edit.versions` builds these from its runs.
  */
@@ -337,10 +353,11 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
       if (payload.character?.trim()) params.character = payload.character;
       if (payload.frameRate != null) params.frameRate = payload.frameRate;
     }
-    if (selection.useCase.audio === "speech" && payload.speechVoice) params.voice = payload.speechVoice;
+    const call = engineCallInputs(payload, selection);
+    if (call.voice) params.voice = call.voice;
     const request: Request = {
       mode: deriveGenerationUseCase(selection.useCase, attachments),
-      prompt: selection.useCase.audio === "music" ? promptWithGenres(payload.value, payload.genres ?? []) : payload.value,
+      prompt: call.prompt,
       attachments,
       modelIds: selection.modelIds.length > 0 ? selection.modelIds : [fallback ?? DEFAULT_MODEL_ID],
       params,

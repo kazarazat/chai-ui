@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createComposerStore,
+  engineCallInputs,
   CREATE_MUSIC_USE_CASE,
   CREATE_SPEECH_USE_CASE,
   DEFAULT_MODEL_ID,
@@ -736,5 +737,24 @@ describe("createComposerStore subscriptions", () => {
     unsubscribe();
     store.cancel();
     expect(listener).toHaveBeenCalledTimes(calls);
+  });
+});
+
+describe("engineCallInputs", () => {
+  it("is the prompt, model and voice the store sends, with genres written into music", () => {
+    const music = { useCase: { kind: "audio" as const, label: "Music", audio: "music" as const }, modelIds: ["m"], models: [] };
+    const speech = { useCase: { kind: "audio" as const, label: "Speech", audio: "speech" as const }, modelIds: ["s"], models: [] };
+    const base = { value: "a rainy night", attachments: [], aspectRatio: null, modelId: "m", autoSelectModel: false, selections: [music] };
+    expect(engineCallInputs({ ...base, genres: ["lo-fi", "jazz"] } as ComposerSubmitPayload, music)).toEqual({
+      modelId: "m",
+      prompt: "a rainy night\n\nGenre: lo-fi, jazz",
+      aspectRatio: null,
+    });
+    expect(engineCallInputs({ ...base, value: "Hello", speechVoice: "eve", selections: [speech] } as ComposerSubmitPayload, speech)).toEqual({
+      modelId: "s",
+      prompt: "Hello",
+      aspectRatio: null,
+      voice: "eve",
+    });
   });
 });
