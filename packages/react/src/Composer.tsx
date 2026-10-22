@@ -69,8 +69,9 @@ export interface ComposerProps {
    * `modelsByKind` instead of `useCase` and `models`, with `modelIds` and
    * `onModelIdsChange` for the picks. Each use case gets its own Model menu
    * (one model each, unless `multiSelectModels`), and submit waits for a
-   * model in every one. Only Image and Video combine; every other use case
-   * runs alone. `nextUseCases` applies that rule to a `+` menu pick.
+   * model in every one, picked by hand: no auto-select. Only Image and
+   * Video combine; every other use case runs alone. `nextUseCases` applies
+   * that rule to a `+` menu pick.
    */
   multiSelectUseCases?: boolean;
   useCases?: ComposerUseCase[];
@@ -100,7 +101,8 @@ export interface ComposerProps {
   /**
    * When true, the model is chosen at submit: `useComposer` asks the
    * reasoning model to pick from each use case's models. The trigger reads
-   * "Auto-select" until a submit routes, then shows the pick.
+   * "Auto-select" until a submit routes, then shows the pick. Ignored with
+   * `multiSelectUseCases`: each use case's model is picked by hand.
    */
   autoSelectModel?: boolean;
   /**
@@ -334,14 +336,16 @@ export function Composer({
   // Auto-select chooses at submit, from the prompt (`useComposer` routes
   // with the reasoning model). Turning it on clears the current pick, so
   // the trigger reads "Auto-select" until routing fills in the real model.
-  const wasAutoSelect = useRef(autoSelectModel);
+  const autoSelect = view.autoSelectModel;
+  const showSwitch = showAutoSelectToggle && view.offersAutoSelect;
+  const wasAutoSelect = useRef(autoSelect);
   useEffect(() => {
-    if (autoSelectModel && !wasAutoSelect.current) {
+    if (autoSelect && !wasAutoSelect.current) {
       if (multiModel) onModelIdsChange?.([]);
       else onModelChange?.(null);
     }
-    wasAutoSelect.current = autoSelectModel;
-  }, [autoSelectModel, multiModel, onModelChange, onModelIdsChange]);
+    wasAutoSelect.current = autoSelect;
+  }, [autoSelect, multiModel, onModelChange, onModelIdsChange]);
 
   // Which field's Enhance is running: `enhancing` is one flag for the bar.
   const [enhancingField, setEnhancingField] = useState<ComposerPromptField>("prompt");
@@ -501,10 +505,10 @@ export function Composer({
                 value={menu.value}
                 multiple={menu.multiple}
                 toggleHeader={
-                  showAutoSelectToggle
+                  showSwitch
                     ? {
                         label: "Auto-select model",
-                        value: autoSelectModel,
+                        value: autoSelect,
                         onChange: (v) => onAutoSelectModelChange?.(v),
                       }
                     : undefined
@@ -514,8 +518,8 @@ export function Composer({
                 onSelect={(opt) => pickModel(menu, opt.id)}
                 searchable={false}
                 triggerVariant="text"
-                disabled={disabled || (autoSelectModel && !showAutoSelectToggle)}
-                panelWidth={showAutoSelectToggle ? 320 : undefined}
+                disabled={disabled || (autoSelect && !showSwitch)}
+                panelWidth={showSwitch ? 320 : undefined}
               />
             ))}
 

@@ -59,7 +59,7 @@ const props = withDefaults(
     onClearUseCase?: () => void;
     /** What a submit means with no use case picked. Defaults to `TEXT_USE_CASE`. Never shown as a chip. */
     defaultUseCase?: ComposerUseCase;
-    /** Image and Video from one prompt, with `useCases`, `modelsByKind` and `modelIds`: a Model menu each, and a model needed in each. Other use cases run alone (`nextUseCases`). */
+    /** Image and Video from one prompt, with `useCases`, `modelsByKind` and `modelIds`: a Model menu each, and a model picked by hand in each (no auto-select). Other use cases run alone (`nextUseCases`). */
     multiSelectUseCases?: boolean;
     useCases?: ComposerUseCase[];
     "onUpdate:useCases"?: (next: ComposerUseCase[]) => void;
@@ -73,7 +73,7 @@ const props = withDefaults(
     models?: ModelOption[];
     modelId?: string | null;
     "onUpdate:modelId"?: (id: string | null) => void;
-    /** The model is chosen at submit: `useComposer` asks the reasoning model. Turning it on clears the pick. */
+    /** The model is chosen at submit: `useComposer` asks the reasoning model. Turning it on clears the pick. Ignored with `multiSelectUseCases`. */
     autoSelectModel?: boolean;
     /** An "Auto-select model" switch at the top of the Model menu, for the end user. */
     showAutoSelectToggle?: boolean;
@@ -177,7 +177,7 @@ const voiceMenuOptions = computed(() =>
 // Auto-select chooses at submit, so turning it on clears the current pick
 // and the trigger reads "Auto-select" until routing fills in the model.
 watch(
-  () => props.autoSelectModel,
+  () => view.value.autoSelectModel,
   (on, was) => {
     if (!on || was) return;
     if (view.value.multiModel) props["onUpdate:modelIds"]?.([]);
@@ -343,16 +343,16 @@ function onSubmitClick() {
           :value="menu.value"
           :multiple="menu.multiple"
           :toggle-header="
-            showAutoSelectToggle
-              ? { label: 'Auto-select model', value: autoSelectModel, onChange: (v: boolean) => props['onUpdate:autoSelectModel']?.(v) }
+            showAutoSelectToggle && view.offersAutoSelect
+              ? { label: 'Auto-select model', value: view.autoSelectModel, onChange: (v: boolean) => props['onUpdate:autoSelectModel']?.(v) }
               : undefined
           "
           :trigger-label="menu.triggerLabel"
           :menu-label="menu.menuLabel"
           :searchable="false"
           trigger-variant="text"
-          :disabled="disabled || (autoSelectModel && !showAutoSelectToggle)"
-          :panel-width="showAutoSelectToggle ? 320 : undefined"
+          :disabled="disabled || (view.autoSelectModel && !(showAutoSelectToggle && view.offersAutoSelect))"
+          :panel-width="showAutoSelectToggle && view.offersAutoSelect ? 320 : undefined"
           @select="pickModel(menu, $event.id)"
         />
 

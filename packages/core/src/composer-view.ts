@@ -129,7 +129,7 @@ export function composerView(props: ComposerViewInput) {
     modelIds = [],
     models,
     modelId = null,
-    autoSelectModel = false,
+    autoSelectModel: autoSelectRequested = false,
     aspectRatios,
     aspectRatio = null,
     character = "",
@@ -141,6 +141,10 @@ export function composerView(props: ComposerViewInput) {
     regions = [],
     disabled = false,
   } = props;
+
+  // Auto-select is off with multi-use-case select: each use case's model
+  // is picked by hand, so one switch never stands for several menus.
+  const autoSelectModel = autoSelectRequested && !multiSelectUseCases;
 
   // What the person picked, and what actually runs: with nothing picked, the
   // builder's default use case (a text request unless they chose otherwise).
@@ -342,6 +346,10 @@ export function composerView(props: ComposerViewInput) {
     modelSections,
     /** The Model menus to render: one, or with multi-use-case select one per use case. */
     modelMenus,
+    /** Whether auto-select is on: never with multi-use-case select. */
+    autoSelectModel,
+    /** Whether a Model menu can offer the auto-select switch: not with multi-use-case select. */
+    offersAutoSelect: !multiSelectUseCases,
     pickedModelIds,
     canPickModel,
     modelTriggerLabel,
