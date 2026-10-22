@@ -20,7 +20,7 @@ import { DEFAULT_MAX_REGIONS } from "./region-edit.js";
 const NANO_BANANA_RATIOS = ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"];
 const FLUX_3_RATIOS = ["21:9", "2:1", "16:9", "3:2", "7:5", "4:3", "5:4", "1:1", "4:5", "3:4", "5:7", "2:3", "9:16", "1:2"];
 const NANO_BANANA_2_RATIOS = [...NANO_BANANA_RATIOS, "4:1", "1:4", "8:1", "1:8"];
-/** The ratios a named `image_size` covers (FLUX.1, GPT Image 2). */
+/** The ratios a named `image_size` covers (Flux 3 Klein, GPT Image 2). */
 const IMAGE_SIZE_RATIOS = ["1:1", "4:3", "16:9", "3:4", "9:16"];
 
 /**
@@ -40,7 +40,15 @@ export const SUGGESTED_IMAGE_MODELS: ModelOption[] = [
   },
   { id: "blackforestlabs/flux-3/text-to-image", label: "Flux 3 Image", provider: "Black Forest Labs", speed: "standard", aspectRatios: FLUX_3_RATIOS, falInput: { aspectRatio: "aspect_ratio" }, withImages: "blackforestlabs/flux-3/edit-image" },
   { id: "openai/gpt-image-2", label: "GPT Image 2", provider: "OpenAI", speed: "slow", aspectRatios: IMAGE_SIZE_RATIOS, falInput: { aspectRatio: "image_size" }, withImages: "openai/gpt-image-2/edit" },
-  { id: "fal-ai/flux/schnell", label: "FLUX.1 schnell", provider: "Black Forest Labs", speed: "fast", aspectRatios: IMAGE_SIZE_RATIOS, falInput: { aspectRatio: "image_size" } },
+  {
+    id: "blackforestlabs/flux-3/klein/text-to-image",
+    label: "Flux 3 Klein",
+    provider: "Black Forest Labs",
+    speed: "fast",
+    aspectRatios: IMAGE_SIZE_RATIOS,
+    falInput: { aspectRatio: "image_size" },
+    withImages: "blackforestlabs/flux-3/klein/edit-image",
+  },
 ];
 
 /**
@@ -134,6 +142,14 @@ export function suggestedModels(useCase: GenerationUseCase | undefined): ModelOp
 /** `withImages` endpoints in no menu of their own. */
 const IMAGE_INPUT_ONLY: ModelOption[] = [
   { id: "fal-ai/nano-banana-2/edit", label: "Nano Banana 2", provider: "Google", speed: "fast", aspectRatios: NANO_BANANA_2_RATIOS, falInput: { aspectRatio: "aspect_ratio", image: "image_urls" } },
+  {
+    id: "blackforestlabs/flux-3/klein/edit-image",
+    label: "Flux 3 Klein",
+    provider: "Black Forest Labs",
+    speed: "fast",
+    aspectRatios: IMAGE_SIZE_RATIOS,
+    falInput: { aspectRatio: "image_size", image: "image_urls" },
+  },
 ];
 
 /** Every suggested Fal model, by id: how the Fal engine knows each one's inputs. */

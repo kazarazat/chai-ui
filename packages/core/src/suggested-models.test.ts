@@ -30,7 +30,7 @@ describe("suggested models", () => {
 
   it("points every withImages at a known model that takes images", () => {
     const withImages = [...SUGGESTED_FAL_MODELS.values()].filter((m) => m.withImages);
-    expect(withImages.length).toBe(8);
+    expect(withImages.length).toBe(9);
     for (const m of withImages) expect(SUGGESTED_FAL_MODELS.get(m.withImages!)?.falInput?.image).toBeDefined();
   });
 
