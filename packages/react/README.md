@@ -153,12 +153,17 @@ Aspect ratio menu:
 // Several models: each produces its own result, paged inside one ResultCard.
 <Composer multiSelectModels modelIds={modelIds} onModelIdsChange={setModelIds} models={models} … />
 
-// Several use cases at once (at most one per kind): the Model menu shows a
-// section per picked use case, and onSubmit gets one selection per use case.
+// Image and Video from one prompt (advanced): a Model menu per use case,
+// one model each, and submit waits for both. Only Image and Video combine;
+// nextUseCases makes any other pick replace the rest.
 <Composer
   multiSelectUseCases
   useCases={useCases}
   onUseCasesChange={setUseCases}
+  onAttachMenuSelect={(action) => {
+    const picked = useCaseFor(action); // your mapping from menu item to use case
+    if (picked) setUseCases((prev) => nextUseCases(prev, picked));
+  }}
   modelsByKind={{ image: imageModels, video: videoModels }}
   modelIds={modelIds}
   onModelIdsChange={setModelIds}
@@ -167,7 +172,9 @@ Aspect ratio menu:
 ```
 
 Either way `onSubmit` receives `selections`: one `{ useCase, modelIds, models }`
-entry per use case.
+entry per use case. An image arrives in seconds and a video can take
+minutes, so show each use case's run in its own `ResultCard` (`useComposer`'s
+`runs`, one per use case) rather than paging them together.
 
 With `autoSelectModel` on, the trigger reads "Auto-select" and
 `useComposer` picks the model at submit: the reasoning model reads the

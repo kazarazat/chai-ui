@@ -48,6 +48,30 @@ export const COMPOSER_ATTACH_MENU_ITEMS: {
 ];
 
 /**
+ * With `multiSelectUseCases`: whether a use case can run alongside others.
+ * Only Image and Video share a prompt (and one Enhance rewrite): music,
+ * speech and a world each read the prompt differently, and an edit works
+ * on one image. Every other use case runs alone.
+ */
+export function combinesWithOthers(useCase: ComposerUseCase): boolean {
+  return !useCase.edit && (useCase.kind === "image" || useCase.kind === "video");
+}
+
+/**
+ * The picked use cases after picking `picked` from the `+` menu with
+ * `multiSelectUseCases`: Image and Video join each other (a pick of the
+ * same kind swaps in place); any other use case replaces the rest, and is
+ * replaced by the next pick.
+ */
+export function nextUseCases(current: ComposerUseCase[], picked: ComposerUseCase): ComposerUseCase[] {
+  if (!combinesWithOthers(picked)) return [picked];
+  const rest = current.filter(combinesWithOthers);
+  return rest.some((u) => u.kind === picked.kind)
+    ? rest.map((u) => (u.kind === picked.kind ? picked : u))
+    : [...rest, picked];
+}
+
+/**
  * Past this length a rewritten prompt appears at once: a long reveal reads
  * as sluggish, and a long prompt is when a person wants the result now.
  */
@@ -120,7 +144,9 @@ export function composerView(props: ComposerViewInput) {
 
   // What the person picked, and what actually runs: with nothing picked, the
   // builder's default use case (a text request unless they chose otherwise).
-  const pickedUseCases = multiSelectUseCases ? useCases : useCase ? [useCase] : [];
+  // A list that breaks `nextUseCases`' rule runs only its last pick.
+  const listed = multiSelectUseCases ? useCases : useCase ? [useCase] : [];
+  const pickedUseCases = listed.length > 1 && !listed.every(combinesWithOthers) ? listed.slice(-1) : listed;
   const activeUseCases = pickedUseCases.length > 0 ? pickedUseCases : [defaultUseCase];
   // An edit needs an image, then a change: a prompt for the whole image, a
   // region with its own instruction, or both.
@@ -162,7 +188,7 @@ export function composerView(props: ComposerViewInput) {
     if (given) return { options: given, suggested: false };
     return { options: suggestedModels(u.edit ? "image-edit" : deriveGenerationUseCase(u, attachments)), suggested: true };
   };
-  // One menu section per use case with multi-use-case select; otherwise one flat roster.
+  // One roster per use case with multi-use-case select (each gets its own menu); otherwise one.
   const modelSections = (multiSelectUseCases ? activeUseCases : activeUseCases.slice(0, 1))
     .map((u) => ({ label: multiSelectUseCases ? u.label : "", kind: u.kind, useCase: u, ...rosterFor(u) }))
     .filter((s) => s.options.length > 0);
@@ -185,13 +211,50 @@ export function composerView(props: ComposerViewInput) {
     pickedModels.length > 1
       ? `${pickedModels.length} models`
       : (pickedModels[0]?.label ?? (autoSelectModel ? "Auto-select" : multiModel ? "Select models" : "Select model"));
-  // With a Model menu, a submit needs a model: one picked, or auto-select to pick it.
-  const needsModel = canPickModel && modelSections.length > 0 && !autoSelectModel && pickedModelIds.length === 0;
+  const picksIn = (s: (typeof modelSections)[number]) => pickedModels.filter((m) => s.options.some((o) => o.id === m.id));
+  // With a Model menu, a submit needs a model for every use case: picked,
+  // or auto-select to pick it. Never an engine default nobody chose.
+  const needsModel = canPickModel && !autoSelectModel && modelSections.some((s) => picksIn(s).length === 0);
+
+  // The Model menus: one per use case with multi-use-case select, each
+  // picking one model unless `multiSelectModels` allows several.
+  const modelMenus = multiSelectUseCases
+    ? modelSections.map((s) => {
+        const picks = picksIn(s);
+        const multiple = multiSelectModels;
+        return {
+          key: s.kind,
+          options: s.options,
+          multiple,
+          value: multiple ? picks.map((m) => m.id) : (picks[0]?.id ?? null),
+          menuLabel: `${s.useCase.label} ${multiple ? "models" : "model"}`,
+          triggerLabel:
+            picks.length > 1
+              ? `${picks.length} models`
+              : (picks[0]?.label ?? (autoSelectModel ? "Auto-select" : `${s.useCase.label} model`)),
+          /** The model ids after a row click: this use case's pick replaced, or with several allowed, toggled. */
+          next: (id: string) =>
+            multiple
+              ? modelIds.includes(id)
+                ? modelIds.filter((m) => m !== id)
+                : [...modelIds, id]
+              : [...modelIds.filter((m) => !s.options.some((o) => o.id === m)), id],
+        };
+      })
+    : modelSections.slice(0, 1).map((s) => ({
+        key: s.kind,
+        options: s.options,
+        multiple: multiModel,
+        value: multiModel ? pickedModelIds : modelId,
+        menuLabel: multiModel ? "Select models" : "Select model",
+        triggerLabel: modelTriggerLabel,
+        next: (id: string) => (modelIds.includes(id) ? modelIds.filter((m) => m !== id) : [...modelIds, id]),
+      }));
   const isSubmitDisabled = submitError ? disabled : (props.submitDisabled ?? (disabled || !hasContent || needsModel));
 
   // The models a control is for: only those of the use cases it applies to,
-  // so with Image and Music picked together, Music's models don't empty the
-  // Aspect ratio menu and Image's don't empty the Genre menu. `offered` is
+  // so with Image and Video picked together, the Aspect ratio menu offers
+  // what both take, and no other use case's models empty a menu. `offered` is
   // what might run: the picks, or with none picked (or auto-select on) the
   // whole list.
   const modelsFor = (applies: (u: ComposerUseCase) => boolean) => {
@@ -277,6 +340,8 @@ export function composerView(props: ComposerViewInput) {
     showStop,
     multiModel,
     modelSections,
+    /** The Model menus to render: one, or with multi-use-case select one per use case. */
+    modelMenus,
     pickedModelIds,
     canPickModel,
     modelTriggerLabel,

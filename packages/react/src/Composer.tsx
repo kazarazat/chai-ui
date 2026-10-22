@@ -64,13 +64,13 @@ export interface ComposerProps {
   /** What a submit means with no use case picked. Defaults to `TEXT_USE_CASE`, a text request. Never shown as a chip. */
   defaultUseCase?: ComposerUseCase;
   /**
-   * Builder opt-in, off by default: several use cases at once (e.g. an image
-   * and a video from one prompt), at most one per kind. Uses `useCases`,
-   * `onUseCasesChange` and `modelsByKind` instead of `useCase` and `models`;
-   * the model menu shows one section per picked use case. Edit image and
-   * Create speech run alone: an edit works on one image, and speech's prompt
-   * is the words to say, which no other use case can share. Create music
-   * can join Image and Video.
+   * Builder opt-in, off by default, for advanced workflows: an image and a
+   * video from one prompt. Uses `useCases`, `onUseCasesChange` and
+   * `modelsByKind` instead of `useCase` and `models`, with `modelIds` and
+   * `onModelIdsChange` for the picks. Each use case gets its own Model menu
+   * (one model each, unless `multiSelectModels`), and submit waits for a
+   * model in every one. Only Image and Video combine; every other use case
+   * runs alone. `nextUseCases` applies that rule to a `+` menu pick.
    */
   multiSelectUseCases?: boolean;
   useCases?: ComposerUseCase[];
@@ -81,7 +81,7 @@ export interface ComposerProps {
    * Builder opt-in, off by default: the end user can pick several models,
    * each producing its own result (ResultCard pages through them). Uses
    * `modelIds` and `onModelIdsChange` instead of `modelId` and
-   * `onModelChange`. Always on with `multiSelectUseCases`.
+   * `onModelChange`. With `multiSelectUseCases`, several per use case.
    */
   multiSelectModels?: boolean;
   modelIds?: string[];
@@ -314,11 +314,11 @@ export function Composer({
     regions,
     disabled,
   });
-  const { editing, isSubmitDisabled, showStop, multiModel, modelSections, pickedModelIds, aspectOptions, offeredAspect } = view;
+  const { editing, isSubmitDisabled, showStop, multiModel, aspectOptions, offeredAspect } = view;
 
-  function toggleModel(id: string) {
+  function pickModel(menu: (typeof view.modelMenus)[number], id: string) {
     if (!multiModel) return onModelChange?.(id);
-    onModelIdsChange?.(view.toggledModelIds(id));
+    onModelIdsChange?.(menu.next(id));
   }
 
   // Auto-select belongs to the Model menu it was turned on in: picking
@@ -485,38 +485,39 @@ export function Composer({
             />
           ))}
 
-          {/* The Model menu shows whenever there are models for the current
-              use case(s), picked or default. The auto-select switch lives
-              inside it (builder opt-in, `showAutoSelectToggle`), so the
-              trigger stays enabled whenever the switch is shown — it's the
-              only way back to the switch. Rows are disabled by `SearchMenu`
-              itself while auto-select is on. */}
-          {modelSections.length > 0 && view.canPickModel && (
-            <SearchMenu
-              placement={menuPlacement}
-              {...(multiSelectUseCases
-                ? { sections: modelSections.map((s) => ({ label: s.label, options: s.options })) }
-                : { options: modelSections[0]!.options })}
-              value={multiModel ? pickedModelIds : modelId}
-              multiple={multiModel}
-              toggleHeader={
-                showAutoSelectToggle
-                  ? {
-                      label: "Auto-select model",
-                      value: autoSelectModel,
-                      onChange: (v) => onAutoSelectModelChange?.(v),
-                    }
-                  : undefined
-              }
-              triggerLabel={view.modelTriggerLabel}
-              menuLabel={multiModel ? "Select models" : "Select model"}
-              onSelect={(opt) => toggleModel(opt.id)}
-              searchable={false}
-              triggerVariant="text"
-              disabled={disabled || (autoSelectModel && !showAutoSelectToggle)}
-              panelWidth={showAutoSelectToggle ? 320 : undefined}
-            />
-          )}
+          {/* A Model menu shows whenever there are models for the use case,
+              picked or default: one per use case with multi-use-case
+              select. The auto-select switch lives inside each (builder
+              opt-in, `showAutoSelectToggle`), so the trigger stays enabled
+              whenever the switch is shown — it's the only way back to the
+              switch. Rows are disabled by `SearchMenu` itself while
+              auto-select is on. */}
+          {view.canPickModel &&
+            view.modelMenus.map((menu) => (
+              <SearchMenu
+                key={menu.key}
+                placement={menuPlacement}
+                options={menu.options}
+                value={menu.value}
+                multiple={menu.multiple}
+                toggleHeader={
+                  showAutoSelectToggle
+                    ? {
+                        label: "Auto-select model",
+                        value: autoSelectModel,
+                        onChange: (v) => onAutoSelectModelChange?.(v),
+                      }
+                    : undefined
+                }
+                triggerLabel={menu.triggerLabel}
+                menuLabel={menu.menuLabel}
+                onSelect={(opt) => pickModel(menu, opt.id)}
+                searchable={false}
+                triggerVariant="text"
+                disabled={disabled || (autoSelectModel && !showAutoSelectToggle)}
+                panelWidth={showAutoSelectToggle ? 320 : undefined}
+              />
+            ))}
 
           {view.showAspectRatio && aspectOptions.length > 0 && onAspectRatioChange && (
             <SearchMenu

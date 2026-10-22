@@ -27,6 +27,7 @@ import {
   type GenerationUseCase,
   type ComposerSubmitPayload,
   type ComposerUseCase,
+  type ComposerView,
   type EditRegion,
   type MediaKind,
   type MenuPlacement,
@@ -58,13 +59,13 @@ const props = withDefaults(
     onClearUseCase?: () => void;
     /** What a submit means with no use case picked. Defaults to `TEXT_USE_CASE`. Never shown as a chip. */
     defaultUseCase?: ComposerUseCase;
-    /** Several use cases at once, at most one per kind, with `useCases` and `modelsByKind`. */
+    /** Image and Video from one prompt, with `useCases`, `modelsByKind` and `modelIds`: a Model menu each, and a model needed in each. Other use cases run alone (`nextUseCases`). */
     multiSelectUseCases?: boolean;
     useCases?: ComposerUseCase[];
     "onUpdate:useCases"?: (next: ComposerUseCase[]) => void;
     /** Models per use-case kind, for `multiSelectUseCases`. A kind left out gets Chai's suggested models. */
     modelsByKind?: Partial<Record<OutputKind, ModelOption[]>>;
-    /** The end user can pick several models, each producing its own result, with `modelIds`. */
+    /** The end user can pick several models, each producing its own result, with `modelIds`. With `multiSelectUseCases`, several per use case. */
     multiSelectModels?: boolean;
     modelIds?: string[];
     "onUpdate:modelIds"?: (ids: string[]) => void;
@@ -166,11 +167,6 @@ const menuItems = computed(() =>
     canSelect: Boolean(props.onAttachMenuSelect),
   })
 );
-const modelMenuOptions = computed(() =>
-  props.multiSelectUseCases
-    ? { sections: view.value.modelSections.map((s) => ({ label: s.label, options: s.options })) }
-    : { options: view.value.modelSections[0]?.options }
-);
 const toMenuOption = (o: { value: string; label: string }) => ({ id: o.value, label: o.label });
 const voiceMenuOptions = computed(() =>
   view.value.voiceSections
@@ -199,8 +195,8 @@ watch(
   }
 );
 
-function toggleModel(id: string) {
-  if (view.value.multiModel) props["onUpdate:modelIds"]?.(view.value.toggledModelIds(id));
+function pickModel(menu: ComposerView["modelMenus"][number], id: string) {
+  if (view.value.multiModel) props["onUpdate:modelIds"]?.(menu.next(id));
   else props["onUpdate:modelId"]?.(id);
 }
 
@@ -338,25 +334,26 @@ function onSubmitClick() {
           @remove="removeUseCase(u)"
         />
 
-        <!-- The auto-select switch lives inside the Model menu, so with it shown the trigger stays enabled: it's the only way back to the switch. -->
+        <!-- One Model menu, or one per use case with multi-use-case select. The auto-select switch lives inside each, so with it shown the trigger stays enabled: it's the only way back to the switch. -->
         <SearchMenu
+          v-for="menu in view.canPickModel ? view.modelMenus : []"
+          :key="menu.key"
           :placement="menuPlacement"
-          v-if="view.modelSections.length > 0 && view.canPickModel"
-          v-bind="modelMenuOptions"
-          :value="view.multiModel ? view.pickedModelIds : modelId"
-          :multiple="view.multiModel"
+          :options="menu.options"
+          :value="menu.value"
+          :multiple="menu.multiple"
           :toggle-header="
             showAutoSelectToggle
               ? { label: 'Auto-select model', value: autoSelectModel, onChange: (v: boolean) => props['onUpdate:autoSelectModel']?.(v) }
               : undefined
           "
-          :trigger-label="view.modelTriggerLabel"
-          :menu-label="view.multiModel ? 'Select models' : 'Select model'"
+          :trigger-label="menu.triggerLabel"
+          :menu-label="menu.menuLabel"
           :searchable="false"
           trigger-variant="text"
           :disabled="disabled || (autoSelectModel && !showAutoSelectToggle)"
           :panel-width="showAutoSelectToggle ? 320 : undefined"
-          @select="toggleModel($event.id)"
+          @select="pickModel(menu, $event.id)"
         />
 
         <SearchMenu
