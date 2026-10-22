@@ -646,29 +646,43 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.poll(() => onModelIdsChange.mock.calls).toEqual([[[]]]);
     });
 
-    it("multi-use-case select: a section per use case, and each chip removes its use case", async () => {
+    it("multi-use-case select: a Model menu per use case, a pick each before submit, and each chip removes its use case", async () => {
       const onUseCasesChange = vi.fn();
       const onSubmit = vi.fn();
       const useCases: ComposerUseCase[] = [IMAGE, VIDEO];
-      const videoModels: ModelOption[] = [{ id: "fal/video", label: "Video Model", provider: "fal", speed: "slow" }];
-      const screen = harness({
-        value: "a mug",
-        multiSelectUseCases: true,
-        useCases,
-        onUseCasesChange,
-        modelsByKind: { image: MODELS, video: videoModels },
-        modelIds: ["fal/pro", "fal/video"],
-        onSubmit,
-      });
-      await screen.getByText("Video").hover();
-      await screen.getByRole("button", { name: "Remove Video" }).click();
-      expect(onUseCasesChange).toHaveBeenCalledWith([IMAGE]);
-
+      const videoModels: ModelOption[] = [{ id: "fal/video", label: "Clip Pro", provider: "fal", speed: "slow" }];
+      const screen = controlled<ComposerProps>(
+        render,
+        {
+          value: "a mug",
+          onChange: () => {},
+          multiSelectUseCases: true,
+          useCases,
+          onUseCasesChange,
+          modelsByKind: { image: MODELS, video: videoModels },
+          modelIds: [],
+          onModelIdsChange: () => {},
+          onSubmit,
+        },
+        { onModelIdsChange: "modelIds" }
+      );
+      await screen.getByText("Image model").click();
+      await screen.getByRole("button", { name: "Pro Image" }).click();
+      // Video has no model yet: no submit on an engine default.
+      await screen.getByRole("button", { name: "Submit" }).click();
+      expect(onSubmit).not.toHaveBeenCalled();
+      await screen.getByText("Video model").click();
+      await screen.getByRole("button", { name: "Clip Pro" }).click();
+      await expect.element(screen.getByText("Pro Image")).toBeVisible();
       await screen.getByRole("button", { name: "Submit" }).click();
       expect(onSubmit.mock.calls[0]![0].selections).toEqual([
         { useCase: IMAGE, modelIds: ["fal/pro"], models: MODELS },
         { useCase: VIDEO, modelIds: ["fal/video"], models: videoModels },
       ]);
+
+      await screen.getByText("Video", { exact: true }).hover();
+      await screen.getByRole("button", { name: "Remove Video" }).click();
+      expect(onUseCasesChange).toHaveBeenCalledWith([IMAGE]);
     });
 
     it("offers the picked model's aspect ratios, and shows the one picked", async () => {

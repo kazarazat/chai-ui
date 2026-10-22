@@ -6,6 +6,7 @@ import {
   composerAttachMenuItems,
   composerView,
   enhanceRevealDurationMs,
+  nextUseCases,
 } from "./composer-view.js";
 import { regionColor } from "./region-edit.js";
 import type { ModelOption } from "./types.js";
@@ -226,22 +227,58 @@ describe("Composer helpers", () => {
     expect(one.payload()).not.toHaveProperty("speechVoice");
   });
 
-  it("keeps Image's Aspect ratio menu and Music's Genre menu when both are picked together", () => {
-    const flux = model("flux", ["1:1", "16:9"]);
-    const lyria = { ...model("lyria"), genres: [{ value: "jazz", label: "Jazz" }] };
-    const view = composerView({
-      value: "a rainy night",
+  it("combines only Image and Video: any other use case runs alone", () => {
+    const WORLD = { kind: "world" as const, label: "World" };
+    expect(nextUseCases([IMAGE], VIDEO)).toEqual([IMAGE, VIDEO]);
+    expect(nextUseCases([IMAGE, VIDEO], { kind: "video", label: "Clip" })).toEqual([IMAGE, { kind: "video", label: "Clip" }]);
+    for (const alone of [CREATE_MUSIC_USE_CASE, CREATE_SPEECH_USE_CASE, EDIT_IMAGE_USE_CASE, WORLD]) {
+      expect(nextUseCases([IMAGE, VIDEO], alone)).toEqual([alone]);
+      expect(nextUseCases([alone], IMAGE)).toEqual([IMAGE]);
+    }
+    // A builder's list that breaks the rule runs only its last pick.
+    const view = composerView({ value: "x", multiSelectUseCases: true, useCases: [IMAGE, CREATE_MUSIC_USE_CASE] });
+    expect(view.pickedUseCases).toEqual([CREATE_MUSIC_USE_CASE]);
+    expect(view.payload().selections.map((s) => s.useCase)).toEqual([CREATE_MUSIC_USE_CASE]);
+  });
+
+  it("gives each use case its own Model menu, one pick each unless several are allowed", () => {
+    const both = {
+      value: "x",
       multiSelectUseCases: true,
-      useCases: [IMAGE, CREATE_MUSIC_USE_CASE],
-      modelsByKind: { image: [flux], audio: [lyria] },
-      modelIds: ["flux", "lyria"],
-      genres: ["jazz"],
+      useCases: [IMAGE, VIDEO],
+      modelsByKind: { image: [model("img"), model("img2")], video: [model("vid")] },
       onModelIdsChange: () => {},
-    });
-    expect(view.showAspectRatio).toBe(true);
-    expect(view.aspectOptions.map((o) => o.value)).toEqual(["1:1", "16:9"]);
-    expect(view.genreOptions.map((o) => o.value)).toEqual(["jazz"]);
-    expect(view.payload().genres).toEqual(["jazz"]);
+    };
+    const none = composerView(both);
+    expect(none.modelMenus.map((m) => [m.triggerLabel, m.multiple, m.value])).toEqual([
+      ["Image model", false, null],
+      ["Video model", false, null],
+    ]);
+    // A pick in one menu replaces that use case's pick only.
+    const picked = composerView({ ...both, modelIds: ["img", "vid"] });
+    expect(picked.modelMenus.map((m) => m.triggerLabel)).toEqual(["img", "vid"]);
+    expect(picked.modelMenus[0]!.next("img2")).toEqual(["vid", "img2"]);
+    // With multiSelectModels too, each menu toggles.
+    const several = composerView({ ...both, multiSelectModels: true, modelIds: ["img", "img2", "vid"] });
+    expect(several.modelMenus.map((m) => [m.triggerLabel, m.menuLabel])).toEqual([
+      ["2 models", "Image models"],
+      ["vid", "Video models"],
+    ]);
+    expect(several.modelMenus[0]!.next("img")).toEqual(["img2", "vid"]);
+    expect(composerView({ ...both, autoSelectModel: true }).modelMenus.map((m) => m.triggerLabel)).toEqual(["Auto-select", "Auto-select"]);
+  });
+
+  it("needs a model for every use case before a submit, never running an engine default", () => {
+    const both = {
+      value: "x",
+      multiSelectUseCases: true,
+      useCases: [IMAGE, VIDEO],
+      modelsByKind: { image: [model("img")], video: [model("vid")] },
+      onModelIdsChange: () => {},
+    };
+    expect(composerView({ ...both, modelIds: ["img"] }).isSubmitDisabled).toBe(true);
+    expect(composerView({ ...both, modelIds: ["img", "vid"] }).isSubmitDisabled).toBe(false);
+    expect(composerView({ ...both, autoSelectModel: true }).isSubmitDisabled).toBe(false);
   });
 
   it("gives speech and music their own placeholder, no aspect ratio, no suggested models, and a use-case key each", () => {

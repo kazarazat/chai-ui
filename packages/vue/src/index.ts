@@ -47,6 +47,8 @@ export {
   suggestedModels,
   promptWithGenres,
   checkSuggestedModels,
+  nextUseCases,
+  combinesWithOthers,
 } from "@chai-ui/core";
 export type {
   AudioUseCase,
