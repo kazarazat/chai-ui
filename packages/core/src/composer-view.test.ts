@@ -265,7 +265,10 @@ describe("Composer helpers", () => {
       ["vid", "Video models"],
     ]);
     expect(several.modelMenus[0]!.next("img")).toEqual(["img2", "vid"]);
-    expect(composerView({ ...both, autoSelectModel: true }).modelMenus.map((m) => m.triggerLabel)).toEqual(["Auto-select", "Auto-select"]);
+    // No auto-select with multi-use-case select: each model is picked by hand.
+    const forced = composerView({ ...both, autoSelectModel: true });
+    expect(forced.modelMenus.map((m) => m.triggerLabel)).toEqual(["Image model", "Video model"]);
+    expect([forced.autoSelectModel, forced.offersAutoSelect, forced.payload().autoSelectModel]).toEqual([false, false, false]);
   });
 
   it("needs a model for every use case before a submit, never running an engine default", () => {
@@ -278,7 +281,7 @@ describe("Composer helpers", () => {
     };
     expect(composerView({ ...both, modelIds: ["img"] }).isSubmitDisabled).toBe(true);
     expect(composerView({ ...both, modelIds: ["img", "vid"] }).isSubmitDisabled).toBe(false);
-    expect(composerView({ ...both, autoSelectModel: true }).isSubmitDisabled).toBe(false);
+    expect(composerView({ ...both, autoSelectModel: true }).isSubmitDisabled).toBe(true);
   });
 
   it("gives speech and music their own placeholder, no aspect ratio, no suggested models, and a use-case key each", () => {

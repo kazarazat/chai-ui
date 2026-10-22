@@ -154,7 +154,7 @@ Aspect ratio menu:
 <Composer multiSelectModels modelIds={modelIds} onModelIdsChange={setModelIds} models={models} … />
 
 // Image and Video from one prompt (advanced): a Model menu per use case,
-// one model each, and submit waits for both. Only Image and Video combine;
+// one model each picked by hand (no auto-select), and submit waits for both. Only Image and Video combine;
 // nextUseCases makes any other pick replace the rest.
 <Composer
   multiSelectUseCases
@@ -176,7 +176,7 @@ entry per use case. An image arrives in seconds and a video can take
 minutes, so show each use case's run in its own `ResultCard` (`useComposer`'s
 `runs`, one per use case) rather than paging them together.
 
-With `autoSelectModel` on, the trigger reads "Auto-select" and
+With `autoSelectModel` on (not with `multiSelectUseCases`), the trigger reads "Auto-select" and
 `useComposer` picks the model at submit: the reasoning model reads the
 prompt and media and chooses from that use case's `models`. When the end
 user owns the switch (`showAutoSelectToggle`), auto-select belongs to the

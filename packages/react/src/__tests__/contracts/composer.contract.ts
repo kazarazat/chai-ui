@@ -685,6 +685,19 @@ export function composerContract(render: Render<ComposerProps>) {
       expect(onUseCasesChange).toHaveBeenCalledWith([IMAGE]);
     });
 
+    it("multi-use-case select: no auto-select switch, even when the builder offers one", async () => {
+      const screen = harness({
+        multiSelectUseCases: true,
+        useCases: [IMAGE, VIDEO],
+        modelsByKind: { image: MODELS, video: [{ id: "fal/video", label: "Clip Pro", provider: "fal", speed: "slow" }] },
+        showAutoSelectToggle: true,
+        autoSelectModel: true,
+      });
+      await screen.getByText("Image model").click();
+      await expect.element(screen.getByRole("switch", { name: "Auto-select model" })).not.toBeInTheDocument();
+      await expect.element(screen.getByRole("button", { name: "Pro Image" })).toBeEnabled();
+    });
+
     it("offers the picked model's aspect ratios, and shows the one picked", async () => {
       const onAspectRatioChange = vi.fn();
       const screen = harness({ useCase: IMAGE, models: [SQUARE_WIDE, WIDE_TALL], modelId: "fal/sw", onAspectRatioChange });
