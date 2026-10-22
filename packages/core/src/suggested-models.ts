@@ -14,7 +14,7 @@ import { DEFAULT_MAX_REGIONS } from "./region-edit.js";
  * the input kinds. They change only through package releases; run
  * `checkSuggestedModels()` to see whether a provider has changed since.
  *
- * Checked 2026-10-06.
+ * Checked 2026-10-22.
  */
 
 const NANO_BANANA_RATIOS = ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"];
@@ -46,18 +46,23 @@ export const SUGGESTED_TEXT_TO_VIDEO_MODELS: ModelOption[] = [
   { id: "fal-ai/veo3.1/fast", label: "Veo 3.1 Fast", provider: "Google", speed: "standard", aspectRatios: ["16:9", "9:16"], falInput: { aspectRatio: "aspect_ratio" } },
 ];
 
-/** Create video, starting from an attached image. The video follows the image's shape, so none lists aspect ratios. */
+/**
+ * Create video, starting from an attached image. The video follows the
+ * image's shape on all but Veo, which can also crop to 16:9 or 9:16, so the
+ * Aspect ratio menu shows only with Veo alone picked.
+ */
 export const SUGGESTED_IMAGE_TO_VIDEO_MODELS: ModelOption[] = [
   { id: "fal-ai/kling-video/v3/pro/image-to-video", label: "Kling v3 Pro", provider: "Kling", speed: "slow", falInput: { image: "start_image_url" } },
   { id: "minimax/h3-max/image-to-video", label: "MiniMax H3 Max", provider: "MiniMax", speed: "slow", falInput: { image: "image_url" } },
   { id: "bytedance/seedance-2.5/image-to-video", label: "Seedance 2.5", provider: "ByteDance", speed: "slow", falInput: { image: "image_url" } },
-  { id: "fal-ai/veo3.1/fast/image-to-video", label: "Veo 3.1 Fast", provider: "Google", speed: "standard", falInput: { image: "image_url" } },
+  { id: "fal-ai/veo3.1/fast/image-to-video", label: "Veo 3.1 Fast", provider: "Google", speed: "standard", aspectRatios: ["16:9", "9:16"], falInput: { aspectRatio: "aspect_ratio", image: "image_url" } },
 ];
 
 /**
- * Edit an image. Flux 3 Image reads marked regions as boxes; the others get
- * them described in words. An edit keeps the image's shape, so no aspect
- * ratios.
+ * Edit an image, or create one from attached images. Flux 3 Image reads
+ * marked regions as boxes; the others get them described in words. Each
+ * takes an aspect ratio, for Create image with attached images; the Edit
+ * image use case keeps the image's shape and never sends one.
  */
 export const SUGGESTED_EDIT_MODELS: ModelOption[] = [
   {
@@ -67,10 +72,11 @@ export const SUGGESTED_EDIT_MODELS: ModelOption[] = [
     speed: "standard",
     regionFormat: "flux-3-boxes",
     maxRegions: DEFAULT_MAX_REGIONS,
-    falInput: { image: "image_urls" },
+    aspectRatios: FLUX_3_RATIOS,
+    falInput: { aspectRatio: "aspect_ratio", image: "image_urls" },
   },
-  { id: "fal-ai/nano-banana-pro/edit", label: "Nano Banana Pro", provider: "Google", speed: "standard", falInput: { image: "image_urls" } },
-  { id: "openai/gpt-image-2/edit", label: "GPT Image 2", provider: "OpenAI", speed: "slow", falInput: { image: "image_urls" } },
+  { id: "fal-ai/nano-banana-pro/edit", label: "Nano Banana Pro", provider: "Google", speed: "standard", aspectRatios: NANO_BANANA_RATIOS, falInput: { aspectRatio: "aspect_ratio", image: "image_urls" } },
+  { id: "openai/gpt-image-2/edit", label: "GPT Image 2", provider: "OpenAI", speed: "slow", aspectRatios: IMAGE_SIZE_RATIOS, falInput: { aspectRatio: "image_size", image: "image_urls" } },
 ];
 
 /**
