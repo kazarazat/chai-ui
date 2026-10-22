@@ -174,6 +174,36 @@ describe("createFalEngine", () => {
     expect(result).toEqual({ src: "https://x/a.mp3", kind: "audio" });
   });
 
+  it("runs a model as its withImages endpoint when images are attached, with the ratio only where that endpoint takes one", async () => {
+    const photo = { src: "data:image/png;base64,AA", kind: "image" as const };
+    const image = mockThreeCallSequence({ result: { images: [{ url: "https://x/img.png" }] } });
+    await createFalEngine({ fetchImpl: image, pollIntervalMs: 0 }).generate({
+      modelId: "fal-ai/nano-banana-pro",
+      prompt: "a mug",
+      attachments: [photo],
+      aspectRatio: "4:5",
+    });
+    expect(image.mock.calls[0]![0]).toBe("/api/chai/fal/fal-ai/nano-banana-pro/edit");
+    expect(JSON.parse(image.mock.calls[0]![1].body)).toEqual({ prompt: "a mug", aspect_ratio: "4:5", image_urls: [photo.src] });
+
+    // MiniMax's image-to-video takes no ratio: the store already fitted the image to it.
+    const video = mockThreeCallSequence({ result: { video: { url: "https://x/v.mp4" } } });
+    await createFalEngine({ fetchImpl: video, pollIntervalMs: 0, outputKind: "video" }).generate({
+      modelId: "minimax/h3-max/text-to-video",
+      prompt: "it lifts off",
+      attachments: [photo],
+      aspectRatio: "16:9",
+    });
+    expect(video.mock.calls[0]![0]).toBe("/api/chai/fal/minimax/h3-max/image-to-video");
+    expect(JSON.parse(video.mock.calls[0]![1].body)).toEqual({ prompt: "it lifts off", image_url: photo.src });
+    expect(video.mock.calls[1]![0]).toBe("/api/chai/fal/minimax/h3-max/image-to-video/requests/req_1/status");
+
+    // Without images, the model's own endpoint as before.
+    const plain = mockThreeCallSequence({ result: { images: [{ url: "https://x/img.png" }] } });
+    await createFalEngine({ fetchImpl: plain, pollIntervalMs: 0 }).generate({ modelId: "fal-ai/nano-banana-pro", prompt: "a mug", attachments: [], aspectRatio: "4:5" });
+    expect(plain.mock.calls[0]![0]).toBe("/api/chai/fal/fal-ai/nano-banana-pro");
+  });
+
   it("passes through verdicts the backend proxy appended to the result", async () => {
     const fetchImpl = mockThreeCallSequence({
       result: {

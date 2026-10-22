@@ -113,6 +113,13 @@ export interface ModelOption {
    */
   falInput?: FalInputFormat;
   /**
+   * The Fal model to call instead when images are attached, for a model
+   * whose own endpoint takes a prompt only: e.g. Nano Banana Pro's edit
+   * endpoint, or a video model's image-to-video one. The Fal engine reads
+   * that model's inputs from the suggested lists or `FalEngineOptions.models`.
+   */
+  withImages?: string;
+  /**
    * The output aspect ratios the model takes, e.g. `["1:1", "16:9", "9:16"]`.
    * Composer's Aspect ratio menu offers only ratios the selected models
    * share, and the engine sends the pick in the model's own format. Leave

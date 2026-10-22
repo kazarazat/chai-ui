@@ -260,21 +260,30 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
         );
       }
 
-      const input = options.models?.find((m) => m.id === model)?.falInput;
-      const body = buildFalRequestBody({ prompt, attachments, model, aspectRatio, voice, input });
+      const known = (id: string) => options.models?.find((m) => m.id === id) ?? SUGGESTED_FAL_MODELS.get(id);
+      // With images attached, a model whose endpoint takes a prompt only
+      // runs as its `withImages` endpoint (an edit, or image-to-video).
+      const hasImages = (attachments ?? []).some((a) => a.kind === "image");
+      const target = (hasImages && known(model)?.withImages) || model;
+      const info = known(target);
+      // An endpoint that lists its ratios gets only one it takes. With none
+      // listed (image-to-video that follows the image), the start image was
+      // already fitted to the ratio, so there's nothing to send.
+      const sendRatio = target === model || info?.aspectRatios?.includes(aspectRatio ?? "") ? aspectRatio : undefined;
+      const body = buildFalRequestBody({ prompt, attachments, model: target, aspectRatio: sendRatio, voice, input: info?.falInput });
       if (signal?.aborted) throw abortError();
 
       try {
         // The submit itself isn't aborted mid-flight: without its request id
         // there'd be nothing to cancel at Fal.
-        const { requestId, status } = await submitFalJob({ endpoint, model, body, fetchImpl });
+        const { requestId, status } = await submitFalJob({ endpoint, model: target, body, fetchImpl });
         if (signal?.aborted) {
-          await cancelFalJob({ endpoint, model, requestId, fetchImpl });
+          await cancelFalJob({ endpoint, model: target, requestId, fetchImpl });
           throw abortError();
         }
         const result = await awaitFalJob({
           endpoint,
-          model,
+          model: target,
           requestId,
           status,
           fetchImpl,
@@ -282,7 +291,7 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
           timeoutMs,
           signal,
         }).catch(async (err) => {
-          if (isAbortError(err)) await cancelFalJob({ endpoint, model, requestId, fetchImpl });
+          if (isAbortError(err)) await cancelFalJob({ endpoint, model: target, requestId, fetchImpl });
           throw err;
         });
         const src = extractFalResultSrc(result, outputKind);

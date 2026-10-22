@@ -186,11 +186,13 @@ export function composerView(props: ComposerViewInput) {
 
   const multiModel = multiSelectModels || multiSelectUseCases;
   const rawPickedIds = multiModel ? modelIds : modelId ? [modelId] : [];
-  // The app's list for a use case, or Chai's suggested models when it gave none.
+  // The app's list for a use case, or Chai's suggested models when it gave
+  // none. Attachments don't change the list: with images attached, the Fal
+  // engine runs each model as its `withImages` endpoint.
   const rosterFor = (u: ComposerUseCase): { options: ModelOption[]; suggested: boolean } => {
     const given = multiSelectUseCases ? modelsByKind?.[u.kind] : models;
     if (given) return { options: given, suggested: false };
-    return { options: suggestedModels(u.edit ? "image-edit" : deriveGenerationUseCase(u, attachments)), suggested: true };
+    return { options: suggestedModels(u.edit ? "image-edit" : deriveGenerationUseCase(u, [])), suggested: true };
   };
   // One roster per use case with multi-use-case select (each gets its own menu); otherwise one.
   const modelSections = (multiSelectUseCases ? activeUseCases : activeUseCases.slice(0, 1))

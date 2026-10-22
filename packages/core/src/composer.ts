@@ -6,6 +6,7 @@
  * composable wrap; the pure transitions live in `run.ts`.
  */
 import {
+  abortError,
   createMockEngine,
   isAbortError,
   mockEngine,
@@ -29,6 +30,7 @@ import {
   type Run,
 } from "./run.js";
 import type { ComposerPromptField } from "./composer-view.js";
+import { fitImagesToRatio, type StartImageFit } from "./image-fit.js";
 import type { AudioUseCase, DroppedMedia, GenerationUseCase, MediaKind, ModelOption, OutputKind } from "./types.js";
 
 export interface ComposerAttachment extends DroppedMedia {
@@ -204,6 +206,13 @@ export interface ComposerOptions {
    * versions of the image. Changing it to another image starts over.
    */
   editImage?: DroppedMedia | null;
+  /**
+   * How a video's attached start image meets the picked aspect ratio:
+   * `"crop"` (the default) cuts it around its center, `"pad"` adds black
+   * bars. The ratio always wins, so the video comes out in it even on
+   * image-to-video models that otherwise take the image's shape.
+   */
+  startImageFit?: StartImageFit;
   /** Replaces how an edit's prompt and regions become the model's prompt. Defaults to `buildRegionEditPrompt`, in the model's `regionFormat`. */
   editPrompt?: (args: { prompt: string; regions: EditRegion[]; model?: ModelOption }) => string;
   onRun?: (run: Run) => void;
@@ -405,6 +414,13 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
 
     for (const { run: newRun, engine, isEdit, models } of newRuns) {
       opts.onRun?.(newRun);
+      // A video's start image is fitted to the picked ratio first, so the
+      // ratio wins on models that otherwise take the image's shape.
+      const ratio = newRun.request.params.aspectRatio as string | undefined;
+      const fitting =
+        ratio && newRun.request.mode === "image-to-video"
+          ? fitImagesToRatio(newRun.request.attachments, ratio, opts.startImageFit ?? "crop")
+          : null;
       for (const result of newRun.results) {
         update(newRun.id, (r) => startResult(r, result.id));
         // An edit's prompt depends on the model: one with box support gets
@@ -415,30 +431,38 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
         const prompt = isEdit
           ? (opts.editPrompt ?? defaultEditPrompt)({ prompt: newRun.request.prompt, regions, model })
           : newRun.request.prompt;
-        void engine
-          .generate({
+        const generate = (attachments: DroppedMedia[]) =>
+          engine.generate({
             modelId: result.modelId === DEFAULT_MODEL_ID ? undefined : result.modelId,
             prompt,
-            attachments: newRun.request.attachments,
-            aspectRatio: newRun.request.params.aspectRatio as string | undefined,
+            attachments,
+            aspectRatio: ratio,
             character: newRun.request.params.character as string | undefined,
             frameRate: newRun.request.params.frameRate as number | undefined,
             voice: newRun.request.params.voice as string | undefined,
             // Text engines that stream fill `output` in while still "running".
             onText: (text) => update(newRun.id, (r) => streamResult(r, result.id, text)),
             signal,
-          })
-          .then(
-            ({ src, kind, usage, evaluations }) => {
-              update(newRun.id, (r) => resolveResult(r, result.id, { src, kind }, usage, evaluations));
-              getOptions().onResult?.(newRun, result.id);
-            },
-            (err) => {
-              if (isAbortError(err)) return update(newRun.id, (r) => cancelResult(r, result.id));
-              update(newRun.id, (r) => failResult(r, result.id, normalizeGenerationError(err)));
-              getOptions().onError?.(newRun, result.id);
-            }
-          );
+          });
+        // Straight to the engine unless a start image is being fitted.
+        void (
+          fitting
+            ? fitting.then((fitted) => {
+                if (signal.aborted) throw abortError();
+                return generate(fitted);
+              })
+            : generate(newRun.request.attachments)
+        ).then(
+          ({ src, kind, usage, evaluations }) => {
+            update(newRun.id, (r) => resolveResult(r, result.id, { src, kind }, usage, evaluations));
+            getOptions().onResult?.(newRun, result.id);
+          },
+          (err) => {
+            if (isAbortError(err)) return update(newRun.id, (r) => cancelResult(r, result.id));
+            update(newRun.id, (r) => failResult(r, result.id, normalizeGenerationError(err)));
+            getOptions().onError?.(newRun, result.id);
+          }
+        );
       }
     }
   }

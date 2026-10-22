@@ -9,6 +9,7 @@ import {
   nextUseCases,
 } from "./composer-view.js";
 import { regionColor } from "./region-edit.js";
+import { SUGGESTED_IMAGE_MODELS, SUGGESTED_TEXT_TO_VIDEO_MODELS } from "./suggested-models.js";
 import type { ModelOption } from "./types.js";
 
 const IMAGE = { kind: "image" as const, label: "Image" };
@@ -116,15 +117,16 @@ describe("composerView", () => {
     expect(composerView({ value: "x", useCase: EDIT_IMAGE_USE_CASE }).showAspectRatio).toBe(false);
   });
 
-  it("keeps Aspect ratio for Create image with an attached image, alone or with other use cases", () => {
-    const ratios = (view: ReturnType<typeof composerView>) => (view.showAspectRatio ? view.aspectOptions.length : 0);
+  it("keeps each use case's models and Aspect ratio with images attached", () => {
     const handlers = { onModelChange: () => {}, onModelIdsChange: () => {} };
-    expect(ratios(composerView({ value: "x", attachments: [photo], useCase: IMAGE, ...handlers }))).toBeGreaterThan(0);
-    expect(ratios(composerView({ value: "x", attachments: [photo], multiSelectUseCases: true, useCases: [IMAGE], ...handlers }))).toBeGreaterThan(0);
-    const both = { value: "x", attachments: [photo], multiSelectUseCases: true, useCases: [IMAGE, VIDEO], ...handlers };
-    // With Video's image-to-video models too, only Veo crops: the menu shows once Image's model and Veo are picked.
-    expect(ratios(composerView({ ...both, modelIds: ["fal-ai/nano-banana-pro/edit", "fal-ai/veo3.1/fast/image-to-video"] }))).toBeGreaterThan(0);
-    expect(ratios(composerView({ ...both, modelIds: ["fal-ai/nano-banana-pro/edit", "minimax/h3-max/image-to-video"] }))).toBe(0);
+    const image = composerView({ value: "x", attachments: [photo], useCase: IMAGE, ...handlers });
+    expect(image.modelMenus[0]!.options).toEqual(SUGGESTED_IMAGE_MODELS);
+    expect(image.aspectOptions.length).toBeGreaterThan(0);
+    for (const m of SUGGESTED_TEXT_TO_VIDEO_MODELS) {
+      const video = composerView({ value: "x", attachments: [photo], useCase: VIDEO, modelId: m.id, ...handlers });
+      expect(video.modelMenus[0]!.options).toEqual(SUGGESTED_TEXT_TO_VIDEO_MODELS);
+      expect(video.aspectOptions.map((o) => o.value)).toEqual(m.aspectRatios);
+    }
     // Edit image keeps the image's shape, though its models take ratios.
     expect(composerView({ value: "x", attachments: [photo], useCase: EDIT_IMAGE_USE_CASE, ...handlers }).showAspectRatio).toBe(false);
   });
