@@ -18,3 +18,4 @@ export * from "./composer-view.js";
 export * from "./edit-card.js";
 export * from "./voice-input.js";
 export * from "./menu-placement.js";
+export * from "./image-fit.js";

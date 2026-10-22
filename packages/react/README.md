@@ -193,6 +193,19 @@ If routing can't run (no `ChaiProvider`, a failed reasoning call, an
 unlisted reply), the request runs on the first listed model and
 `onRoutingFallback` says why.
 
+### Attached images and the picked ratio
+
+Attaching images doesn't change the Model menu or hide Aspect ratio. Each
+suggested model names its image-taking Fal endpoint (`withImages`), and the
+Fal engine calls it when images are attached. The picked ratio always
+wins: image models take it directly, and a video's start image is fitted
+to it before it's sent, cropped around its center by default or padded
+with black bars:
+
+```tsx
+const { submit } = useComposer({ engine, startImageFit: "pad" }); // default "crop"
+```
+
 ### Where the bar sits: `menuPlacement`
 
 Every menu in the bar (the `+` menu, Model, Aspect ratio, Voice, Genre,

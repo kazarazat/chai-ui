@@ -28,6 +28,12 @@ describe("suggested models", () => {
     for (const m of SUGGESTED_FAL_MODELS.values()) expect(m.falInput).toBeDefined();
   });
 
+  it("points every withImages at a known model that takes images", () => {
+    const withImages = [...SUGGESTED_FAL_MODELS.values()].filter((m) => m.withImages);
+    expect(withImages.length).toBe(9);
+    for (const m of withImages) expect(SUGGESTED_FAL_MODELS.get(m.withImages!)?.falInput?.image).toBeDefined();
+  });
+
   it("gives edit models aspect ratios, and image-to-video only Veo's crops", () => {
     for (const m of SUGGESTED_EDIT_MODELS) expect(m.aspectRatios?.length).toBeGreaterThan(0);
     const cropping = SUGGESTED_IMAGE_TO_VIDEO_MODELS.filter((m) => m.aspectRatios);

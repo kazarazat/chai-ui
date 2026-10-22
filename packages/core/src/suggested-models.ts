@@ -19,31 +19,48 @@ import { DEFAULT_MAX_REGIONS } from "./region-edit.js";
 
 const NANO_BANANA_RATIOS = ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"];
 const FLUX_3_RATIOS = ["21:9", "2:1", "16:9", "3:2", "7:5", "4:3", "5:4", "1:1", "4:5", "3:4", "5:7", "2:3", "9:16", "1:2"];
-/** The ratios a named `image_size` covers (FLUX.1, GPT Image 2). */
+const NANO_BANANA_2_RATIOS = [...NANO_BANANA_RATIOS, "4:1", "1:4", "8:1", "1:8"];
+/** The ratios a named `image_size` covers (Flux 3 Klein, GPT Image 2). */
 const IMAGE_SIZE_RATIOS = ["1:1", "4:3", "16:9", "3:4", "9:16"];
 
-/** Create image, from a prompt. */
+/**
+ * Create image. Each model's `withImages` endpoint takes attached images
+ * (as references) and still the picked aspect ratio.
+ */
 export const SUGGESTED_IMAGE_MODELS: ModelOption[] = [
-  { id: "fal-ai/nano-banana-pro", label: "Nano Banana Pro", provider: "Google", speed: "standard", aspectRatios: NANO_BANANA_RATIOS, falInput: { aspectRatio: "aspect_ratio" } },
+  { id: "fal-ai/nano-banana-pro", label: "Nano Banana Pro", provider: "Google", speed: "standard", aspectRatios: NANO_BANANA_RATIOS, falInput: { aspectRatio: "aspect_ratio" }, withImages: "fal-ai/nano-banana-pro/edit" },
   {
     id: "fal-ai/nano-banana-2",
     label: "Nano Banana 2",
     provider: "Google",
     speed: "fast",
-    aspectRatios: [...NANO_BANANA_RATIOS, "4:1", "1:4", "8:1", "1:8"],
+    aspectRatios: NANO_BANANA_2_RATIOS,
     falInput: { aspectRatio: "aspect_ratio" },
+    withImages: "fal-ai/nano-banana-2/edit",
   },
-  { id: "blackforestlabs/flux-3/text-to-image", label: "Flux 3 Image", provider: "Black Forest Labs", speed: "standard", aspectRatios: FLUX_3_RATIOS, falInput: { aspectRatio: "aspect_ratio" } },
-  { id: "openai/gpt-image-2", label: "GPT Image 2", provider: "OpenAI", speed: "slow", aspectRatios: IMAGE_SIZE_RATIOS, falInput: { aspectRatio: "image_size" } },
-  { id: "fal-ai/flux/schnell", label: "FLUX.1 schnell", provider: "Black Forest Labs", speed: "fast", aspectRatios: IMAGE_SIZE_RATIOS, falInput: { aspectRatio: "image_size" } },
+  { id: "blackforestlabs/flux-3/text-to-image", label: "Flux 3 Image", provider: "Black Forest Labs", speed: "standard", aspectRatios: FLUX_3_RATIOS, falInput: { aspectRatio: "aspect_ratio" }, withImages: "blackforestlabs/flux-3/edit-image" },
+  { id: "openai/gpt-image-2", label: "GPT Image 2", provider: "OpenAI", speed: "slow", aspectRatios: IMAGE_SIZE_RATIOS, falInput: { aspectRatio: "image_size" }, withImages: "openai/gpt-image-2/edit" },
+  {
+    id: "blackforestlabs/flux-3/klein/text-to-image",
+    label: "Flux 3 Klein",
+    provider: "Black Forest Labs",
+    speed: "fast",
+    aspectRatios: IMAGE_SIZE_RATIOS,
+    falInput: { aspectRatio: "image_size" },
+    withImages: "blackforestlabs/flux-3/klein/edit-image",
+  },
 ];
 
-/** Create video, from a prompt alone. */
+/**
+ * Create video. With an image attached, each runs as its `withImages`
+ * image-to-video endpoint, the image as the first frame; the image is
+ * fitted to the picked ratio first (`startImageFit`).
+ */
 export const SUGGESTED_TEXT_TO_VIDEO_MODELS: ModelOption[] = [
-  { id: "minimax/h3-max/text-to-video", label: "MiniMax H3 Max", provider: "MiniMax", speed: "slow", aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], falInput: { aspectRatio: "aspect_ratio" } },
-  { id: "bytedance/seedance-2.5/text-to-video", label: "Seedance 2.5", provider: "ByteDance", speed: "slow", aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], falInput: { aspectRatio: "aspect_ratio" } },
-  { id: "fal-ai/kling-video/v3/pro/text-to-video", label: "Kling v3 Pro", provider: "Kling", speed: "slow", aspectRatios: ["16:9", "9:16", "1:1"], falInput: { aspectRatio: "aspect_ratio" } },
-  { id: "fal-ai/veo3.1/fast", label: "Veo 3.1 Fast", provider: "Google", speed: "standard", aspectRatios: ["16:9", "9:16"], falInput: { aspectRatio: "aspect_ratio" } },
+  { id: "minimax/h3-max/text-to-video", label: "MiniMax H3 Max", provider: "MiniMax", speed: "slow", aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], falInput: { aspectRatio: "aspect_ratio" }, withImages: "minimax/h3-max/image-to-video" },
+  { id: "bytedance/seedance-2.5/text-to-video", label: "Seedance 2.5", provider: "ByteDance", speed: "slow", aspectRatios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"], falInput: { aspectRatio: "aspect_ratio" }, withImages: "bytedance/seedance-2.5/image-to-video" },
+  { id: "fal-ai/kling-video/v3/pro/text-to-video", label: "Kling v3 Pro", provider: "Kling", speed: "slow", aspectRatios: ["16:9", "9:16", "1:1"], falInput: { aspectRatio: "aspect_ratio" }, withImages: "fal-ai/kling-video/v3/pro/image-to-video" },
+  { id: "fal-ai/veo3.1/fast", label: "Veo 3.1 Fast", provider: "Google", speed: "standard", aspectRatios: ["16:9", "9:16"], falInput: { aspectRatio: "aspect_ratio" }, withImages: "fal-ai/veo3.1/fast/image-to-video" },
 ];
 
 /**
@@ -122,7 +139,20 @@ export function suggestedModels(useCase: GenerationUseCase | undefined): ModelOp
   }
 }
 
+/** `withImages` endpoints in no menu of their own. */
+const IMAGE_INPUT_ONLY: ModelOption[] = [
+  { id: "fal-ai/nano-banana-2/edit", label: "Nano Banana 2", provider: "Google", speed: "fast", aspectRatios: NANO_BANANA_2_RATIOS, falInput: { aspectRatio: "aspect_ratio", image: "image_urls" } },
+  {
+    id: "blackforestlabs/flux-3/klein/edit-image",
+    label: "Flux 3 Klein",
+    provider: "Black Forest Labs",
+    speed: "fast",
+    aspectRatios: IMAGE_SIZE_RATIOS,
+    falInput: { aspectRatio: "image_size", image: "image_urls" },
+  },
+];
+
 /** Every suggested Fal model, by id: how the Fal engine knows each one's inputs. */
 export const SUGGESTED_FAL_MODELS: ReadonlyMap<string, ModelOption> = new Map(
-  [...SUGGESTED_IMAGE_MODELS, ...SUGGESTED_TEXT_TO_VIDEO_MODELS, ...SUGGESTED_IMAGE_TO_VIDEO_MODELS, ...SUGGESTED_EDIT_MODELS].map((m) => [m.id, m])
+  [...SUGGESTED_IMAGE_MODELS, ...SUGGESTED_TEXT_TO_VIDEO_MODELS, ...SUGGESTED_IMAGE_TO_VIDEO_MODELS, ...SUGGESTED_EDIT_MODELS, ...IMAGE_INPUT_ONLY].map((m) => [m.id, m])
 );
