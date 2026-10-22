@@ -28,8 +28,19 @@ describe("suggested models", () => {
     for (const m of SUGGESTED_FAL_MODELS.values()) expect(m.falInput).toBeDefined();
   });
 
-  it("keeps image-to-video and edits to the image's own shape", () => {
-    for (const m of [...SUGGESTED_IMAGE_TO_VIDEO_MODELS, ...SUGGESTED_EDIT_MODELS]) expect(m.aspectRatios).toBeUndefined();
+  it("gives edit models aspect ratios, and image-to-video only Veo's crops", () => {
+    for (const m of SUGGESTED_EDIT_MODELS) expect(m.aspectRatios?.length).toBeGreaterThan(0);
+    const cropping = SUGGESTED_IMAGE_TO_VIDEO_MODELS.filter((m) => m.aspectRatios);
+    expect(cropping.map((m) => [m.id, m.aspectRatios])).toEqual([["fal-ai/veo3.1/fast/image-to-video", ["16:9", "9:16"]]]);
+  });
+
+  it("sends an edit model's aspect ratio in its own field", () => {
+    expect(buildFalRequestBody({ prompt: "p", attachments: [image], model: "openai/gpt-image-2/edit", aspectRatio: "16:9" })).toMatchObject({
+      image_size: "landscape_16_9",
+    });
+    expect(buildFalRequestBody({ prompt: "p", attachments: [image], model: "fal-ai/nano-banana-pro/edit", aspectRatio: "4:5" })).toMatchObject({
+      aspect_ratio: "4:5",
+    });
   });
 });
 
