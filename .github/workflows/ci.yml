@@ -13,6 +13,8 @@ jobs:
   test:
     name: Test (React ${{ matrix.react }})
     runs-on: ubuntu-latest
+    # A hung download otherwise holds a required check for GitHub's 6-hour default.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -32,6 +34,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - name: Install Chromium for the browser tests
+        timeout-minutes: 10
         run: pnpm --filter @chai-ui/react exec playwright install --with-deps chromium
       - run: pnpm test
       - name: Coverage
