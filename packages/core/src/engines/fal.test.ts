@@ -204,6 +204,26 @@ describe("createFalEngine", () => {
     expect(plain.mock.calls[0]![0]).toBe("/api/chai/fal/fal-ai/nano-banana-pro");
   });
 
+  it("runs a builder's own model as its withImages endpoint, and drops a ratio that endpoint doesn't list", async () => {
+    const photo = { src: "data:image/png;base64,AA", kind: "image" as const };
+    const mine = { id: "me/t2v", label: "Mine", provider: "me", speed: "fast" as const, withImages: "me/i2v" };
+    const mineWithImages = { id: "me/i2v", label: "Mine", provider: "me", speed: "fast" as const, aspectRatios: ["16:9"], falInput: { image: "start_image_url" as const } };
+    const own = mockThreeCallSequence({ result: { video: { url: "https://x/v.mp4" } } });
+    await createFalEngine({ fetchImpl: own, pollIntervalMs: 0, outputKind: "video", models: [mine, mineWithImages] }).generate({
+      modelId: "me/t2v",
+      prompt: "go",
+      attachments: [photo],
+      aspectRatio: "1:1",
+    });
+    expect(own.mock.calls[0]![0]).toBe("/api/chai/fal/me/i2v");
+    expect(JSON.parse(own.mock.calls[0]![1].body)).toEqual({ prompt: "go", start_image_url: photo.src });
+
+    // No ratio picked: none sent.
+    const none = mockThreeCallSequence({ result: { video: { url: "https://x/v.mp4" } } });
+    await createFalEngine({ fetchImpl: none, pollIntervalMs: 0, outputKind: "video", models: [mine, mineWithImages] }).generate({ modelId: "me/t2v", prompt: "go", attachments: [photo] });
+    expect(JSON.parse(none.mock.calls[0]![1].body)).toEqual({ prompt: "go", start_image_url: photo.src });
+  });
+
   it("passes through verdicts the backend proxy appended to the result", async () => {
     const fetchImpl = mockThreeCallSequence({
       result: {

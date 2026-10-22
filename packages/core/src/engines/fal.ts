@@ -263,13 +263,13 @@ export function createFalEngine(options: FalEngineOptions = {}): GenerationEngin
       const known = (id: string) => options.models?.find((m) => m.id === id) ?? SUGGESTED_FAL_MODELS.get(id);
       // With images attached, a model whose endpoint takes a prompt only
       // runs as its `withImages` endpoint (an edit, or image-to-video).
-      const hasImages = (attachments ?? []).some((a) => a.kind === "image");
+      const hasImages = attachments.some((a) => a.kind === "image");
       const target = (hasImages && known(model)?.withImages) || model;
       const info = known(target);
       // An endpoint that lists its ratios gets only one it takes. With none
       // listed (image-to-video that follows the image), the start image was
       // already fitted to the ratio, so there's nothing to send.
-      const sendRatio = target === model || info?.aspectRatios?.includes(aspectRatio ?? "") ? aspectRatio : undefined;
+      const sendRatio = aspectRatio && (target === model || info?.aspectRatios?.includes(aspectRatio)) ? aspectRatio : undefined;
       const body = buildFalRequestBody({ prompt, attachments, model: target, aspectRatio: sendRatio, voice, input: info?.falInput });
       if (signal?.aborted) throw abortError();
 
