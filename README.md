@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/kazarazat/chai-ui/actions/workflows/ci.yml"><img src="https://github.com/kazarazat/chai-ui/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="https://codecov.io/gh/kazarazat/chai-ui"><img src="https://codecov.io/gh/kazarazat/chai-ui/graph/badge.svg" alt="Coverage" /></a>
-  <a href="https://www.npmjs.com/package/@chai-ui/react"><img src="https://img.shields.io/npm/v/@chai-ui/react?label=npm&color=009747" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@chai-ui/react"><img src="https://img.shields.io/npm/v/@chai-ui/react?label=npm&color=009747&logo=npm&logoColor=white" alt="npm version" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-009747" alt="MIT license" /></a>
   <a href="#install"><img src="https://img.shields.io/badge/React-18.3%20%7C%2019-61DAFB?logo=react&logoColor=white" alt="React 18.3 | 19" /></a>
   <a href="#install"><img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vuedotjs&logoColor=white" alt="Vue 3.5" /></a>
