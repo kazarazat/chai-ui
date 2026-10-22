@@ -1,5 +1,14 @@
 # @chai-ui/vue
 
+## 0.11.4
+
+### Patch Changes
+
+- ca123be: Composer: no auto-select with `multiSelectUseCases`. Each use case's Model menu is picked by hand: the "Auto-select model" switch no longer shows in those menus, and a builder's `autoSelectModel` is ignored in that mode (the submit payload's `autoSelectModel` is `false`). Before, every menu showed a switch, but they all controlled one shared setting.
+- Updated dependencies [ca123be]
+  - @chai-ui/core@0.11.4
+  - @chai-ui/tokens@0.11.4
+
 ## 0.11.3
 
 ### Patch Changes
