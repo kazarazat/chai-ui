@@ -33,9 +33,26 @@ jobs:
       - run: pnpm build
       - run: pnpm lint
       - run: pnpm typecheck
+      # Chromium comes from GitHub's cache when this Playwright version has
+      # run in the last 7 days; only a miss downloads it. Its system
+      # libraries aren't cached and install either way.
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(pnpm --filter @chai-ui/react exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache Chromium for the browser tests
+        id: chromium-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Chromium for the browser tests
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
         timeout-minutes: 10
         run: pnpm --filter @chai-ui/react exec playwright install --with-deps chromium
+      - name: Install Chromium's system libraries
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        timeout-minutes: 10
+        run: pnpm --filter @chai-ui/react exec playwright install-deps chromium
       - run: pnpm test
       - name: Coverage
         if: matrix.react == '18'
