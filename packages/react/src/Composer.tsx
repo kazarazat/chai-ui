@@ -378,10 +378,12 @@ export function Composer({
 
   async function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || !onAttachmentsChange) return;
+    // Counted now: the input is cleared for the next pick, which empties its live FileList.
+    const picked = fileList.length;
     // Edit mode works on one image: a new one replaces it, and the edit starts over.
     const { attachments: next, unsupported } = await composerAttachmentsFromFiles(fileList, attachments, editing);
     unsupported.forEach((name) => onUnsupportedFile?.(name));
-    onEvent?.(composerEvents.mediaAttached(fileList.length - unsupported.length, unsupported.length));
+    onEvent?.(composerEvents.mediaAttached(picked - unsupported.length, unsupported.length));
     if (next) onAttachmentsChange(next);
   }
 

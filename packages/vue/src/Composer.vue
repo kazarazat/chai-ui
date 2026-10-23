@@ -233,10 +233,12 @@ onScopeDispose(() => {
 async function onFiles(files: FileList | null) {
   const onAttachments = props["onUpdate:attachments"];
   if (!files || files.length === 0 || !onAttachments) return;
+  // Counted now: the input is cleared for the next pick, which empties its live FileList.
+  const picked = files.length;
   // Edit mode works on one image: a new one replaces it, and the edit starts over.
   const { attachments, unsupported } = await composerAttachmentsFromFiles(files, props.attachments, view.value.editing);
   unsupported.forEach((name) => emit("unsupportedFile", name));
-  props.onEvent?.(composerEvents.mediaAttached(files.length - unsupported.length, unsupported.length));
+  props.onEvent?.(composerEvents.mediaAttached(picked - unsupported.length, unsupported.length));
   if (attachments) onAttachments(attachments);
 }
 

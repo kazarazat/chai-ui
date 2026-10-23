@@ -606,10 +606,13 @@ export function composerContract(render: Render<ComposerProps>) {
   describe("Composer attachments", () => {
     it("reads picked files by kind and reports unsupported ones", async () => {
       const onUnsupportedFile = vi.fn();
-      const screen = harness({ onUnsupportedFile }, { holdAttachments: true });
+      const onEvent = vi.fn();
+      const screen = harness({ onUnsupportedFile, onEvent }, { holdAttachments: true });
       await userEvent.upload(fileInput(), [file("photo.png", "image/png"), file("clip.mp4", "video/mp4"), file("notes.txt", "text/plain")]);
       await expect.element(screen.getByRole("button", { name: "Remove attachment" }).nth(1)).toBeInTheDocument();
       expect(onUnsupportedFile).toHaveBeenCalledWith("notes.txt");
+      // Counted from the pick, not from the input after it's cleared.
+      expect(onEvent).toHaveBeenCalledWith({ name: "chai_composer_media_attached", properties: { count: 2, unsupported_count: 1 } });
       // An image shows as a thumbnail; other kinds show their icon.
       expect(document.querySelectorAll(".chai-composer__thumb-img")).toHaveLength(1);
       expect(document.querySelectorAll(".chai-composer__thumb-icon")).toHaveLength(1);
