@@ -23,6 +23,7 @@ pnpm lint        # design-token rules and the rules of React
 pnpm typecheck
 pnpm test        # unit tests, then real-browser component and accessibility tests
 pnpm pack-test   # installs the packed packages into a sample app and builds it
+pnpm check-docs  # the docs name real file paths and package exports
 ```
 
 The browser tests need Chromium once:

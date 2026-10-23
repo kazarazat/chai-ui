@@ -38,7 +38,12 @@ pnpm lint         # token rules + the rules of React (eslint-plugin-react-hooks)
 pnpm typecheck
 pnpm test         # unit tests, then real-browser component + axe tests, for React and Vue
 pnpm pack-test    # packs, installs into sandbox/consumer-app with npm, builds it
+pnpm check-docs   # after build: docs name real paths and exports (scripts/check-docs.mjs)
 ```
+
+When you add a source file, an export or a feature, update the docs that
+describe it in the same change (`pnpm check-docs` catches the mechanical
+part; reread the wording yourself).
 
 Browser tests need Chromium once:
 `pnpm --filter @chai-ui/react exec playwright install chromium`.
