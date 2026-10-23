@@ -6,8 +6,10 @@ import {
   formatCost,
   formatDuration,
   formatTokens,
+  resultCardEvents,
   resultModelLabel,
   shareMedia,
+  type ChaiEvent,
   type ModelOption,
   type Result,
 } from "@chai-ui/core";
@@ -83,6 +85,12 @@ export interface ResultCardProps {
   /** Configurable extra items in the "more" menu (reference: Figma "Result Card - More menu expanded") — entirely up to the host. Omit to hide the "more" button entirely. */
   moreActions?: ResultCardMoreAction[];
   disabled?: boolean;
+  /**
+   * Front-end analytics: a result appearing (done or failed), result
+   * actions, paging and opening the details side, one `ChaiEvent` each:
+   * `onEvent={(e) => posthog.capture(e.name, e.properties)}`.
+   */
+  onEvent?: (event: ChaiEvent) => void;
 }
 
 // --- Component ------------------------------------------------------------
@@ -98,8 +106,19 @@ export function ResultCard({
   onAction,
   moreActions,
   disabled,
+  onEvent,
 }: ResultCardProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  // Each result reports once, the first time it's shown done or failed.
+  const shownIds = useRef(new Set<string>());
+  useEffect(() => {
+    for (const r of results) {
+      if ((r.status === "done" || r.status === "error") && !shownIds.current.has(r.id)) {
+        shownIds.current.add(r.id);
+        onEvent?.(resultCardEvents.shown(r.status, r.output?.kind, results.length));
+      }
+    }
+  }, [results, onEvent]);
   const [flipped, setFlipped] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -196,21 +215,28 @@ export function ResultCard({
   // known TS limitation, not stylistic), so every one of these closing
   // over `result` needs to be an expression instead.
   const goTo = (index: number) => {
-    setActiveIndex(Math.max(0, Math.min(results.length - 1, index)));
+    const next = Math.max(0, Math.min(results.length - 1, index));
+    if (next !== clampedIndex) onEvent?.(resultCardEvents.paged(next, results.length));
+    setActiveIndex(next);
+  };
+
+  const act = (action: string, r: Result) => {
+    onEvent?.(resultCardEvents.action(action));
+    onAction(action, r);
   };
 
   const handleCopyPrompt = () => {
     navigator.clipboard?.writeText(prompt).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-    onAction("copy-prompt", result);
+    act("copy-prompt", result);
   };
 
   const handleDownload = async () => {
     if (result.output) {
       await downloadMedia(result.output.src, downloadFilename(result.id, result.output.kind, result.output.src));
     }
-    onAction("download", result);
+    act("download", result);
   };
 
   const handleShare = async () => {
@@ -219,7 +245,7 @@ export function ResultCard({
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 1500);
     }
-    onAction("share", result);
+    act("share", result);
   };
 
   const isVideo = result.output?.kind === "video";
@@ -284,7 +310,7 @@ export function ResultCard({
                     label="Like"
                     active={vote === "like"}
                     disabled={disabled}
-                    onClick={() => onAction("like", result)}
+                    onClick={() => act("like", result)}
                   >
                     <ThumbUpIcon />
                   </ResultIconButton>
@@ -293,11 +319,11 @@ export function ResultCard({
                     label="Dislike"
                     active={vote === "dislike"}
                     disabled={disabled}
-                    onClick={() => onAction("dislike", result)}
+                    onClick={() => act("dislike", result)}
                   >
                     <ThumbDownIcon />
                   </ResultIconButton>
-                  <ResultIconButton variant="pill" label="Retry" disabled={disabled} onClick={() => onAction("retry", result)}>
+                  <ResultIconButton variant="pill" label="Retry" disabled={disabled} onClick={() => act("retry", result)}>
                     <RefreshIcon />
                   </ResultIconButton>
                   {moreActions && moreActions.length > 0 && (
@@ -306,11 +332,14 @@ export function ResultCard({
                       open={moreOpen}
                       onOpenChange={setMoreOpen}
                       disabled={disabled}
-                      onSelect={(action) => onAction(action.id, result)}
+                      onSelect={(action) => act(action.id, result)}
                     />
                   )}
                 </div>
-                <ResultIconButton variant="round" label="Show details" disabled={disabled} onClick={() => setFlipped(true)}>
+                <ResultIconButton variant="round" label="Show details" disabled={disabled} onClick={() => {
+                  onEvent?.(resultCardEvents.infoOpened());
+                  setFlipped(true);
+                }}>
                   <InfoIcon />
                 </ResultIconButton>
               </div>

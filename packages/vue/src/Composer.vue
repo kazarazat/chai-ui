@@ -18,6 +18,7 @@ import "@material/web/fab/fab.js";
 import { computed, onScopeDispose, ref, shallowRef, watch } from "vue";
 import {
   composerAttachmentsFromFiles,
+  composerEvents,
   composerAttachMenuItems,
   composerView,
   createVoiceInput,
@@ -28,6 +29,7 @@ import {
   type ComposerSubmitPayload,
   type ComposerUseCase,
   type ComposerView,
+  type ChaiEvent,
   type EditRegion,
   type MediaKind,
   type MenuPlacement,
@@ -113,6 +115,8 @@ const props = withDefaults(
     submitting?: boolean;
     onAbort?: () => void;
     onAttachMenuSelect?: (action: ComposerAttachMenuAction) => void;
+    /** Front-end analytics (`@event`): what the person does in the bar, one `ChaiEvent` each, for any analytics tool. No prompt text or file contents, only lengths and counts. */
+    onEvent?: (event: ChaiEvent) => void;
     /** Which + menu items to show. Each still shows only when it can work. */
     attachMenuActions?: ComposerAttachMenuAction[];
     /** An edit's regions (from `useComposer`'s `edit`), shown as colored chips while editing. */
@@ -196,6 +200,7 @@ watch(
 );
 
 function pickModel(menu: ComposerView["modelMenus"][number], id: string) {
+  props.onEvent?.(composerEvents.modelPicked(menu.key, id));
   if (view.value.multiModel) props["onUpdate:modelIds"]?.(menu.next(id));
   else props["onUpdate:modelId"]?.(id);
 }
@@ -205,6 +210,7 @@ const enhancingField = ref<ComposerPromptField>("prompt");
 const enhanceField = (field: ComposerPromptField) =>
   props.onEnhance &&
   ((current: string) => {
+    props.onEvent?.(composerEvents.enhanceClicked(field, current.length));
     enhancingField.value = field;
     props.onEnhance?.(current, field, view.value.enhanceMode);
   });
@@ -230,17 +236,45 @@ async function onFiles(files: FileList | null) {
   // Edit mode works on one image: a new one replaces it, and the edit starts over.
   const { attachments, unsupported } = await composerAttachmentsFromFiles(files, props.attachments, view.value.editing);
   unsupported.forEach((name) => emit("unsupportedFile", name));
+  props.onEvent?.(composerEvents.mediaAttached(files.length - unsupported.length, unsupported.length));
   if (attachments) onAttachments(attachments);
 }
 
 function removeUseCase(useCase: ComposerUseCase) {
+  props.onEvent?.(composerEvents.useCaseRemoved(useCase));
   if (props.multiSelectUseCases) props["onUpdate:useCases"]?.(props.useCases.filter((u) => u.kind !== useCase.kind));
   else props.onClearUseCase?.();
 }
 
 function onSubmitClick() {
-  if (view.value.showStop) props.onAbort?.();
-  else if (!view.value.isSubmitDisabled && !props.submitting) emit("submit", view.value.payload());
+  if (view.value.showStop) {
+    props.onEvent?.(composerEvents.stopped());
+    props.onAbort?.();
+  } else if (!view.value.isSubmitDisabled && !props.submitting) {
+    const payload = view.value.payload();
+    props.onEvent?.(composerEvents.submitted(payload, Boolean(props.submitError)));
+    emit("submit", payload);
+  }
+}
+
+function onMenuSelect(action: ComposerAttachMenuAction) {
+  if (action !== "add-media") props.onEvent?.(composerEvents.useCasePicked(action));
+  props.onAttachMenuSelect?.(action);
+}
+
+function toggleAutoSelect(on: boolean) {
+  props.onEvent?.(composerEvents.autoSelectToggled(on));
+  props["onUpdate:autoSelectModel"]?.(on);
+}
+
+function onVoiceStart() {
+  props.onEvent?.(composerEvents.voiceStarted());
+}
+
+/** An option menu's pick, reported, then passed to its handler. */
+function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", id: string, apply: () => unknown) {
+  props.onEvent?.(composerEvents.optionPicked(option, id));
+  apply();
 }
 </script>
 
@@ -321,7 +355,7 @@ function onSubmitClick() {
           :images-only="view.editing"
           :disabled="disabled"
           :placement="menuPlacement"
-          @select="onAttachMenuSelect?.($event)"
+          @select="onMenuSelect($event)"
           @files="onFiles"
         />
 
@@ -344,7 +378,7 @@ function onSubmitClick() {
           :multiple="menu.multiple"
           :toggle-header="
             showAutoSelectToggle && view.offersAutoSelect
-              ? { label: 'Auto-select model', value: view.autoSelectModel, onChange: (v: boolean) => props['onUpdate:autoSelectModel']?.(v) }
+              ? { label: 'Auto-select model', value: view.autoSelectModel, onChange: toggleAutoSelect }
               : undefined
           "
           :trigger-label="menu.triggerLabel"
@@ -366,7 +400,7 @@ function onSubmitClick() {
           :searchable="false"
           trigger-variant="text"
           :disabled="disabled"
-          @select="props['onUpdate:aspectRatio']?.($event.id)"
+          @select="pickOption('aspect_ratio', $event.id, () => props['onUpdate:aspectRatio']?.($event.id))"
         />
 
         <SearchMenu
@@ -379,7 +413,7 @@ function onSubmitClick() {
           :searchable="view.voiceOptions.length > view.searchableAt"
           trigger-variant="text"
           :disabled="disabled"
-          @select="props['onUpdate:speechVoice']?.($event.id)"
+          @select="pickOption('voice', $event.id, () => props['onUpdate:speechVoice']?.($event.id))"
         />
 
         <SearchMenu
@@ -393,7 +427,7 @@ function onSubmitClick() {
           :searchable="view.genreOptions.length > view.searchableAt"
           trigger-variant="text"
           :disabled="disabled"
-          @select="props['onUpdate:genres']?.(view.toggledGenres($event.id))"
+          @select="pickOption('genre', $event.id, () => props['onUpdate:genres']?.(view.toggledGenres($event.id)))"
         />
 
         <SearchMenu
@@ -406,12 +440,18 @@ function onSubmitClick() {
           :searchable="false"
           trigger-variant="text"
           :disabled="disabled"
-          @select="props['onUpdate:frameRate']?.(Number($event.id))"
+          @select="pickOption('frame_rate', $event.id, () => props['onUpdate:frameRate']?.(Number($event.id)))"
         />
       </div>
 
       <div class="chai-composer__controls-end">
-      <VoiceButton v-if="voiceInput" :voice="voice" :state="voiceState" :disabled="disabled" />
+      <VoiceButton
+        v-if="voiceInput"
+        :voice="voice"
+        :state="voiceState"
+        :disabled="disabled"
+        :on-start="onVoiceStart"
+      />
       <!-- MD3's md-fab has no disabled state of its own; Chai's unfilled-until-ready look comes from `data-ready` in style.css. `label=""` keeps it a plain icon FAB.
            Hidden while a recording is made or transcribed: the transcript is sent once it's in the prompt to check. -->
       <md-fab

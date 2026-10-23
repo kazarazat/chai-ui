@@ -481,6 +481,57 @@ export function composerContract(render: Render<ComposerProps>) {
     });
   });
 
+  describe("Composer analytics events", () => {
+    it("reports what the person does through onEvent, with lengths and counts but no prompt text", async () => {
+      const onEvent = vi.fn();
+      const screen = harness(
+        {
+          value: "a red mug",
+          useCase: IMAGE,
+          models: [SQUARE_WIDE, WIDE_TALL],
+          aspectRatio: "16:9",
+          onEnhance: () => {},
+          onClearUseCase: () => {},
+          onAttachMenuSelect: () => {},
+          onEvent,
+        },
+        { holdModel: true }
+      );
+      await screen.getByText("Select model").click();
+      await screen.getByRole("button", { name: "Square and wide" }).click();
+      await screen.getByRole("button", { name: "16:9", expanded: false }).click();
+      await screen.getByRole("button", { name: "1:1" }).click();
+      await screen.getByRole("button", { name: "Optimize prompt" }).click();
+      await screen.getByRole("button", { name: "Add media" }).click();
+      await screen.getByRole("menuitem", { name: "Create video" }).click();
+      await screen.getByRole("button", { name: "Submit" }).click();
+      await screen.getByText("Image", { exact: true }).hover();
+      await screen.getByRole("button", { name: "Remove Image" }).click();
+
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_composer_model_picked", properties: { use_case: "image", model_id: "fal/sw" } },
+        { name: "chai_composer_option_picked", properties: { option: "aspect_ratio", value: "1:1" } },
+        { name: "chai_composer_enhance_clicked", properties: { field: "prompt", prompt_length: 9 } },
+        { name: "chai_composer_use_case_picked", properties: { action: "create-video" } },
+        {
+          name: "chai_composer_submitted",
+          properties: { use_cases: "image", model_count: 1, auto_select: false, aspect_ratio: "16:9", attachment_count: 0, prompt_length: 9, retry: false },
+        },
+        { name: "chai_composer_use_case_removed", properties: { use_case: "image" } },
+      ]);
+      expect(JSON.stringify(onEvent.mock.calls)).not.toContain("a red mug");
+    });
+
+    it("reports Stop, and not Add media as a use-case pick", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ value: "a mug", submitting: true, onAbort: () => {}, onAttachMenuSelect: () => {}, onAttachmentsChange: () => {}, onEvent });
+      await screen.getByRole("button", { name: "Stop" }).click();
+      await screen.getByRole("button", { name: "Add media" }).click();
+      await screen.getByRole("menuitem", { name: "Add media" }).click();
+      expect(onEvent.mock.calls.map((c) => c[0].name)).toEqual(["chai_composer_stopped"]);
+    });
+  });
+
   describe("Composer attach menu", () => {
     it("opens, lists the actions, reports a pick and closes", async () => {
       const onAttachMenuSelect = vi.fn();

@@ -13,8 +13,10 @@ import {
   formatCost,
   formatDuration,
   formatTokens,
+  resultCardEvents,
   resultModelLabel,
   shareMedia,
+  type ChaiEvent,
   type ModelOption,
   type Result,
 } from "@chai-ui/core";
@@ -46,6 +48,8 @@ const props = defineProps<{
   /** Extra items in the ⋯ menu. Omit to hide the menu. */
   moreActions?: ResultCardMoreAction[];
   disabled?: boolean;
+  /** Front-end analytics (`@event`): a result appearing, result actions, paging and opening the details side, one `ChaiEvent` each. */
+  onEvent?: (event: ChaiEvent) => void;
 }>();
 const emit = defineEmits<{
   /** `"like"`, `"dislike"`, `"download"`, `"share"`, `"copy-prompt"`, `"retry"`, or a `moreActions` id. */
@@ -98,7 +102,38 @@ const { slide, endSlide } = usePageSlide(() => ({
   image: kind.value === "image" ? result.value!.output!.src : undefined,
 }));
 
-const act = (action: string) => emit("action", action, result.value!);
+/** A result action: reported, then emitted with the result it's for. */
+function report(action: string, r: Result) {
+  props.onEvent?.(resultCardEvents.action(action));
+  emit("action", action, r);
+}
+const act = (action: string) => report(action, result.value!);
+
+/** Paging to another result, reported. */
+function goTo(next: number) {
+  if (next !== index.value) props.onEvent?.(resultCardEvents.paged(next, props.results.length));
+  activeIndex.value = next;
+}
+
+function openInfo() {
+  props.onEvent?.(resultCardEvents.infoOpened());
+  flipped.value = true;
+}
+
+// Each result reports once, the first time it's shown done or failed.
+const shownIds = new Set<string>();
+watch(
+  () => props.results,
+  (results) => {
+    for (const r of results) {
+      if ((r.status === "done" || r.status === "error") && !shownIds.has(r.id)) {
+        shownIds.add(r.id);
+        props.onEvent?.(resultCardEvents.shown(r.status, r.output?.kind, results.length));
+      }
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 function flash(flag: typeof copied) {
   flag.value = true;
@@ -114,14 +149,14 @@ function copyPrompt() {
 async function download() {
   const r = result.value!;
   if (r.output) await downloadMedia(r.output.src, downloadFilename(r.id, r.output.kind, r.output.src));
-  emit("action", "download", r);
+  report("download", r);
 }
 
 async function share() {
   const r = result.value!;
   // With no share sheet the link is copied; say so, or the click looks like nothing happened.
   if (r.output && (await shareMedia(r.output.src)) === "copied") flash(linkCopied);
-  emit("action", "share", r);
+  report("share", r);
 }
 
 // Flipping moves focus to the side now showing, so a keyboard user isn't left on a button that just turned away.
@@ -206,7 +241,7 @@ function onOverlayKeydown(e: KeyboardEvent) {
               :index="index"
               label="Results"
               :disabled="disabled"
-              @update:index="activeIndex = $event"
+              @update:index="goTo($event)"
             />
           </div>
 
@@ -223,7 +258,7 @@ function onOverlayKeydown(e: KeyboardEvent) {
                 <IconButton variant="pill" label="Retry" :disabled="disabled" @click="act('retry')"><RefreshIcon /></IconButton>
                 <MoreMenu v-if="moreActions?.length" :actions="moreActions" :disabled="disabled" @select="act($event.id)" />
               </div>
-              <IconButton variant="round" label="Show details" :disabled="disabled" @click="flipped = true"><InfoIcon /></IconButton>
+              <IconButton variant="round" label="Show details" :disabled="disabled" @click="openInfo"><InfoIcon /></IconButton>
             </div>
           </div>
         </div>

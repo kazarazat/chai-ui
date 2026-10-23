@@ -105,6 +105,9 @@ into the page. Left out, it's `"auto"`: each menu goes where it fits.
 - **`ResultCard`**: one prompt's results, paged, with votes, retry,
   download, share, details, streaming text and quality-check tags (from
   your backend, or the opt-in judge: `useComposer({ judgeModel, judgeChecks })`).
+- **Analytics:** `@event` on `Composer` and `ResultCard` reports what the
+  person does and sees, one `ChaiEvent` each, for any analytics tool:
+  `@event="(e) => posthog.capture(e.name, e.properties)"`.
 - **`EditCard`**: marked regions with their own instructions, and each
   edit as a new version.
 - **`useComposer`**, **`ChaiProvider`**, and the `Toggle`, `SearchMenu`

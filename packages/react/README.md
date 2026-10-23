@@ -236,6 +236,28 @@ The judge's prompt is `buildJudgePrompt` (exported, so you can read it).
 Pass `judgePrompt` to replace it, calling `buildJudgePrompt` to add to it
 rather than rewrite it.
 
+### Analytics: `onEvent`
+
+`Composer` and `ResultCard` report what the person does and sees, one
+`ChaiEvent` each, for whatever analytics tool you use. Write one function
+and pass it to each component:
+
+```tsx
+import posthog from "posthog-js";
+import type { ChaiEvent } from "@chai-ui/react";
+
+const track = (e: ChaiEvent) => posthog.capture(e.name, e.properties);
+
+<Composer onEvent={track} … />
+<ResultCard onEvent={track} … />
+```
+
+Events cover submits, Stop, use case, model and option picks, attachments,
+Enhance, voice input, results shown (once each), result actions, paging and
+the details side. They're front end only: no prompt text, file names, URLs
+or outputs, only lengths, counts and Chai's own ids. Track model calls,
+latency and cost on your server, where they're accurate.
+
 ### Where the bar sits: `menuPlacement`
 
 Every menu in the bar (the `+` menu, Model, Aspect ratio, Voice, Genre,
