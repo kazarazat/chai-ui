@@ -37,7 +37,7 @@ option.
 |---|---|
 | `Composer` | A prompt bar for image, video, audio, text and world models, with attachments, use cases, a pre-filled model menu whose aspect ratios match each model, prompt optimization, auto-select routing, stop and opt-in voice input. |
 | `MediaAnalyzer` | Turns a dropped image, video or audio clip into a generation-ready prompt, with the analysis model and prompt length chosen by the user. |
-| `ResultCard` | Shows one prompt's image, video, audio or streaming text results with like, retry, download, share, a details flip and pass or fail quality checks. |
+| `ResultCard` | Shows one prompt's results from one or several models in a single card, paging between them, as image, video, audio or streaming text with like, retry, download, share, a details flip and pass or fail quality checks. |
 | `EditCard` | Edits an image through regions drawn on it, each with its own instruction, then pages from the original through every edited version. |
 
 ## Install
