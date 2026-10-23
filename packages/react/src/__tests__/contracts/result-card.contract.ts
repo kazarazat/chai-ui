@@ -122,6 +122,33 @@ export function resultCardContract(render: Render<ResultCardProps>) {
     });
   });
 
+  describe("ResultCard analytics events", () => {
+    it("reports each result once when it's shown, then actions, paging and opening details", async () => {
+      const onEvent = vi.fn();
+      const props = { results: [result("r1", { status: "running", output: undefined }), result("r2")], prompt: "a mug", onAction: () => {}, onEvent };
+      const screen = render(props);
+      await expect.poll(() => onEvent.mock.calls.length).toBe(1);
+      await screen.rerender({ ...props, results: [result("r1"), result("r2")] });
+      await screen.rerender({ ...props, results: [result("r1"), result("r2")] });
+      await expect.poll(() => onEvent.mock.calls.length).toBe(2);
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_result_shown", properties: { status: "done", output_kind: "image", result_count: 2 } },
+        { name: "chai_result_shown", properties: { status: "done", output_kind: "image", result_count: 2 } },
+      ]);
+
+      onEvent.mockClear();
+      await userEvent.click(screen.getByRole("slider", { name: "Results" }));
+      await userEvent.keyboard("{End}");
+      await screen.getByRole("button", { name: "Like" }).first().click();
+      await screen.getByRole("button", { name: "Show details" }).click();
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_result_paged", properties: { index: 1, count: 2 } },
+        { name: "chai_result_action", properties: { action: "like" } },
+        { name: "chai_result_info_opened", properties: {} },
+      ]);
+    });
+  });
+
   describe("ResultCard info side", () => {
     it("shows the model, usage, timing, shape and evaluations, and copies the prompt", async () => {
       const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);

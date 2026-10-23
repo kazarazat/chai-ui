@@ -20,3 +20,4 @@ export * from "./voice-input.js";
 export * from "./menu-placement.js";
 export * from "./image-fit.js";
 export * from "./evaluation-judge.js";
+export * from "./analytics-events.js";

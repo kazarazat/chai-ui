@@ -5,6 +5,7 @@ import * as React from "react";
 import { MdFab } from "@material/web/fab/fab.js";
 import {
   composerAttachmentsFromFiles,
+  composerEvents,
   composerAttachMenuItems,
   composerView,
   createVoiceInput,
@@ -15,6 +16,7 @@ import {
   regionColor,
   TEXT_USE_CASE,
   menuOpensAbove,
+  type ChaiEvent,
   type ComposerAttachMenuAction,
   type ComposerPromptField,
   type MenuPlacement,
@@ -31,6 +33,7 @@ export {
   EDIT_IMAGE_USE_CASE,
   TEXT_USE_CASE,
   type AudioUseCase,
+  type ChaiEvent,
   type ComposerAttachMenuAction,
   type ComposerAttachment,
   type ComposerPromptField,
@@ -199,6 +202,13 @@ export interface ComposerProps {
   onAbort?: () => void;
   onAttachMenuSelect?: (action: ComposerAttachMenuAction) => void;
   /**
+   * Front-end analytics: what the person does in the bar (submit, stop,
+   * picks, attachments, Enhance, voice), one `ChaiEvent` each, for any
+   * analytics tool: `onEvent={(e) => posthog.capture(e.name, e.properties)}`.
+   * No prompt text or file contents are sent, only lengths and counts.
+   */
+  onEvent?: (event: ChaiEvent) => void;
+  /**
    * Which `+` menu items to show. Defaults to all of them. Either way, an
    * item only shows when it can work: "Add media" needs
    * `onAttachmentsChange`, and the use-case items need `onAttachMenuSelect`.
@@ -279,6 +289,7 @@ export function Composer({
   submitting = false,
   onAbort,
   onAttachMenuSelect,
+  onEvent,
   attachMenuActions,
   regions = [],
   onRegionsChange,
@@ -319,6 +330,7 @@ export function Composer({
   const { editing, isSubmitDisabled, showStop, multiModel, aspectOptions, offeredAspect } = view;
 
   function pickModel(menu: (typeof view.modelMenus)[number], id: string) {
+    onEvent?.(composerEvents.modelPicked(menu.key, id));
     if (!multiModel) return onModelChange?.(id);
     onModelIdsChange?.(menu.next(id));
   }
@@ -352,6 +364,7 @@ export function Composer({
   const enhanceField = (field: ComposerPromptField) =>
     onEnhance &&
     ((current: string) => {
+      onEvent?.(composerEvents.enhanceClicked(field, current.length));
       setEnhancingField(field);
       onEnhance(current, field, view.enhanceMode);
     });
@@ -365,9 +378,12 @@ export function Composer({
 
   async function handleFilesSelected(fileList: FileList | null) {
     if (!fileList || fileList.length === 0 || !onAttachmentsChange) return;
+    // Counted now: the input is cleared for the next pick, which empties its live FileList.
+    const picked = fileList.length;
     // Edit mode works on one image: a new one replaces it, and the edit starts over.
     const { attachments: next, unsupported } = await composerAttachmentsFromFiles(fileList, attachments, editing);
     unsupported.forEach((name) => onUnsupportedFile?.(name));
+    onEvent?.(composerEvents.mediaAttached(picked - unsupported.length, unsupported.length));
     if (next) onAttachmentsChange(next);
   }
 
@@ -421,6 +437,7 @@ export function Composer({
             note="(required)"
             hint={view.environmentHint}
             onEnhance={enhanceField("environment")}
+            onRevert={() => onEvent?.(composerEvents.enhanceReverted("environment"))}
             enhancing={enhancing && enhancingField === "environment"}
             disabled={disabled}
           />
@@ -432,6 +449,7 @@ export function Composer({
               heading="Character"
               note="(optional)"
               onEnhance={enhanceField("character")}
+              onRevert={() => onEvent?.(composerEvents.enhanceReverted("character"))}
               enhancing={enhancing && enhancingField === "character"}
               disabled={disabled}
             />
@@ -444,6 +462,7 @@ export function Composer({
           placeholder={view.placeholder}
           label={promptLabel}
           onEnhance={enhanceField("prompt")}
+          onRevert={() => onEvent?.(composerEvents.enhanceReverted("prompt"))}
           enhancing={enhancing}
           disabled={disabled}
         />
@@ -468,7 +487,10 @@ export function Composer({
           {menuItems.length > 0 && (
             <ComposerAttachMenu
               items={menuItems}
-              onSelect={onAttachMenuSelect}
+              onSelect={(action) => {
+                if (action !== "add-media") onEvent?.(composerEvents.useCasePicked(action));
+                onAttachMenuSelect?.(action);
+              }}
               onAddMediaFiles={handleFilesSelected}
               imagesOnly={editing}
               disabled={disabled}
@@ -481,9 +503,12 @@ export function Composer({
               key={u.kind}
               useCase={u}
               onRemove={
-                multiSelectUseCases
-                  ? onUseCasesChange && (() => onUseCasesChange(useCases.filter((x) => x.kind !== u.kind)))
-                  : onClearUseCase
+                (multiSelectUseCases ? onUseCasesChange : onClearUseCase) &&
+                (() => {
+                  onEvent?.(composerEvents.useCaseRemoved(u));
+                  if (multiSelectUseCases) onUseCasesChange?.(useCases.filter((x) => x.kind !== u.kind));
+                  else onClearUseCase?.();
+                })
               }
               disabled={disabled}
             />
@@ -509,7 +534,10 @@ export function Composer({
                     ? {
                         label: "Auto-select model",
                         value: autoSelect,
-                        onChange: (v) => onAutoSelectModelChange?.(v),
+                        onChange: (v) => {
+                          onEvent?.(composerEvents.autoSelectToggled(v));
+                          onAutoSelectModelChange?.(v);
+                        },
                       }
                     : undefined
                 }
@@ -530,7 +558,10 @@ export function Composer({
               value={offeredAspect}
               triggerLabel={view.selectedAspect?.label ?? "Aspect ratio"}
               menuLabel="Aspect ratio"
-              onSelect={(opt) => onAspectRatioChange?.(opt.id)}
+              onSelect={(opt) => {
+                onEvent?.(composerEvents.optionPicked("aspect_ratio", opt.id));
+                onAspectRatioChange?.(opt.id);
+              }}
               searchable={false}
               triggerVariant="text"
               disabled={disabled}
@@ -551,7 +582,10 @@ export function Composer({
               value={view.offeredVoice}
               triggerLabel={view.voiceTriggerLabel}
               menuLabel="Voice"
-              onSelect={(opt) => onSpeechVoiceChange(opt.id)}
+              onSelect={(opt) => {
+                onEvent?.(composerEvents.optionPicked("voice", opt.id));
+                onSpeechVoiceChange(opt.id);
+              }}
               searchable={view.voiceOptions.length > view.searchableAt}
               triggerVariant="text"
               disabled={disabled}
@@ -566,7 +600,10 @@ export function Composer({
               multiple
               triggerLabel={view.genreTriggerLabel}
               menuLabel="Genre"
-              onSelect={(opt) => onGenresChange(view.toggledGenres(opt.id))}
+              onSelect={(opt) => {
+                onEvent?.(composerEvents.optionPicked("genre", opt.id));
+                onGenresChange(view.toggledGenres(opt.id));
+              }}
               searchable={view.genreOptions.length > view.searchableAt}
               triggerVariant="text"
               disabled={disabled}
@@ -580,7 +617,10 @@ export function Composer({
               value={view.offeredFrameRate == null ? null : String(view.offeredFrameRate)}
               triggerLabel={view.offeredFrameRate == null ? "Frame rate" : `${view.offeredFrameRate}fps`}
               menuLabel="Frame rate"
-              onSelect={(opt) => onFrameRateChange(Number(opt.id))}
+              onSelect={(opt) => {
+                onEvent?.(composerEvents.optionPicked("frame_rate", opt.id));
+                onFrameRateChange(Number(opt.id));
+              }}
               searchable={false}
               triggerVariant="text"
               disabled={disabled}
@@ -625,7 +665,7 @@ export function Composer({
             clickable regardless of `isSubmitDisabled` since a request
             already in flight isn't gated on the field having content. */}
         <div className="chai-composer__controls-end">
-        {voiceInput && <VoiceButton voice={voice} disabled={disabled} />}
+        {voiceInput && <VoiceButton voice={voice} disabled={disabled} onStart={() => onEvent?.(composerEvents.voiceStarted())} />}
         {/* No submit while a recording is being made or transcribed: the
             person sends the transcript once it's in the prompt to check. */}
         {!(voiceInput && (voice.state.status === "recording" || voice.state.status === "transcribing")) && (
@@ -647,8 +687,14 @@ export function Composer({
             ariaDisabled: showStop ? "false" : submitting ? "true" : isSubmitDisabled ? "true" : "false",
           } as Record<string, unknown>)}
           onClick={() => {
-            if (showStop) onAbort?.();
-            else if (!isSubmitDisabled && !submitting) onSubmit(view.payload());
+            if (showStop) {
+              onEvent?.(composerEvents.stopped());
+              onAbort?.();
+            } else if (!isSubmitDisabled && !submitting) {
+              const payload = view.payload();
+              onEvent?.(composerEvents.submitted(payload, Boolean(submitError)));
+              onSubmit(payload);
+            }
           }}
         >
           <span slot="icon">
@@ -700,7 +746,7 @@ function VoiceWaveform({ levels, elapsedMs }: { levels: number[]; elapsedMs: num
  * the recording and transcribes it; while transcribing, a spinner, and a
  * click cancels.
  */
-function VoiceButton({ voice, disabled }: { voice: ReturnType<typeof useVoice>; disabled: boolean }) {
+function VoiceButton({ voice, disabled, onStart }: { voice: ReturnType<typeof useVoice>; disabled: boolean; onStart: () => void }) {
   const { status } = voice.state;
   const label =
     status === "recording" ? "Stop recording and transcribe" : status === "transcribing" ? "Cancel transcription" : "Start voice input";
@@ -709,6 +755,7 @@ function VoiceButton({ voice, disabled }: { voice: ReturnType<typeof useVoice>; 
     else if (status === "transcribing") voice.cancel();
     else {
       voice.dismiss();
+      onStart();
       void voice.start();
     }
   }
@@ -757,6 +804,7 @@ function PromptField({
   note,
   hint,
   onEnhance,
+  onRevert,
   enhancing,
   disabled,
 }: {
@@ -770,6 +818,8 @@ function PromptField({
   /** Shown under a headed field, e.g. why submit can't go yet. */
   hint?: string | null;
   onEnhance?: (value: string) => void;
+  /** After an Enhance, the button's "Revert to original" click. */
+  onRevert?: () => void;
   enhancing: boolean;
   disabled: boolean;
 }) {
@@ -844,6 +894,7 @@ function PromptField({
       setEnhancedValue(null);
       setOriginalValue(null);
       if (original != null) onChange(original);
+      onRevert?.();
       return;
     }
     setOriginalValue(value); // snapshot now — before the rewrite lands, for undo

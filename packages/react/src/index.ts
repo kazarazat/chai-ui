@@ -35,6 +35,8 @@ export {
   combinesWithOthers,
   buildJudgePrompt,
   DEFAULT_EVALUATION_CHECKS,
+  composerEvents,
+  resultCardEvents,
 } from "@chai-ui/core";
 export type {
   DroppedMedia,
@@ -42,6 +44,8 @@ export type {
   Evaluation,
   EvaluationCheck,
   JudgePromptInput,
+  ChaiEvent,
+  ChaiEventName,
   GenerationEngine,
   GenerationUseCase,
   MediaAnalysisKind,

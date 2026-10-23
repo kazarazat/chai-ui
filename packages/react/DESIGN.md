@@ -172,6 +172,7 @@ Rules:
 | Feedback | Like/dislike fire `onAction`, and the displayed vote comes from `getVote` | Store votes yourself |
 | Details | The flip side shows prompt, model, tokens, cost and duration | Supply `models` so ids resolve to labels |
 | Quality checks | Each result's `evaluations` render on the flip side: green with a check if it passed, red with a cross if it failed | Run your checks in your backend proxy and add a top-level `evaluations: [{ id, label, passed }]` field to the JSON it returns (for a stream, send it as its own `data:` chunk). The built-in Fal and OpenRouter engines read that field, a custom engine returns it from `generate`, and `useComposer` puts it on the matching `Result`. Or turn on the opt-in judge: `useComposer({ judgeModel, judgeChecks })` has a model you name check each text or image result against your criteria, one tag per check, after your backend's. It's off by default, with no default model, and there are no confidence scores. |
+| Analytics | Nothing visible: `Composer` and `ResultCard` report interactions through `onEvent` (`@event` in Vue), one `ChaiEvent` each | Pass one function to each component, e.g. `(e) => posthog.capture(e.name, e.properties)`. Events are front end only (what the person did and saw), with no prompt text, file names, URLs or outputs. Track model calls, latency and cost on your server. |
 
 `ResultCard` is where a run ends. Don't add a "use as input" action that
 feeds a result back into a `Composer`. Chaining steps like that is

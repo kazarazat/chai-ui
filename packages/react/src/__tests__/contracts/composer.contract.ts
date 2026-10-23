@@ -141,10 +141,11 @@ export function composerContract(render: Render<ComposerProps>) {
 
   describe("Composer prompt optimization", () => {
     /** An app whose Enhance rewrites the prompt to `rewrite` after a moment. */
-    function enhancing(rewrite: string) {
+    function enhancing(rewrite: string, onEvent?: (e: unknown) => void) {
       const screen = harness({
         value: "a mug",
         enhancing: false,
+        onEvent,
         onEnhance: () => {
           screen.rerender({ enhancing: true });
           setTimeout(() => screen.rerender({ value: rewrite, enhancing: false }), 20);
@@ -153,14 +154,19 @@ export function composerContract(render: Render<ComposerProps>) {
       return screen;
     }
 
-    it("optimize then undo restores the original prompt", async () => {
+    it("optimize then undo restores the original prompt, and reports both", async () => {
       const rewrite = "a red ceramic mug on oak, ".repeat(12); // past the reveal's length cap, so no animation
-      const screen = enhancing(rewrite);
+      const onEvent = vi.fn();
+      const screen = enhancing(rewrite, onEvent);
       await screen.getByRole("button", { name: "Optimize prompt" }).click();
       await expect.element(screen.getByRole("textbox")).toHaveValue(rewrite);
       await screen.getByRole("button", { name: "Revert to original prompt" }).click();
       await expect.element(screen.getByRole("textbox")).toHaveValue("a mug");
       await expect.element(screen.getByRole("button", { name: "Optimize prompt" })).toBeVisible();
+      expect(onEvent.mock.calls.map((call) => call[0])).toEqual([
+        { name: "chai_composer_enhance_clicked", properties: { field: "prompt", prompt_length: 5 } },
+        { name: "chai_composer_enhance_reverted", properties: { field: "prompt" } },
+      ]);
     });
 
     it("reveals a short rewrite, then undo restores the original", async () => {
@@ -481,6 +487,57 @@ export function composerContract(render: Render<ComposerProps>) {
     });
   });
 
+  describe("Composer analytics events", () => {
+    it("reports what the person does through onEvent, with lengths and counts but no prompt text", async () => {
+      const onEvent = vi.fn();
+      const screen = harness(
+        {
+          value: "a red mug",
+          useCase: IMAGE,
+          models: [SQUARE_WIDE, WIDE_TALL],
+          aspectRatio: "16:9",
+          onEnhance: () => {},
+          onClearUseCase: () => {},
+          onAttachMenuSelect: () => {},
+          onEvent,
+        },
+        { holdModel: true }
+      );
+      await screen.getByText("Select model").click();
+      await screen.getByRole("button", { name: "Square and wide" }).click();
+      await screen.getByRole("button", { name: "16:9", expanded: false }).click();
+      await screen.getByRole("button", { name: "1:1" }).click();
+      await screen.getByRole("button", { name: "Optimize prompt" }).click();
+      await screen.getByRole("button", { name: "Add media" }).click();
+      await screen.getByRole("menuitem", { name: "Create video" }).click();
+      await screen.getByRole("button", { name: "Submit" }).click();
+      await screen.getByText("Image", { exact: true }).hover();
+      await screen.getByRole("button", { name: "Remove Image" }).click();
+
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_composer_model_picked", properties: { use_case: "image", model_id: "fal/sw" } },
+        { name: "chai_composer_option_picked", properties: { option: "aspect_ratio", value: "1:1" } },
+        { name: "chai_composer_enhance_clicked", properties: { field: "prompt", prompt_length: 9 } },
+        { name: "chai_composer_use_case_picked", properties: { action: "create-video" } },
+        {
+          name: "chai_composer_submitted",
+          properties: { use_cases: "image", model_count: 1, auto_select: false, aspect_ratio: "16:9", attachment_count: 0, prompt_length: 9, retry: false },
+        },
+        { name: "chai_composer_use_case_removed", properties: { use_case: "image" } },
+      ]);
+      expect(JSON.stringify(onEvent.mock.calls)).not.toContain("a red mug");
+    });
+
+    it("reports Stop, and not Add media as a use-case pick", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ value: "a mug", submitting: true, onAbort: () => {}, onAttachMenuSelect: () => {}, onAttachmentsChange: () => {}, onEvent });
+      await screen.getByRole("button", { name: "Stop" }).click();
+      await screen.getByRole("button", { name: "Add media" }).click();
+      await screen.getByRole("menuitem", { name: "Add media" }).click();
+      expect(onEvent.mock.calls.map((c) => c[0].name)).toEqual(["chai_composer_stopped"]);
+    });
+  });
+
   describe("Composer attach menu", () => {
     it("opens, lists the actions, reports a pick and closes", async () => {
       const onAttachMenuSelect = vi.fn();
@@ -555,10 +612,13 @@ export function composerContract(render: Render<ComposerProps>) {
   describe("Composer attachments", () => {
     it("reads picked files by kind and reports unsupported ones", async () => {
       const onUnsupportedFile = vi.fn();
-      const screen = harness({ onUnsupportedFile }, { holdAttachments: true });
+      const onEvent = vi.fn();
+      const screen = harness({ onUnsupportedFile, onEvent }, { holdAttachments: true });
       await userEvent.upload(fileInput(), [file("photo.png", "image/png"), file("clip.mp4", "video/mp4"), file("notes.txt", "text/plain")]);
       await expect.element(screen.getByRole("button", { name: "Remove attachment" }).nth(1)).toBeInTheDocument();
       expect(onUnsupportedFile).toHaveBeenCalledWith("notes.txt");
+      // Counted from the pick, not from the input after it's cleared.
+      expect(onEvent).toHaveBeenCalledWith({ name: "chai_composer_media_attached", properties: { count: 2, unsupported_count: 1 } });
       // An image shows as a thumbnail; other kinds show their icon.
       expect(document.querySelectorAll(".chai-composer__thumb-img")).toHaveLength(1);
       expect(document.querySelectorAll(".chai-composer__thumb-icon")).toHaveLength(1);

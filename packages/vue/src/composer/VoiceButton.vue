@@ -4,7 +4,7 @@ import { computed } from "vue";
 import type { VoiceInput, VoiceInputState } from "@chai-ui/core";
 import { MicIcon, StopIcon } from "../icons.js";
 
-const props = defineProps<{ voice: VoiceInput; state: VoiceInputState; disabled?: boolean }>();
+const props = defineProps<{ voice: VoiceInput; state: VoiceInputState; disabled?: boolean; onStart?: () => void }>();
 
 const label = computed(() =>
   props.state.status === "recording"
@@ -20,6 +20,7 @@ function onClick() {
   else if (status === "transcribing") props.voice.cancel();
   else {
     props.voice.dismiss();
+    props.onStart?.();
     void props.voice.start();
   }
 }
