@@ -49,7 +49,7 @@ pnpm changeset
 ```
 
 Pick the bump (patch, minor or major) and write one line for the
-changelog. The three packages share one version.
+changelog. The four packages share one version.
 
 ## License
 
