@@ -141,10 +141,11 @@ export function composerContract(render: Render<ComposerProps>) {
 
   describe("Composer prompt optimization", () => {
     /** An app whose Enhance rewrites the prompt to `rewrite` after a moment. */
-    function enhancing(rewrite: string) {
+    function enhancing(rewrite: string, onEvent?: (e: unknown) => void) {
       const screen = harness({
         value: "a mug",
         enhancing: false,
+        onEvent,
         onEnhance: () => {
           screen.rerender({ enhancing: true });
           setTimeout(() => screen.rerender({ value: rewrite, enhancing: false }), 20);
@@ -153,14 +154,19 @@ export function composerContract(render: Render<ComposerProps>) {
       return screen;
     }
 
-    it("optimize then undo restores the original prompt", async () => {
+    it("optimize then undo restores the original prompt, and reports both", async () => {
       const rewrite = "a red ceramic mug on oak, ".repeat(12); // past the reveal's length cap, so no animation
-      const screen = enhancing(rewrite);
+      const onEvent = vi.fn();
+      const screen = enhancing(rewrite, onEvent);
       await screen.getByRole("button", { name: "Optimize prompt" }).click();
       await expect.element(screen.getByRole("textbox")).toHaveValue(rewrite);
       await screen.getByRole("button", { name: "Revert to original prompt" }).click();
       await expect.element(screen.getByRole("textbox")).toHaveValue("a mug");
       await expect.element(screen.getByRole("button", { name: "Optimize prompt" })).toBeVisible();
+      expect(onEvent.mock.calls.map((call) => call[0])).toEqual([
+        { name: "chai_composer_enhance_clicked", properties: { field: "prompt", prompt_length: 5 } },
+        { name: "chai_composer_enhance_reverted", properties: { field: "prompt" } },
+      ]);
     });
 
     it("reveals a short rewrite, then undo restores the original", async () => {

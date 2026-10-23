@@ -269,6 +269,10 @@ function toggleAutoSelect(on: boolean) {
   props["onUpdate:autoSelectModel"]?.(on);
 }
 
+function revertField(field: ComposerPromptField) {
+  props.onEvent?.(composerEvents.enhanceReverted(field));
+}
+
 function onVoiceStart() {
   props.onEvent?.(composerEvents.voiceStarted());
 }
@@ -319,6 +323,7 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
         note="(required)"
         :hint="view.environmentHint"
         :on-enhance="enhanceField('environment')"
+        :on-revert="() => revertField('environment')"
         :enhancing="Boolean(enhancing) && enhancingField === 'environment'"
         :disabled="disabled"
         @change="emit('update:modelValue', $event)"
@@ -330,6 +335,7 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
         heading="Character"
         note="(optional)"
         :on-enhance="enhanceField('character')"
+        :on-revert="() => revertField('character')"
         :enhancing="Boolean(enhancing) && enhancingField === 'character'"
         :disabled="disabled"
         @change="props['onUpdate:character']?.($event)"
@@ -341,6 +347,7 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
       :placeholder="view.placeholder"
       :label="promptLabel"
       :on-enhance="enhanceField('prompt')"
+      :on-revert="() => revertField('prompt')"
       :enhancing="Boolean(enhancing)"
       :disabled="disabled"
       @change="emit('update:modelValue', $event)"

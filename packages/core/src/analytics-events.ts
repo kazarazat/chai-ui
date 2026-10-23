@@ -36,6 +36,7 @@ export type ChaiEvent =
       properties: { option: "aspect_ratio" | "voice" | "genre" | "frame_rate"; value: string };
     }
   | { name: "chai_composer_enhance_clicked"; properties: { field: ComposerPromptField; prompt_length: number } }
+  | { name: "chai_composer_enhance_reverted"; properties: { field: ComposerPromptField } }
   | { name: "chai_composer_voice_started"; properties: Record<string, never> }
   | {
       name: "chai_result_shown";
@@ -89,6 +90,7 @@ export const composerEvents = {
     name: "chai_composer_enhance_clicked",
     properties: { field, prompt_length: promptLength },
   }),
+  enhanceReverted: (field: ComposerPromptField): ChaiEvent => ({ name: "chai_composer_enhance_reverted", properties: { field } }),
   voiceStarted: (): ChaiEvent => ({ name: "chai_composer_voice_started", properties: {} }),
 };
 

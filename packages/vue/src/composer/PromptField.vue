@@ -19,6 +19,8 @@ const props = defineProps<{
   /** Shown under a headed field, e.g. why submit can't go yet. */
   hint?: string | null;
   onEnhance?: (value: string) => void;
+  /** After an Enhance, the button's "Revert to original" click. */
+  onRevert?: () => void;
   enhancing: boolean;
   disabled: boolean;
 }>();
@@ -81,6 +83,7 @@ function onOptimizeClick() {
     enhancedValue.value = null;
     originalValue.value = null;
     if (original != null) emit("change", original);
+    props.onRevert?.();
     return;
   }
   originalValue.value = props.value; // for undo, before the rewrite lands

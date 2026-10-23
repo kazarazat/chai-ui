@@ -437,6 +437,7 @@ export function Composer({
             note="(required)"
             hint={view.environmentHint}
             onEnhance={enhanceField("environment")}
+            onRevert={() => onEvent?.(composerEvents.enhanceReverted("environment"))}
             enhancing={enhancing && enhancingField === "environment"}
             disabled={disabled}
           />
@@ -448,6 +449,7 @@ export function Composer({
               heading="Character"
               note="(optional)"
               onEnhance={enhanceField("character")}
+              onRevert={() => onEvent?.(composerEvents.enhanceReverted("character"))}
               enhancing={enhancing && enhancingField === "character"}
               disabled={disabled}
             />
@@ -460,6 +462,7 @@ export function Composer({
           placeholder={view.placeholder}
           label={promptLabel}
           onEnhance={enhanceField("prompt")}
+          onRevert={() => onEvent?.(composerEvents.enhanceReverted("prompt"))}
           enhancing={enhancing}
           disabled={disabled}
         />
@@ -801,6 +804,7 @@ function PromptField({
   note,
   hint,
   onEnhance,
+  onRevert,
   enhancing,
   disabled,
 }: {
@@ -814,6 +818,8 @@ function PromptField({
   /** Shown under a headed field, e.g. why submit can't go yet. */
   hint?: string | null;
   onEnhance?: (value: string) => void;
+  /** After an Enhance, the button's "Revert to original" click. */
+  onRevert?: () => void;
   enhancing: boolean;
   disabled: boolean;
 }) {
@@ -888,6 +894,7 @@ function PromptField({
       setEnhancedValue(null);
       setOriginalValue(null);
       if (original != null) onChange(original);
+      onRevert?.();
       return;
     }
     setOriginalValue(value); // snapshot now — before the rewrite lands, for undo
