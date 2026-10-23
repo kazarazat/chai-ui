@@ -29,30 +29,16 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
 what Chai UI can do. Between them they cover every component, use case and
 option.
 
-<details>
-<summary><strong>Features</strong></summary>
+## Components
 
-- **Composer:** a prompt bar with attachments, use cases, a model menu,
-  prompt optimization, auto-select model routing, and a stop button. The
-  model menu comes filled with suggested models for each use case, the
-  aspect-ratio menu offers only what the selected model takes, and the
-  pick reaches the model in its own format, so you never write a model or
-  ratio list. Create world (opt-in) adds world model support: Environment
-  and Character prompts, each with its own Enhance, and a frame rate menu.
-  Voice input (opt-in) adds a mic: name a speech-to-text model, and the
-  transcript lands in the prompt to check before sending.
-- **MediaAnalyzer:** drop in an image, video or audio clip and get a
-  generation-ready prompt back.
-- **ResultCard:** one prompt's results (image, video, audio or text), with
-  like, retry, download, share, a details flip, and streaming text.
-  Quality checks show as pass or fail tags, from your backend or the
-  opt-in judge, which checks each result against your own criteria.
-- **EditCard:** edit an image by marking regions on it, each with its own
-  instruction, then page through the edits as versions.
-- **Engines:** Fal.ai for media generation, OpenRouter for reasoning, Vercel
-  AI Gateway for both, or your own. API keys stay on your server.
+<a href="https://chai-ui.com/docs/components"><img src=".github/components.png" alt="Chai UI's four components: Composer bar, Media analyzer, Result card and Edit card" /></a>
 
-</details>
+| Component | What it does |
+|---|---|
+| `Composer` | A prompt bar for image, video, audio, text and world models, with attachments, use cases, a pre-filled model menu whose aspect ratios match each model, prompt optimization, auto-select routing, stop and opt-in voice input. |
+| `MediaAnalyzer` | Turns a dropped image, video or audio clip into a generation-ready prompt, with the analysis model and prompt length chosen by the user. |
+| `ResultCard` | Shows one prompt's image, video, audio or streaming text results with like, retry, download, share, a details flip and pass or fail quality checks. |
+| `EditCard` | Edits an image through regions drawn on it, each with its own instruction, then pages from the original through every edited version. |
 
 ## Install
 
