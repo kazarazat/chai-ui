@@ -112,6 +112,11 @@ export function resolveResult(
   }));
 }
 
+/** The result with `evaluations` added after any it already has (e.g. the judge's after the backend's). */
+export function addEvaluations(run: Run, resultId: string, evaluations: Evaluation[]): Run {
+  return updateResult(run, resultId, (r) => ({ ...r, evaluations: [...(r.evaluations ?? []), ...evaluations] }));
+}
+
 export function failResult(run: Run, resultId: string, error: Result["error"]): Run {
   return updateResult(run, resultId, (r) => ({
     ...r,

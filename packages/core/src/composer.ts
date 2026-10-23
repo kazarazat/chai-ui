@@ -17,6 +17,7 @@ import { routeModel, type ModelRoutingInput, type ModelRoutingResult } from "./m
 import { buildRegionEditPrompt, PRECISE_EDIT_MODELS, type EditRegion } from "./region-edit.js";
 import { pickReasoning, reasoningModelFor, type Reasoning } from "./reasoning.js";
 import {
+  addEvaluations,
   cancelResult,
   createRun,
   deriveGenerationUseCase,
@@ -31,6 +32,13 @@ import {
 } from "./run.js";
 import type { ComposerPromptField } from "./composer-view.js";
 import { fitImagesToRatio, type StartImageFit } from "./image-fit.js";
+import {
+  buildJudgePrompt,
+  DEFAULT_EVALUATION_CHECKS,
+  parseJudgeReply,
+  type EvaluationCheck,
+  type JudgePromptInput,
+} from "./evaluation-judge.js";
 import type { AudioUseCase, DroppedMedia, GenerationUseCase, MediaKind, ModelOption, OutputKind } from "./types.js";
 
 export interface ComposerAttachment extends DroppedMedia {
@@ -213,6 +221,18 @@ export interface ComposerOptions {
    * image-to-video models that otherwise take the image's shape.
    */
   startImageFit?: StartImageFit;
+  /**
+   * Opt-in, off by default: the model that checks each text or image
+   * result against `judgeChecks`, run on the reasoning engine (a
+   * `ChaiProvider`, or `reasoningEngine`). Each check becomes a pass or
+   * fail tag in the result's `evaluations`, after any your backend added.
+   * There's no default model: you name it. Video results aren't judged.
+   */
+  judgeModel?: string;
+  /** What the judge checks, in your words. Defaults to `DEFAULT_EVALUATION_CHECKS`, one "Matches prompt" check. */
+  judgeChecks?: EvaluationCheck[];
+  /** Replaces the judge's prompt. Defaults to `buildJudgePrompt`; call it to add to the default rather than rewrite it. */
+  judgePrompt?: (input: JudgePromptInput) => string;
   /** Replaces how an edit's prompt and regions become the model's prompt. Defaults to `buildRegionEditPrompt`, in the model's `regionFormat`. */
   editPrompt?: (args: { prompt: string; regions: EditRegion[]; model?: ModelOption }) => string;
   onRun?: (run: Run) => void;
@@ -456,6 +476,7 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
           ({ src, kind, usage, evaluations }) => {
             update(newRun.id, (r) => resolveResult(r, result.id, { src, kind }, usage, evaluations));
             getOptions().onResult?.(newRun, result.id);
+            void judge(newRun, result.id, { src, kind }, signal);
           },
           (err) => {
             if (isAbortError(err)) return update(newRun.id, (r) => cancelResult(r, result.id));
@@ -464,6 +485,33 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
           }
         );
       }
+    }
+  }
+
+  // The opt-in judge: checks a text or image result against the builder's
+  // criteria and adds a tag per check. A reply it can't read adds none.
+  async function judge(run: Run, resultId: string, output: { src: string; kind: MediaKind }, signal: AbortSignal) {
+    const { judgeModel, judgeChecks = DEFAULT_EVALUATION_CHECKS, judgePrompt = buildJudgePrompt } = getOptions();
+    if (!judgeModel || (output.kind !== "text" && output.kind !== "image")) return;
+    const checks = judgeChecks.filter((c) => !c.kind || c.kind === output.kind);
+    if (checks.length === 0) return;
+    const r = reasoning();
+    if (!r) return warnOnce("[chai-ui] judgeModel is set, but there's no reasoning engine to run it. Wrap your app in <ChaiProvider> or pass reasoningEngine.");
+    const prompt = judgePrompt({
+      prompt: run.request.prompt,
+      output: output.kind === "image" ? { kind: "image" } : { kind: "text", text: output.src },
+      checks,
+    });
+    try {
+      const attachments: DroppedMedia[] = output.kind === "image" ? [{ src: output.src, kind: "image" }] : [];
+      const reply = await r.engine.generate({ modelId: judgeModel, prompt, attachments, signal });
+      const verdicts = parseJudgeReply(reply.src, checks);
+      if (!verdicts) return warnOnce(`[chai-ui] The judge model "${judgeModel}" replied without verdicts Chai can read, so no evaluations were added.`);
+      // Only on a run still shown: a newer submit's runs are left alone.
+      const add = (runs: Run[]) => runs.map((x) => (x.id === run.id ? addEvaluations(x, resultId, verdicts) : x));
+      set((s) => ({ runs: add(s.runs), editRuns: add(s.editRuns) }));
+    } catch (err) {
+      if (!isAbortError(err)) warnOnce(`[chai-ui] The judge model "${judgeModel}" failed, so no evaluations were added: ${normalizeGenerationError(err).message}`);
     }
   }
 
@@ -608,11 +656,16 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
 export type ComposerStore = ReturnType<typeof createComposerStore>;
 
 const warned = new Set<string>();
-/** One console warning per message per page load: auto-select is on with no reasoning model to route with. */
+/** One console warning per message per page load. */
+function warnOnce(message: string) {
+  if (warned.has(message)) return;
+  warned.add(message);
+  console.warn(message);
+}
+
+/** Auto-select is on with no reasoning model to route with. */
 export function warnNoReasoningOnce(consequence: string) {
-  if (warned.has(consequence)) return;
-  warned.add(consequence);
-  console.warn(
+  warnOnce(
     `[chai-ui] Auto-select model is on, but there's no reasoning model, so ${consequence}. Wrap your app in <ChaiProvider> to route with one.`
   );
 }

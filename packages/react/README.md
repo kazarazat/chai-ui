@@ -206,6 +206,36 @@ with black bars:
 const { submit } = useComposer({ engine, startImageFit: "pad" }); // default "crop"
 ```
 
+### Quality checks: `evaluations`
+
+Each result can carry pass or fail tags, shown on the ResultCard's flip
+side. They come from two places, and you can use either or both:
+
+- **Your backend:** add a top-level `evaluations: [{ id, label, passed }]`
+  field to the JSON your route returns (for a stream, send it as its own
+  `data:` chunk). The Fal and OpenRouter engines read it.
+- **The opt-in judge:** a model you name checks each text or image result
+  against your criteria, one tag per check. It runs on the reasoning engine
+  (`ChaiProvider`). It's off by default, with no default model. Without
+  `judgeChecks` it runs one general "Matches prompt" check. What else counts
+  as good is up to your app.
+
+```tsx
+const { submit } = useComposer({
+  engine,
+  judgeModel: "google/gemini-3.5-flash",
+  judgeChecks: [
+    // Your criteria, in your words. This one is an example for a marketing app's images.
+    { id: "on-brand", label: "On brand", criterion: "Photographic and polished, never cartoonish.", kind: "image" },
+    ...DEFAULT_EVALUATION_CHECKS,
+  ],
+});
+```
+
+The judge's prompt is `buildJudgePrompt` (exported, so you can read it).
+Pass `judgePrompt` to replace it, calling `buildJudgePrompt` to add to it
+rather than rewrite it.
+
 ### Where the bar sits: `menuPlacement`
 
 Every menu in the bar (the `+` menu, Model, Aspect ratio, Voice, Genre,

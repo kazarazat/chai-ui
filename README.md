@@ -23,6 +23,11 @@ Gateway or your own engine. For React and Vue.
 
 Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
 
+**Building with an AI agent?** Point it at [DESIGN.md](packages/react/DESIGN.md)
+(it also ships in both npm packages) and
+[chai-ui.com/llms.txt](https://chai-ui.com/llms.txt), then ask it what Chai
+UI can do. Between them they cover every component, use case and option.
+
 <details>
 <summary><strong>Features</strong></summary>
 
@@ -39,6 +44,8 @@ Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
   generation-ready prompt back.
 - **ResultCard:** one prompt's results (image, video, audio or text), with
   like, retry, download, share, a details flip, and streaming text.
+  Quality checks show as pass or fail tags, from your backend or the
+  opt-in judge, which checks each result against your own criteria.
 - **EditCard:** edit an image by marking regions on it, each with its own
   instruction, then page through the edits as versions.
 - **Engines:** Fal.ai for media generation, OpenRouter for reasoning, Vercel
