@@ -31,8 +31,6 @@ option.
 
 ## Components
 
-<a href="https://chai-ui.com/docs/components"><img src=".github/components.png" alt="Chai UI's four components: Composer bar, Media analyzer, Result card and Edit card" /></a>
-
 | Component | What it does |
 |---|---|
 | `Composer` | A prompt bar for image, video, audio, text and world models, with attachments, use cases, a pre-filled model menu whose aspect ratios match each model, prompt optimization, auto-select routing, stop and opt-in voice input. |
