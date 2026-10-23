@@ -103,7 +103,8 @@ into the page. Left out, it's `"auto"`: each menu goes where it fits.
 - **`MediaAnalyzer`** + **`useMediaAnalyzer`**: media in, a
   generation-ready prompt out.
 - **`ResultCard`**: one prompt's results, paged, with votes, retry,
-  download, share, details and streaming text.
+  download, share, details, streaming text and quality-check tags (from
+  your backend, or the opt-in judge: `useComposer({ judgeModel, judgeChecks })`).
 - **`EditCard`**: marked regions with their own instructions, and each
   edit as a new version.
 - **`useComposer`**, **`ChaiProvider`**, and the `Toggle`, `SearchMenu`

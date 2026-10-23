@@ -33,11 +33,15 @@ export {
   checkSuggestedModels,
   nextUseCases,
   combinesWithOthers,
+  buildJudgePrompt,
+  DEFAULT_EVALUATION_CHECKS,
 } from "@chai-ui/core";
 export type {
   DroppedMedia,
   EditRegion,
   Evaluation,
+  EvaluationCheck,
+  JudgePromptInput,
   GenerationEngine,
   GenerationUseCase,
   MediaAnalysisKind,

@@ -49,6 +49,8 @@ export {
   checkSuggestedModels,
   nextUseCases,
   combinesWithOthers,
+  buildJudgePrompt,
+  DEFAULT_EVALUATION_CHECKS,
 } from "@chai-ui/core";
 export type {
   AudioUseCase,
@@ -62,6 +64,8 @@ export type {
   EditRegion,
   EditVersion,
   Evaluation,
+  EvaluationCheck,
+  JudgePromptInput,
   GenerationEngine,
   GenerationUseCase,
   MediaAnalysisKind,
