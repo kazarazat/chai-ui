@@ -16,7 +16,7 @@ pnpm build
 ## Checks
 
 Run these before opening a pull request; CI runs the same ones on React
-18.3 and 19.
+18.3 and 19, and the Vue tests with them.
 
 ```sh
 pnpm lint        # design-token rules and the rules of React
@@ -34,6 +34,9 @@ The browser tests need Chromium once:
   CSS; `pnpm lint` enforces it. A new color means a new token.
 - **Components are controlled.** Values come in as props and changes go
   out as callbacks.
+- **React and Vue stay identical.** Component behavior goes in
+  `@chai-ui/core`; the two packages only render it. Test behavior once, as
+  a contract in `packages/react/src/__tests__/contracts/`, which both run.
 - **Follow the rules of React.** The React Compiler lint rules are on.
 - **Keep accessibility green.** New UI needs a name for every control,
   keyboard operation, and 24px targets; the axe tests check WCAG 2.2 AA.
@@ -49,7 +52,7 @@ pnpm changeset
 ```
 
 Pick the bump (patch, minor or major) and write one line for the
-changelog. The three packages share one version.
+changelog. The four packages share one version.
 
 ## License
 

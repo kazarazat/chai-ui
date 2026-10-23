@@ -18,6 +18,6 @@ body:
     id: versions
     attributes:
       label: Versions
-      placeholder: "@chai-ui/react 0.1.0, React 19.1, Next.js 15"
+      placeholder: "@chai-ui/react 0.13.0, React 19.1, Next.js 15 (or @chai-ui/vue, Vue 3.5, Nuxt)"
     validations:
       required: true

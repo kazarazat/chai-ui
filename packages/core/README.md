@@ -16,7 +16,7 @@ The headless core behind Chai UI's components: the data types, the
 Request → Run → Result model a submitted prompt flows through, and the
 pluggable generation engines that actually call models, and the components'
 behavior as small framework-free stores. No framework, no rendering:
-`@chai-ui/react` wraps the stores in hooks, and a Vue binding will wrap the
+`@chai-ui/react` wraps the stores in hooks, and `@chai-ui/vue` wraps the
 same stores.
 
 ## Layout
@@ -26,14 +26,24 @@ same stores.
 - `engine.ts` — the `GenerationEngine` interface every provider implements, `GenerationError`, and `mockEngine`/`createMockEngine` (placeholder output, no network call, no API key).
 - `engines/fal.ts` — `createFalEngine`, media generation through Fal.ai (the default).
 - `engines/openrouter.ts` — `createOpenRouterEngine`, text/reasoning through OpenRouter (prompt enhancement, media analysis).
+- `engines/vercel.ts` — `createVercelEngine`, text and image models through Vercel AI Gateway.
 - `media-analysis-prompts.ts` — the instruction text `MediaAnalyzer` sends, per media kind × prompt length.
 - `suggested-models.ts` — the suggested model lists per use case (Fal for generation, OpenRouter for analysis), each model with its verified aspect ratios and Fal input format; `suggestedModels(useCase)`.
 - `check-suggested-models.ts` — `checkSuggestedModels()`: checks those lists against Fal's and OpenRouter's catalogs as they are today. No key, no model run.
 - `model-routing.ts` — auto-select: `buildModelRoutingPrompt`, `parseModelRoutingReply`, and `routeModel`, which falls back to the first listed model instead of throwing.
 - `reasoning.ts` — the reasoning engine and models a `ChaiProvider` shares: `createReasoning`, `pickReasoning`, `reasoningModelFor` and the suggested defaults.
-- `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance, cancel, and image edit versions. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
+- `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance, cancel, image edit versions and the evaluation judge. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
+- `composer-view.ts` — what the `Composer` shows and submits, worked out from its props, for every binding: model menus, aspect ratios, use-case rules (`nextUseCases`).
+- `evaluation-judge.ts` — the opt-in judge: `EvaluationCheck`, `DEFAULT_EVALUATION_CHECKS`, `buildJudgePrompt`, `parseJudgeReply`.
+- `image-fit.ts` — `fitImageToRatio`: crops or pads a video's start image to the picked ratio (`startImageFit`).
+- `region-edit.ts` — region editing: the region shape, the models that read regions as boxes, and `buildRegionEditPrompt`.
+- `edit-card.ts` — `EditCard`'s geometry: region boxes, zoom and pan, and where the instruction field goes.
+- `voice-input.ts` — the Composer's voice input: record, send to a speech-to-text model, return the transcript.
+- `result-format.ts` — how `ResultCard` shows a result's details.
+- `media-actions.ts` — download and share for generated media.
+- `menu-placement.ts` — which way a component's menus open from their trigger.
 - `media-analyzer.ts` — `createMediaAnalyzerStore`, what `useMediaAnalyzer` wraps.
-- `server/` — `createChaiHandler` and `toNodeHandler`, exported from `@chai-ui/core/server` (server-only).
+- `server/` — `createChaiHandler` (`chai-handler.ts`) and `toNodeHandler` (`node.ts`), exported from `@chai-ui/core/server` (server-only).
 
 ## Suggested models, and checking them
 
