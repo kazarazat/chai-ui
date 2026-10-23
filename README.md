@@ -24,9 +24,10 @@ Gateway or your own engine. For React and Vue.
 Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
 
 **Building with an AI agent?** Point it at [DESIGN.md](packages/react/DESIGN.md)
-(it also ships in both npm packages) and
-[chai-ui.com/llms.txt](https://chai-ui.com/llms.txt), then ask it what Chai
-UI can do. Between them they cover every component, use case and option.
+(it also ships in both npm packages) and the full reference at
+[chai-ui.com/docs/llms.txt](https://chai-ui.com/docs/llms.txt), then ask it
+what Chai UI can do. Between them they cover every component, use case and
+option.
 
 <details>
 <summary><strong>Features</strong></summary>

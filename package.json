@@ -15,6 +15,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "pack-test": "./scripts/pack-test.sh",
+    "check-docs": "node scripts/check-docs.mjs",
     "clean": "turbo run clean && rimraf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",

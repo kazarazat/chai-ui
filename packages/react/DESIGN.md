@@ -36,7 +36,8 @@ use these names: `Results`, `Compare`, `ModelPicker`,
    your app.
 3. **Advanced selection is the builder's opt-in.** `multiSelectModels`
    and `multiSelectUseCases` are off by default. Turn them on only where
-   comparing models or making several media types at once is the point.
+   comparing models, or making an image and a video from one prompt, is the
+   point. With both use cases, show each run in its own `ResultCard`.
 4. **A callback's presence is the opt-in.** Omit `onEnhance` and there's
    no optimize button. Omit `onAbort` and there's no stop button. Omit
    `moreActions` and there's no ⋯ menu. Don't pass no-op handlers just to

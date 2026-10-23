@@ -7,13 +7,16 @@ Docs and live examples are at [chai-ui.com/docs](https://chai-ui.com/docs).
 ## Installation
 
 **Which packages do I need?**
-All three: `pnpm add @chai-ui/react @chai-ui/core @chai-ui/tokens`.
-`@chai-ui/react` has the components; the other two are its foundations.
+Three. For React: `pnpm add @chai-ui/react @chai-ui/core @chai-ui/tokens`.
+For Vue: `pnpm add @chai-ui/vue @chai-ui/core @chai-ui/tokens`. The
+framework package has the components; the other two are its foundations.
 
-**Which React versions work?** React 18.3 and 19.
+**Which versions work?** React 18.3 and 19, and Vue 3.5 or later (Nuxt
+included).
 
 **The components render unstyled.** Import the CSS once, tokens first:
-`import "@chai-ui/tokens/css";` then `import "@chai-ui/react/style.css";`.
+`import "@chai-ui/tokens/css";` then `import "@chai-ui/react/style.css";`
+(or `@chai-ui/vue/style.css`).
 
 ## Usage
 
