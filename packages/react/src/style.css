@@ -1468,6 +1468,22 @@
   border-radius: 29px;
   border: 1px solid var(--chai-color-semantic-control-border-soft);
   overflow: hidden;
+  /* WebKit (Safari) ignores `backface-visibility` here, likely because each
+     face clips (`overflow: hidden` with rounded corners) and composites its
+     media and floating controls on their own layers: the turned-away face
+     showed through mirrored, and on a paged card the back's chips showed
+     below the front. So the turned-away face is also faded out, swapping
+     when the card is edge-on: with the standard easing the turn reaches 90°
+     at 20% of the duration, not halfway (the curve starts fast). Opacity, not
+     visibility: focus moves to the incoming face as the flip starts, and a
+     hidden element can't take it. The turned-away face is already `inert`
+     (set in ResultCard), so it's out of the tab order either way. */
+  transition: opacity 0s linear calc(var(--chai-motion-duration-slow) * 0.2);
+}
+
+.chai-result-card--flipped .chai-result-card__front,
+.chai-result-card:not(.chai-result-card--flipped) .chai-result-card__back {
+  opacity: 0;
 }
 
 /* The media fills the face, with the controls floating over its bottom
