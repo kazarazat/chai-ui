@@ -1,5 +1,14 @@
 # @chai-ui/vue
 
+## 0.14.1
+
+### Patch Changes
+
+- 2b34fb9: ResultCard: fix the flip in Safari (WebKit). Flipping to the info side showed the front through, mirrored, and on a card with several results the info chips also showed below it. The turned-away face is now faded out when the card is edge-on, in every browser. Focus still moves to the info side's close button and back to Show details.
+- Updated dependencies [2b34fb9]
+  - @chai-ui/core@0.14.1
+  - @chai-ui/tokens@0.14.1
+
 ## 0.14.0
 
 ### Minor Changes
