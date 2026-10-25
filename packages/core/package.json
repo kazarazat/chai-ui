@@ -1,6 +1,6 @@
 {
   "name": "@chai-ui/core",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Chai UI headless core — the Request/Run/Result data model and pluggable generation engines (Fal.ai, OpenRouter, Vercel AI Gateway, mock). No framework, no rendering.",
   "license": "MIT",
   "author": "kazarazat",
