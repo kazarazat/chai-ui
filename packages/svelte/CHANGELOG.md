@@ -1,5 +1,12 @@
 # @chai-ui/svelte
 
+## 1.1.1
+
+### Patch Changes
+
+- @chai-ui/core@1.1.1
+  - @chai-ui/tokens@1.1.1
+
 ## 1.1.0
 
 ### Minor Changes
