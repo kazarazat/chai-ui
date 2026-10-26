@@ -1,8 +1,9 @@
 /**
  * Shared component tests ("contracts"): each one is written once against a
- * `render(props)` that the React and Vue packages each supply, so both
- * bindings are held to the same behavior. Props are React-shaped
- * (`onAction`); the Vue side passes them through as event listeners or maps them.
+ * `render(props)` that the React, Vue and Svelte packages each supply, so
+ * every binding is held to the same behavior. Props are React-shaped
+ * (`onAction`); Vue passes them through as event listeners or maps them,
+ * and Svelte takes them as they are.
  */
 import type { LocatorSelectors } from "@vitest/browser/context";
 

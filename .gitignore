@@ -14,3 +14,6 @@ sandbox/consumer-app/.tarballs
 sandbox/consumer-app/package-lock.json
 sandbox/vue-app/package-lock.json
 packages/vue/DESIGN.md
+packages/svelte/DESIGN.md
+# svelte-package's working copy.
+.svelte-kit
