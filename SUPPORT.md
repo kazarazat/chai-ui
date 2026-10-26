@@ -8,15 +8,16 @@ Docs and live examples are at [chai-ui.com/docs](https://chai-ui.com/docs).
 
 **Which packages do I need?**
 Three. For React: `pnpm add @chai-ui/react @chai-ui/core @chai-ui/tokens`.
-For Vue: `pnpm add @chai-ui/vue @chai-ui/core @chai-ui/tokens`. The
+For Vue: `pnpm add @chai-ui/vue @chai-ui/core @chai-ui/tokens`. For
+Svelte: `pnpm add @chai-ui/svelte @chai-ui/core @chai-ui/tokens`. The
 framework package has the components; the other two are its foundations.
 
-**Which versions work?** React 18.3 and 19, and Vue 3.5 or later (Nuxt
-included).
+**Which versions work?** React 18.3 and 19, Vue 3.5 or later (Nuxt
+included), and Svelte 5.20 or later (SvelteKit included).
 
 **The components render unstyled.** Import the CSS once, tokens first:
 `import "@chai-ui/tokens/css";` then `import "@chai-ui/react/style.css";`
-(or `@chai-ui/vue/style.css`).
+(or `@chai-ui/vue/style.css`, `@chai-ui/svelte/style.css`).
 
 ## Usage
 

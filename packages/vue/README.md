@@ -18,8 +18,9 @@ edit card, with the AI work built in and wired to Fal.ai, OpenRouter, Vercel
 AI Gateway or your own engine. Everything is controlled: you own the state with
 `v-model`, and the components render it.
 
-These are the same components as [`@chai-ui/react`](https://www.npmjs.com/package/@chai-ui/react),
-with the same behavior. Both packages are thin layers over
+These are the same components as [`@chai-ui/react`](https://www.npmjs.com/package/@chai-ui/react)
+and [`@chai-ui/svelte`](https://www.npmjs.com/package/@chai-ui/svelte),
+with the same behavior. All three are thin layers over
 `@chai-ui/core` and run one shared test suite, including the WCAG 2.2 AA
 checks (axe, keyboard and focus).
 
@@ -27,7 +28,7 @@ Building with it, or pointing a coding agent at it? Read
 [`DESIGN.md`](./DESIGN.md) (shipped in the package) for the usage rules,
 and the docs site's [`llms.txt`](https://chai-ui.com/docs/llms.txt) for
 the API. The code boxes on [chai-ui.com/docs](https://chai-ui.com/docs)
-switch between React and Vue.
+switch between React, Vue and Svelte.
 
 ## Install
 
