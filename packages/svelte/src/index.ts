@@ -1,5 +1,6 @@
 export { default as ChaiProvider } from "./ChaiProvider.svelte";
 export { default as Composer } from "./Composer.svelte";
+export { default as EditCard } from "./EditCard.svelte";
 export { default as ResultCard } from "./ResultCard.svelte";
 export { default as MediaAnalyzer } from "./MediaAnalyzer.svelte";
 export { default as Pagination } from "./primitives/Pagination.svelte";
