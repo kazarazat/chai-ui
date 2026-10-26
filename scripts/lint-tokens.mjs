@@ -161,7 +161,7 @@ for (const { file, decls } of parsed) {
 if (unknown.length) {
   console.error("lint-tokens: var() references a custom property that doesn't exist:");
   for (const u of unknown) console.error(`  ${u}`);
-  console.error("  Use a real token from @chai-ui/tokens (see packages/react/DESIGN.md), or define the property first.\n");
+  console.error("  Use a real token from @chai-ui/tokens (see packages/shared/DESIGN.md), or define the property first.\n");
 }
 if (literals.length) {
   console.error("lint-tokens: color literal — colors come from @chai-ui/tokens:");

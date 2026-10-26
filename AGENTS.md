@@ -36,6 +36,9 @@ as five packages that share one version:
   as `composer.run`. Components render on the server (SvelteKit), so
   browser-only APIs belong in effects or event handlers, never in
   `onDestroy` or the script body; `server-render.ssr.test.ts` checks it.
+- `packages/shared` (`@chai-ui/shared`, private, never published): the one
+  stylesheet, `DESIGN.md`, and the contract tests every binding builds and
+  tests from, so no binding is another's source.
 
 ## Commands
 
@@ -62,11 +65,11 @@ Browser tests need Chromium once:
   belong in `@chai-ui/core`; React, Vue and Svelte only render it and wire
   events.
 - **One test suite for all.** Component behavior is tested once, as
-  contracts in `packages/react/src/__tests__/contracts/`, which every
+  contracts in `packages/shared/contracts/`, which every
   binding runs. A change to behavior needs a contract test.
-- **One stylesheet and one `DESIGN.md`.** Both live in `packages/react`
-  and are copied into the Vue and Svelte packages at build. Edit only
-  React's copies.
+- **One stylesheet and one `DESIGN.md`.** Both live in `packages/shared`
+  (private, never published) with the contracts, and every binding copies
+  them at build. Edit only those; the bindings' copies are ignored by git.
 
 ## Rules
 
@@ -83,7 +86,7 @@ Browser tests need Chromium once:
 - **Accessibility: support WCAG 2.2 AA.** Every control has an accessible
   name, works by keyboard, and has a 24×24px target. Add new states to the
   component's "passes axe" contract test (`wcagViolations`, in
-  `packages/react/src/__tests__/axe.ts`); axe must stay at zero findings.
+  `packages/shared/contracts/axe.ts`); axe must stay at zero findings.
   Don't claim compliance in docs: Chai "supports" WCAG 2.2 AA, tested with
   automated checks.
 - **No real model calls in tests.** Inject a fake engine or `fetchImpl`.

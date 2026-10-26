@@ -37,7 +37,7 @@ The browser tests need Chromium once:
   out as callbacks.
 - **React, Vue and Svelte stay identical.** Component behavior goes in
   `@chai-ui/core`; the three packages only render it. Test behavior once,
-  as a contract in `packages/react/src/__tests__/contracts/`, which all
+  as a contract in `packages/shared/contracts/`, which all
   three run.
 - **Follow the rules of React.** The React Compiler lint rules are on.
 - **Keep accessibility green.** New UI needs a name for every control,

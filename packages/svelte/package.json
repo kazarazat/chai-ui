@@ -46,7 +46,7 @@
     "**/*.css"
   ],
   "scripts": {
-    "build": "rimraf dist && svelte-package -i src -o dist && node -e \"require('fs').copyFileSync('../react/src/style.css','dist/style.css');require('fs').copyFileSync('../react/DESIGN.md','DESIGN.md')\"",
+    "build": "rimraf dist && svelte-package -i src -o dist && node -e \"require('fs').copyFileSync('../shared/src/style.css','dist/style.css');require('fs').copyFileSync('../shared/DESIGN.md','DESIGN.md')\"",
     "dev": "svelte-package -i src -o dist --watch",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "lint": "echo \"(no lint configured yet)\"",

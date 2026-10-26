@@ -2,8 +2,8 @@ import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
 
 // Component tests: real Chromium via Playwright, mounting the components
-// with the package's real CSS. Most run the contracts shared with React
-// (../react/src/__tests__/contracts).
+// with the package's real CSS. Most run the contracts in @chai-ui/shared
+// (../shared/contracts).
 export default defineConfig({
   plugins: [vue({ template: { compilerOptions: { isCustomElement: (tag) => tag.startsWith("md-") } } })],
   optimizeDeps: { include: ["vue", "@material/web/all.js"] },

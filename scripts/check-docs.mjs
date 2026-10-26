@@ -33,7 +33,8 @@ const DOCS = [
   "packages/vue/README.md",
   "packages/svelte/README.md",
   "packages/tokens/README.md",
-  "packages/react/DESIGN.md",
+  "packages/shared/DESIGN.md",
+  "packages/shared/README.md",
 ];
 
 /** Hand-maintained files whose wording only a person (or agent) can check. */
@@ -136,10 +137,10 @@ const isApiName = (n) =>
 const sourceDefines = (name) =>
   tracked.some((f) => /^packages\/[^/]+\/src\/.*\.(ts|tsx|vue|svelte)$/.test(f) && new RegExp(`(function|const|class) ${name}\\b`).test(read(f)));
 
-const design = read("packages/react/DESIGN.md");
+const design = read("packages/shared/DESIGN.md");
 const notYet = (design.match(/These don't exist yet\.[\s\S]*?\n\n/)?.[0].match(/`(\w+)`/g) ?? []).map((n) => n.slice(1, -1));
 for (const name of notYet) {
-  if (exported.has(name)) errors.push(`packages/react/DESIGN.md: \`${name}\` is listed as not existing, but it's exported`);
+  if (exported.has(name)) errors.push(`packages/shared/DESIGN.md: \`${name}\` is listed as not existing, but it's exported`);
 }
 for (const doc of DOCS) {
   for (const [, name] of docText(doc).matchAll(/`(\w+)`/g)) {

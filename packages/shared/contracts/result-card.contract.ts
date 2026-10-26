@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import type { ModelOption, Result } from "@chai-ui/core";
-import { wcagViolations } from "../axe.js";
+import { wcagViolations } from "./axe.js";
 import type { Render } from "./render.js";
 
 export interface ResultCardProps {

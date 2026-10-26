@@ -1,5 +1,5 @@
 import EditCard from "../EditCard.vue";
-import { editCardContract, type EditCardProps } from "../../../react/src/__tests__/contracts/edit-card.contract.js";
+import { editCardContract, type EditCardProps } from "../../../shared/contracts/edit-card.contract.js";
 import { renderWith } from "./render.js";
 
 editCardContract(

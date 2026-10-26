@@ -1,5 +1,5 @@
 import Composer from "../Composer.svelte";
-import { composerContract, type ComposerProps } from "../../../react/src/__tests__/contracts/composer.contract.js";
+import { composerContract, type ComposerProps } from "../../../shared/contracts/composer.contract.js";
 import { renderWith } from "./render.js";
 
 /** React's `className` and style object are Svelte's `class` and style string; every other prop is the same. */
