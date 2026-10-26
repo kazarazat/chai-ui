@@ -28,15 +28,21 @@ as four packages that share one version:
   `packages/vue` (`@chai-ui/vue`, Vue 3.5): thin bindings with the same
   components (`Composer`, `MediaAnalyzer`, `ResultCard`, `EditCard`),
   `ChaiProvider`, `useComposer`, `useMediaAnalyzer` and the primitives.
+- `packages/svelte` (`@chai-ui/svelte`, Svelte 5): the third binding, in
+  progress and `private` until its components are done. Same prop and hook
+  names as React. Built with `svelte-package`, which ships the `.svelte`
+  files for the app's own compiler. The hooks use runes
+  (`useComposer.svelte.ts`) and return objects with getters, so they're read
+  as `composer.run`.
 
 ## Commands
 
 ```sh
 pnpm install
-pnpm build        # turbo: tokens -> core -> react and vue
+pnpm build        # turbo: tokens -> core -> react, vue and svelte
 pnpm lint         # token rules + the rules of React (eslint-plugin-react-hooks)
 pnpm typecheck
-pnpm test         # unit tests, then real-browser component + axe tests, for React and Vue
+pnpm test         # unit tests, then real-browser component + axe tests, for every binding
 pnpm pack-test    # packs, installs into sandbox/consumer-app with npm, builds it
 pnpm check-docs   # after build: docs name real paths and exports (scripts/check-docs.mjs)
 ```
@@ -51,12 +57,14 @@ Browser tests need Chromium once:
 ## How the bindings stay identical
 
 - **Behavior goes in core first.** A component's logic and derived state
-  belong in `@chai-ui/core`; React and Vue only render it and wire events.
-- **One test suite for both.** Component behavior is tested once, as
-  contracts in `packages/react/src/__tests__/contracts/`, which React and
-  Vue both run. A change to behavior needs a contract test.
+  belong in `@chai-ui/core`; React, Vue and Svelte only render it and wire
+  events.
+- **One test suite for all.** Component behavior is tested once, as
+  contracts in `packages/react/src/__tests__/contracts/`, which every
+  binding runs. A change to behavior needs a contract test.
 - **One stylesheet and one `DESIGN.md`.** Both live in `packages/react`
-  and are copied into the Vue package at build. Edit only React's copies.
+  and are copied into the Vue and Svelte packages at build. Edit only
+  React's copies.
 
 ## Rules
 
