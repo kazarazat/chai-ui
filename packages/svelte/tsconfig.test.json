@@ -1,0 +1,10 @@
+{
+  // The tests, and the contracts they share with React and Vue, which use
+  // ES2022 (`.at()`). The package itself stays on the base ES2021 library.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte"],
+  "exclude": []
+}
