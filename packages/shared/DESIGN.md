@@ -146,7 +146,7 @@ colors are driven by Chai tokens, not the other way around.
 | Overlays and media | `--chai-color-semantic-{overlay, on-overlay, scrim, media-backdrop}` | Buttons and backdrops on top of images and video |
 | Space | `--chai-space-0` … `--chai-space-8` (0, 4, 8, 12, 16, 24, 32, 48, 64px) | Padding, gaps, margins |
 | Radius | `--chai-radius-{sm, md, lg, full}` | Corners |
-| Type | `--chai-type-{family, size, weight, leading, tracking}-*` | Text |
+| Type | `--chai-type-{family, size, weight, leading, tracking}-*` | Text. The components use `--chai-type-family-material` (Roboto, loaded by `style.css`). With an app font, import `style-without-fonts.css` instead and set that variable. |
 | Motion | `--chai-motion-duration-{fast, base, slow, steep}`, `--chai-motion-easing-{standard, growth}` | Transitions |
 | Effects | `--chai-shadow-menu`, `--chai-gradient-ai` | Floating menus, and the AI shimmer after prompt optimization |
 | Component | `--chai-composer-{bg, border, hover, placeholder, text}`, `--chai-media-analyzer-{bg, border, hover, text}` | Restyling that one component. Each defaults to a control role. |

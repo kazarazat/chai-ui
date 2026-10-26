@@ -1,18 +1,15 @@
-// `tsc --watch` (the "dev" script's other half) only recompiles TypeScript —
-// it never touches style.css, so without this, CSS edits sit in
-// packages/shared/src/ and
-// never reach dist/style.css (what "./style.css" resolves to for consumers)
-// until someone runs the one-shot "build" script. Keeps dist/style.css in
-// sync with the shared stylesheet for the lifetime of `pnpm dev`.
-import { copyFileSync, watch } from "node:fs";
-
-const src = "../shared/src/style.css";
-const dest = "dist/style.css";
+// `tsc --watch` (the "dev" script's other half) only recompiles TypeScript.
+// It never touches the stylesheets, so without this, CSS edits in
+// packages/shared/src/ wouldn't reach dist/style.css and
+// dist/style-without-fonts.css (what consumers import) until someone runs
+// the one-shot "build" script. Keeps them in sync for the life of `pnpm dev`.
+import { watch } from "node:fs";
+import { buildCss } from "../../shared/build-css.mjs";
 
 function sync() {
-  copyFileSync(src, dest);
-  console.log(`[watch-css] synced ${src} -> ${dest}`);
+  buildCss();
+  console.log("[watch-css] synced the shared stylesheets -> dist/");
 }
 
 sync();
-watch(src, sync);
+watch("../shared/src", sync);

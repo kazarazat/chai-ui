@@ -32,7 +32,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./style-without-fonts.css": "./dist/style-without-fonts.css"
   },
   "files": [
     "dist",
@@ -42,7 +43,7 @@
     "DESIGN.md"
   ],
   "scripts": {
-    "build": "rimraf dist && vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir dist && node -e \"require('fs').copyFileSync('../shared/src/style.css','dist/style.css');require('fs').copyFileSync('../shared/DESIGN.md','DESIGN.md')\"",
+    "build": "rimraf dist && vite build && vue-tsc -p tsconfig.json --declaration --emitDeclarationOnly --outDir dist && node ../shared/build-css.mjs",
     "dev": "vite build --watch",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "lint": "echo \"(no lint configured yet)\"",

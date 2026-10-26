@@ -1,15 +1,15 @@
 /*
- * @chai-ui/react default styling.
+ * Chai UI's component styles, shared by every binding.
  *
  * Requires @chai-ui/tokens/css to be loaded first (it defines every
  * --chai-* variable referenced below) — see the package README.
  *
  * Class names use a `chai-` prefix with BEM-style `__element` and
  * `--modifier` suffixes, one block per component or primitive.
+ *
+ * No font imports here: Roboto is in fonts.css, which build-css.mjs puts at
+ * the top of style.css and leaves out of style-without-fonts.css.
  */
-
-@import "@fontsource/roboto/400.css";
-@import "@fontsource/roboto/500.css";
 
 /*
  * Every switch in the app, locked once here rather than per call site: the

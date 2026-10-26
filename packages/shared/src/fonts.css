@@ -1,0 +1,9 @@
+/*
+ * Roboto, Material Design 3's typeface, self-hosted through
+ * @fontsource/roboto in the two weights the components use. The build puts
+ * this at the top of each binding's style.css; style-without-fonts.css leaves
+ * it out, for apps that bring their own font (set
+ * --chai-type-family-material to it).
+ */
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
