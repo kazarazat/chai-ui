@@ -58,7 +58,7 @@
     "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "peerDependencies": {
-    "svelte": "^5.0.0"
+    "svelte": "^5.16.0"
   },
   "dependencies": {
     "@chai-ui/core": "workspace:*",
