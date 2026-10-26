@@ -21,6 +21,8 @@ const props = defineProps<{
   onEnhance?: (value: string) => void;
   /** After an Enhance, the button's "Revert to original" click. */
   onRevert?: () => void;
+  /** The field took focus: voice input fills the field the person was last in. */
+  onFocus?: () => void;
   enhancing: boolean;
   disabled: boolean;
 }>();
@@ -120,6 +122,7 @@ function onOptimizeClick() {
         rows="1"
         :disabled="disabled || animating"
         @input="emit('change', ($event.target as HTMLTextAreaElement).value)"
+        @focus="onFocus?.()"
       />
       <div v-if="animating" class="chai-composer__reveal chai-composer__type" aria-hidden="true">
         <span class="chai-composer__reveal-text">{{ animatingText!.slice(0, revealedLength) }}</span>

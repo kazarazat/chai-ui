@@ -276,6 +276,27 @@ export function composerContract(render: Render<ComposerProps>) {
       await expect.element(screen.getByRole("alert")).toHaveTextContent(/Microphone access is blocked/);
     });
 
+    it("in a world, adds the transcript to the field the person was last in", async () => {
+      stubMic();
+      const world = { kind: "world" as const, label: "World" };
+      const transcribe = vi.fn().mockResolvedValueOnce("with vines").mockResolvedValueOnce("and a parrot");
+      const screen = controlled<ComposerProps>(
+        render,
+        { value: "a temple", onChange: () => {}, onSubmit: () => {}, useCase: world, models: [], character: "", onCharacterChange: () => {}, voiceInput: { transcribe } },
+        { onChange: "value", onCharacterChange: "character" }
+      );
+      // Environment by default.
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await expect.element(screen.getByRole("textbox", { name: "Environment (required)" })).toHaveValue("a temple with vines");
+      // Then the character, once the person has been in that field.
+      await screen.getByRole("textbox", { name: "Character (optional)" }).click();
+      await screen.getByRole("button", { name: "Start voice input" }).click();
+      await screen.getByRole("button", { name: "Stop recording and transcribe" }).click();
+      await expect.element(screen.getByRole("textbox", { name: "Character (optional)" })).toHaveValue("and a parrot");
+      await expect.element(screen.getByRole("textbox", { name: "Environment (required)" })).toHaveValue("a temple with vines");
+    });
+
     it("has no WCAG violations while recording", async () => {
       stubMic();
       const screen = harness({ voiceInput: { transcribe: vi.fn() } });

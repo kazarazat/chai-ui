@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildEnhancePrompt,
   createComposerStore,
   engineCallInputs,
   CREATE_MUSIC_USE_CASE,
@@ -314,6 +315,18 @@ describe("createComposerStore", () => {
     expect(result.current.enhancing).toBe(false);
     expect(generate.mock.calls[0]![0].prompt).toContain("a mug");
     expect(generate.mock.calls[0]![0].modelId).toBe("google/gemini-2.5-flash");
+  });
+
+  it("lets enhancePrompt build on the exported default, buildEnhancePrompt", async () => {
+    const reason = vi.fn().mockResolvedValue({ src: "better", kind: "text" });
+    const { result } = setup({
+      reasoningEngine: fakeEngine(reason),
+      reasoningModel: "m",
+      enhancePrompt: (value, mode, field) => `${buildEnhancePrompt(value, mode, field)}\n\nKeep it warm.`,
+    });
+    await result.current.enhance!("a mug");
+    expect(reason.mock.calls[0]![0].prompt).toBe(`${buildEnhancePrompt("a mug")}\n\nKeep it warm.`);
+    expect(buildEnhancePrompt("a mug")).toContain("an image-generation prompt");
   });
 
   it("words Enhance's instruction for the last run's kind: video, then text", async () => {

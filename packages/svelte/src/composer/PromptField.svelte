@@ -19,6 +19,7 @@
     hint,
     onEnhance,
     onRevert,
+    onFocus,
     enhancing,
     disabled,
     onChange,
@@ -34,6 +35,8 @@
     onEnhance?: (value: string) => void;
     /** After an Enhance, the button's "Revert to original" click. */
     onRevert?: () => void;
+    /** The field took focus: voice input fills the field the person was last in. */
+    onFocus?: () => void;
     enhancing: boolean;
     disabled: boolean;
     onChange: (value: string) => void;
@@ -144,6 +147,7 @@
         rows="1"
         disabled={disabled || animating}
         {oninput}
+        onfocus={onFocus}
       ></textarea>
       {@render reveal()}
     </div>

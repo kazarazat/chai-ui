@@ -208,12 +208,16 @@
       props.onEnhance?.(current, field, view.enhanceMode);
     });
 
-  // Voice input: a transcript is added to the prompt, never submitted.
+  // Voice input: a transcript is added to a prompt, never submitted. In a
+  // world, it goes to the field the person was last in.
+  let voiceField = $state<ComposerPromptField>("environment");
   const voice = createVoiceInput(
     () => props.voiceInput ?? { transcribe: async () => "" },
     (text) => {
-      const current = props.value;
-      props.onChange(current.trim() ? `${current.trimEnd()} ${text}` : text);
+      const onCharacter = view.world && voiceField === "character" ? props.onCharacterChange : undefined;
+      const current = onCharacter ? (props.character ?? "") : props.value;
+      const next = current.trim() ? `${current.trimEnd()} ${text}` : text;
+      (onCharacter ?? props.onChange)(next);
     }
   );
   let voiceState = $state.raw(voice.getState());
@@ -323,6 +327,7 @@
         placeholder={view.placeholder}
         heading="Environment"
         note="(required)"
+        onFocus={() => (voiceField = "environment")}
         hint={view.environmentHint}
         onEnhance={enhanceField("environment")}
         onRevert={revertField("environment")}
@@ -336,6 +341,7 @@
           placeholder={view.characterPlaceholder}
           heading="Character"
           note="(optional)"
+          onFocus={() => (voiceField = "character")}
           onEnhance={enhanceField("character")}
           onRevert={revertField("character")}
           enhancing={Boolean(props.enhancing) && enhancingField === "character"}

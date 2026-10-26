@@ -187,8 +187,8 @@ export interface ComposerOptions {
   reasoningModel?: string;
   /**
    * Overrides the instruction wrapping a raw prompt for Enhance. Defaults to
-   * a rewrite instruction for the kind of prompt: still, video, text, or a
-   * world's environment or character (`field`).
+   * `buildEnhancePrompt`, a rewrite instruction for the kind of prompt:
+   * still, video, text, or a world's environment or character (`field`).
    */
   enhancePrompt?: (value: string, mode?: GenerationUseCase, field?: ComposerPromptField) => string;
   /**
@@ -266,7 +266,13 @@ export interface ComposerEdit {
 
 const mockTextEngine = createMockEngine({ outputKind: "text" });
 
-function defaultEnhancePrompt(value: string, mode?: GenerationUseCase, field: ComposerPromptField = "prompt"): string {
+/**
+ * Enhance's default instruction: wraps the person's text in a rewrite
+ * request for the kind of prompt (still, video, text, speech, music, or a
+ * world's environment or character). Exported so an `enhancePrompt` can
+ * build on it instead of starting over.
+ */
+export function buildEnhancePrompt(value: string, mode?: GenerationUseCase, field: ComposerPromptField = "prompt"): string {
   const reply = "Reply with only the rewritten description, nothing else.";
   if (field === "environment") {
     return `Rewrite the following description of an interactive world for a world model to be more detailed and specific, keeping the same intent: the setting, its look and lighting, and how the person moves through it. Don't add a character. ${reply}\n\n${value}`;
@@ -609,7 +615,7 @@ export function createComposerStore(getOptions: () => ComposerOptions, getProvid
     if (!r) throw new Error("[chai-ui] Enhance needs a reasoning engine and model.");
     set(() => ({ enhancing: true }));
     try {
-      const prompt = (getOptions().enhancePrompt ?? defaultEnhancePrompt)(value, mode ?? state.runs[0]?.request.mode, field);
+      const prompt = (getOptions().enhancePrompt ?? buildEnhancePrompt)(value, mode ?? state.runs[0]?.request.mode, field);
       const { src } = await r.engine.generate({ modelId: r.model, prompt, attachments: [] });
       return src;
     } finally {

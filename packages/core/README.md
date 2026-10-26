@@ -32,7 +32,7 @@ same stores.
 - `check-suggested-models.ts` — `checkSuggestedModels()`: checks those lists against Fal's and OpenRouter's catalogs as they are today. No key, no model run.
 - `model-routing.ts` — auto-select: `buildModelRoutingPrompt`, `parseModelRoutingReply`, and `routeModel`, which falls back to the first listed model instead of throwing.
 - `reasoning.ts` — the reasoning engine and models a `ChaiProvider` shares: `createReasoning`, `pickReasoning`, `reasoningModelFor` and the suggested defaults.
-- `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance, cancel, image edit versions and the evaluation judge. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
+- `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance (`buildEnhancePrompt`, its default instruction), cancel, image edit versions and the evaluation judge. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
 - `composer-view.ts` — what the `Composer` shows and submits, worked out from its props, for every binding: model menus, aspect ratios, use-case rules (`nextUseCases`).
 - `analytics-events.ts` — front-end analytics: the `ChaiEvent` type and the `composerEvents` and `resultCardEvents` the components report through `onEvent`.
 - `evaluation-judge.ts` — the opt-in judge: `EvaluationCheck`, `DEFAULT_EVALUATION_CHECKS`, `buildJudgePrompt`, `parseJudgeReply`.
