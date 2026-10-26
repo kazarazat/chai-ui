@@ -1,5 +1,17 @@
 # @chai-ui/svelte
 
+## 1.1.0
+
+### Minor Changes
+
+- 83ac142: **`style-without-fonts.css`**: the same component styles without Roboto, for apps with their own typography. Import `@chai-ui/react/style-without-fonts.css` (or the Vue or Svelte package's) in place of `style.css`, then set `--chai-type-family-material` to your font. `style.css` is unchanged and still loads Roboto, so nothing changes for existing apps.
+
+### Patch Changes
+
+- Updated dependencies [83ac142]
+  - @chai-ui/tokens@1.1.0
+  - @chai-ui/core@1.1.0
+
 ## 1.0.0
 
 ### Major Changes

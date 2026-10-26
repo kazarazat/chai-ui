@@ -1,6 +1,6 @@
 {
   "name": "@chai-ui/svelte",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Chai UI Svelte components \u2014 smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, and the useComposer hook.",
   "license": "MIT",
   "author": "kazarazat",
