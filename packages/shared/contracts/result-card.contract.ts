@@ -203,6 +203,16 @@ export function resultCardContract(render: Render<ResultCardProps>) {
       expect(onAction.mock.calls.map((c) => c[0])).toEqual(["dislike", "retry"]);
     });
 
+    it("marks only the votes as toggles: the other buttons aren't pressed or unpressed", async () => {
+      const screen = render({ results: [result("r1"), result("r2")], prompt: "x", getVote: () => null, onAction: () => {} });
+      // Like and Dislike are toggles, so they say whether they're on.
+      await expect.element(screen.getByRole("button", { name: "Like", exact: true })).toHaveAttribute("aria-pressed", "false");
+      // Plain buttons say nothing about being pressed, or screen readers call them toggles.
+      for (const name of ["Download", "Share", "Expand", "Retry", "Show details"]) {
+        await expect.element(screen.getByRole("button", { name, exact: true })).not.toHaveAttribute("aria-pressed");
+      }
+    });
+
     it("opens the ⋯ menu, sends a pick, and closes on Escape or a click outside", async () => {
       const onAction = vi.fn();
       // No text of its own: the screen's queries find the page partly by its text.
