@@ -8,7 +8,7 @@ import {
   type MediaKind,
   type ModelOption,
 } from "@chai-ui/core";
-import { wcagViolations } from "../axe.js";
+import { wcagViolations } from "./axe.js";
 import { controlled, type Render } from "./render.js";
 
 export interface MediaAnalyzerProps {

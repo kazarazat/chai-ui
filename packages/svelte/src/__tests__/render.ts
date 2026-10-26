@@ -1,6 +1,6 @@
 import { render as mount } from "vitest-browser-svelte";
 import type { Component } from "svelte";
-import type { Render } from "../../../react/src/__tests__/contracts/render.js";
+import type { Render } from "../../../shared/contracts/render.js";
 
 /**
  * A contract's `render` for a Svelte component. The props are React's, which

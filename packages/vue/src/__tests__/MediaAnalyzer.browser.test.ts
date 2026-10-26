@@ -1,5 +1,5 @@
 import MediaAnalyzer from "../MediaAnalyzer.vue";
-import { mediaAnalyzerContract, type MediaAnalyzerProps } from "../../../react/src/__tests__/contracts/media-analyzer.contract.js";
+import { mediaAnalyzerContract, type MediaAnalyzerProps } from "../../../shared/contracts/media-analyzer.contract.js";
 import { renderWith } from "./render.js";
 
 mediaAnalyzerContract(

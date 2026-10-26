@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import type { EditRegion, EditVersion } from "@chai-ui/core";
-import { wcagViolations } from "../axe.js";
+import { wcagViolations } from "./axe.js";
 import { controlled, type Render } from "./render.js";
 
 export interface EditCardProps {

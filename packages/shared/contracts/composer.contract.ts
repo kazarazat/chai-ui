@@ -12,7 +12,7 @@ import {
   type EditRegion,
   type ModelOption,
 } from "@chai-ui/core";
-import { wcagViolations } from "../axe.js";
+import { wcagViolations } from "./axe.js";
 import { controlled, type Render } from "./render.js";
 
 /** React-shaped Composer props; the Vue side maps the `on…Change` ones to `v-model` events. */

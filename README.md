@@ -24,7 +24,7 @@ Gateway or your own engine. For React, Vue and Svelte.
 
 Docs and live examples: **[chai-ui.com/docs](https://chai-ui.com/docs)**
 
-**Building with an AI agent?** Point it at [DESIGN.md](packages/react/DESIGN.md)
+**Building with an AI agent?** Point it at [DESIGN.md](packages/shared/DESIGN.md)
 (it also ships in every component package) and the full reference at
 [chai-ui.com/docs/llms.txt](https://chai-ui.com/docs/llms.txt), then ask it
 what Chai UI can do. Between them they cover every component, use case and
@@ -165,7 +165,7 @@ tested in a real browser with axe, against the WCAG 2.0, 2.1 and 2.2 A and
 AA rules, and with keyboard and focus checks, in the React, Vue and Svelte
 packages. Automated checks can't catch everything, and conformance
 belongs to a whole page, so your app still needs its own checks. See
-[DESIGN.md](./packages/react/DESIGN.md#6-accessibility).
+[DESIGN.md](./packages/shared/DESIGN.md#6-accessibility).
 
 ## Help and contributing
 

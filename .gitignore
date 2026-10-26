@@ -16,6 +16,8 @@ sandbox/vue-app/package-lock.json
 sandbox/svelte-app/package-lock.json
 sandbox/svelte-app/build
 sandbox/svelte-app/server.log
+# Copied from packages/shared at build.
+packages/react/DESIGN.md
 packages/vue/DESIGN.md
 packages/svelte/DESIGN.md
 # svelte-package's working copy.

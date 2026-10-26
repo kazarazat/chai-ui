@@ -1,5 +1,5 @@
 import Composer from "../Composer.vue";
-import { composerContract, type ComposerProps } from "../../../react/src/__tests__/contracts/composer.contract.js";
+import { composerContract, type ComposerProps } from "../../../shared/contracts/composer.contract.js";
 import { renderWith } from "./render.js";
 
 /** React's `value`/`onXChange` pairs are Vue's `v-model` props and `update:x` events. */
