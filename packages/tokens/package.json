@@ -1,7 +1,7 @@
 {
   "name": "@chai-ui/tokens",
   "version": "0.14.1",
-  "description": "Chai UI design tokens — single source of truth, built to CSS variables, TypeScript, and a Figma Tokens/Variables-plugin JSON.",
+  "description": "Chai UI design tokens \u2014 single source of truth, built to CSS variables, TypeScript, and a Figma Tokens/Variables-plugin JSON.",
   "license": "MIT",
   "author": "kazarazat",
   "homepage": "https://chai-ui.com",
@@ -34,7 +34,10 @@
       "types": "./dist/js/index.d.ts",
       "import": "./dist/js/index.js"
     },
-    "./css": "./dist/css/tokens.css",
+    "./css": {
+      "types": "./dist/css/tokens.css.d.ts",
+      "default": "./dist/css/tokens.css"
+    },
     "./figma": "./dist/figma/tokens.figma.json"
   },
   "files": [
@@ -43,7 +46,7 @@
   "scripts": {
     "build": "rimraf dist && node build.mjs",
     "dev": "node build.mjs --watch",
-    "typecheck": "echo \"(no TS source to typecheck — tokens.json + a plain build.mjs only)\"",
+    "typecheck": "echo \"(no TS source to typecheck \u2014 tokens.json + a plain build.mjs only)\"",
     "lint": "echo \"(no lint configured yet)\"",
     "clean": "rimraf dist"
   },

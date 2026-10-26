@@ -13,6 +13,9 @@ coverage
 sandbox/consumer-app/.tarballs
 sandbox/consumer-app/package-lock.json
 sandbox/vue-app/package-lock.json
+sandbox/svelte-app/package-lock.json
+sandbox/svelte-app/build
+sandbox/svelte-app/server.log
 packages/vue/DESIGN.md
 packages/svelte/DESIGN.md
 # svelte-package's working copy.

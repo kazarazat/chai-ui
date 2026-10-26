@@ -5,7 +5,6 @@
    * hand. A `heading` gives it a visible label above a filled box (a world's
    * Environment and Character); without one it's the bar's plain prompt.
    */
-  import { onDestroy } from "svelte";
   import { enhanceRevealDurationMs, MAX_ANIMATE_ENHANCE_LENGTH } from "@chai-ui/core";
   import Icon from "../Icon.svelte";
   import { OptimizeIcon, UndoIcon } from "../icons.js";
@@ -81,7 +80,8 @@
     };
     raf = requestAnimationFrame(step);
   });
-  onDestroy(() => cancelAnimationFrame(raf));
+  // An effect's cleanup, not onDestroy: onDestroy also runs on the server, which has no animation frames.
+  $effect(() => () => cancelAnimationFrame(raf));
 
   const animating = $derived(animatingText != null);
   const isEnhanced = $derived(!animating && enhancedValue != null && value === enhancedValue);

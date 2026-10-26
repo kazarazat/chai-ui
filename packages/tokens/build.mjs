@@ -3,7 +3,7 @@
 //
 // Reads the single DTCG-flavored source (src/tokens.json) and emits three
 // consumers from one source of truth:
-//   dist/css/tokens.css        -- CSS custom properties, for any web app
+//   dist/css/tokens.css        -- CSS custom properties, for any web app (+ .d.ts for TypeScript)
 //   dist/js/index.js + .d.ts   -- typed JS/TS exports, for @chai-ui/react and friends
 //   dist/figma/tokens.figma.json -- a token set the "Tokens Studio for Figma"
 //                                   plugin (or Figma Variables import) can read
@@ -189,6 +189,10 @@ async function main() {
     ...md3CssLines(flat),
   ];
   await writeFile(path.join(OUT, "css", "tokens.css"), cssLines.join("\n"));
+  // Types for `import "@chai-ui/tokens/css"`: the path has no .css ending, so
+  // an app's `*.css` declarations don't cover it, and TypeScript 6 checks
+  // side-effect imports by default.
+  await writeFile(path.join(OUT, "css", "tokens.css.d.ts"), "// The stylesheet has no exports; it's imported for its side effect.\nexport {};\n");
 
   // --- JS / TS ---
   const nested = buildNestedObject(resolved);

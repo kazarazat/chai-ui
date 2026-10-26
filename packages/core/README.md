@@ -16,8 +16,8 @@ The headless core behind Chai UI's components: the data types, the
 Request → Run → Result model a submitted prompt flows through, and the
 pluggable generation engines that actually call models, and the components'
 behavior as small framework-free stores. No framework, no rendering:
-`@chai-ui/react` wraps the stores in hooks, and `@chai-ui/vue` wraps the
-same stores.
+`@chai-ui/react` wraps the stores in hooks, and `@chai-ui/vue` and
+`@chai-ui/svelte` wrap the same stores.
 
 ## Layout
 
@@ -89,7 +89,7 @@ environment (never with a `VITE_` or `NEXT_PUBLIC_` prefix). On Vercel,
 `VERCEL_OIDC_TOKEN` is set for you and works in place of the gateway key. A missing key comes back as a
 clear error, e.g. "FAL_KEY isn't set on the server."
 
-**Where it runs.** The route lives in your app's framework (React or Vue)
+**Where it runs.** The route lives in your app's framework (React, Vue or Svelte)
 or on the API server behind it. Mount it at
 `/api/chai`, where the components send their requests. `handle(request)`
 takes a standard web `Request` and returns a `Response`; `GET`, `POST` and
@@ -101,6 +101,7 @@ disconnects, the provider call is aborted too.
 | Next.js (App Router) | `export const { GET, POST, PUT } = createChaiHandler();` in `app/api/chai/[...path]/route.ts` |
 | Remix / React Router | `export const loader = ({ request }) => chai.handle(request); export const action = loader;` in `app/routes/api.chai.$.ts` |
 | Nuxt | `export default defineEventHandler((event) => chai.handle(toWebRequest(event)));` in `server/api/chai/[...path].ts` |
+| SvelteKit | `export const fallback = ({ request }) => chai.handle(request);` in `src/routes/api/chai/[...path]/+server.ts`, with the keys passed in (see the `@chai-ui/svelte` README) |
 | Hono | `app.all("/api/chai/*", (c) => chai.handle(c.req.raw))` |
 | Bun, Deno | route `/api/chai/*` to `chai.handle` in `Bun.serve` / `Deno.serve` |
 | Cloudflare Workers | `createChaiHandler({ falKey: env.FAL_KEY, openRouterKey: env.OPENROUTER_API_KEY, aiGatewayKey: env.AI_GATEWAY_API_KEY }).handle(request)` |

@@ -31,6 +31,7 @@ const DOCS = [
   "packages/core/README.md",
   "packages/react/README.md",
   "packages/vue/README.md",
+  "packages/svelte/README.md",
   "packages/tokens/README.md",
   "packages/react/DESIGN.md",
 ];
@@ -70,7 +71,9 @@ const pathExists = (token) =>
 for (const doc of DOCS) {
   for (const [, token] of docText(doc).matchAll(/`([^`\s]+)`/g)) {
     if (!/^[\w.-]+(\/[\w.-]+)*\/?$/.test(token)) continue;
-    if (!/\.(ts|tsx|vue|mjs|js|json|md|yml|yaml|css|sh)$|\/$/.test(token)) continue;
+    // A file type in prose (`.svelte`), not a path.
+    if (/^\.\w+$/.test(token)) continue;
+    if (!/\.(ts|tsx|vue|svelte|mjs|js|json|md|yml|yaml|css|sh)$|\/$/.test(token)) continue;
     // Build output (`dist/…`) isn't tracked, but exists next to the doc after `pnpm build`.
     const built = existsSync(join(root, dirname(doc), token));
     if (!pathExists(token) && !built) errors.push(`${doc}: \`${token}\` doesn't exist`);
@@ -113,7 +116,7 @@ const collect = (file, seen = new Set()) => {
     collect(join(dirname(file), from.replace(/\.js$/, ".d.ts")), seen);
   }
 };
-for (const pkg of ["core", "react", "vue"]) {
+for (const pkg of ["core", "react", "vue", "svelte"]) {
   const dts = join(root, `packages/${pkg}/dist/index.d.ts`);
   if (!existsSync(dts)) {
     console.error(`check-docs: run \`pnpm build\` first (no ${relative(root, dts)}).`);
@@ -131,7 +134,7 @@ const isApiName = (n) =>
 
 /** Whether the source defines `name` at all, exported or not (for contributor docs). */
 const sourceDefines = (name) =>
-  tracked.some((f) => /^packages\/[^/]+\/src\/.*\.(ts|tsx|vue)$/.test(f) && new RegExp(`(function|const|class) ${name}\\b`).test(read(f)));
+  tracked.some((f) => /^packages\/[^/]+\/src\/.*\.(ts|tsx|vue|svelte)$/.test(f) && new RegExp(`(function|const|class) ${name}\\b`).test(read(f)));
 
 const design = read("packages/react/DESIGN.md");
 const notYet = (design.match(/These don't exist yet\.[\s\S]*?\n\n/)?.[0].match(/`(\w+)`/g) ?? []).map((n) => n.slice(1, -1));
@@ -145,6 +148,18 @@ for (const doc of DOCS) {
       errors.push(`${doc}: \`${name}\` isn't exported by any package`);
     }
   }
+}
+
+// 5. The SvelteKit packaging app builds the Svelte README's snippets, so
+// they're type-checked and run: each copy must match its README block.
+const svelteReadme = read("packages/svelte/README.md");
+for (const file of tracked.filter((f) => f.startsWith("sandbox/svelte-app/src/"))) {
+  const [header, ...rest] = read(file).split("\n");
+  if (!header.includes("Copied from packages/svelte/README.md")) continue;
+  const copy = rest.join("\n");
+  const path = file.replace("sandbox/svelte-app/", "");
+  const block = [...svelteReadme.matchAll(/```(?:svelte|ts)\n([\s\S]*?)```/g)].map((m) => m[1]).find((b) => b.split("\n")[0].includes(` ${path}`));
+  if (block !== copy) errors.push(`${file} doesn't match its block in packages/svelte/README.md: copy the README's version over it`);
 }
 
 // 4. On a minor or major release, hand-maintained files untouched since
