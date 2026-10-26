@@ -1,4 +1,7 @@
 export { default as ChaiProvider } from "./ChaiProvider.svelte";
+export { default as ResultCard } from "./ResultCard.svelte";
+export { default as Pagination } from "./primitives/Pagination.svelte";
+export type { ResultCardMoreAction, ResultCardVote } from "./result-card/types.js";
 export { useReasoning } from "./reasoning.js";
 export * from "./useComposer.svelte.js";
 export * from "./useMediaAnalyzer.svelte.js";
