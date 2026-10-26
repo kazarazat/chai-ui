@@ -44,6 +44,16 @@ import "@chai-ui/tokens/css";
 import "@chai-ui/vue/style.css";
 ```
 
+### Your own font
+
+`style.css` loads Roboto, Material Design 3's typeface. If your app has its
+own font, import `@chai-ui/vue/style-without-fonts.css` in its place (the
+same styles, without Roboto) and point the components at your font:
+
+```css
+:root { --chai-type-family-material: "Your Font", system-ui, sans-serif; }
+```
+
 ## Quick start
 
 ```vue

@@ -273,6 +273,16 @@ measured when it opens and goes below if it fits, else above if that fits,
 else toward the side with more room, so it's never cut off by the edge of
 the screen.
 
+### Your own font
+
+`style.css` loads Roboto, Material Design 3's typeface. If your app has its
+own font, import `@chai-ui/react/style-without-fonts.css` in its place (the
+same styles, without Roboto) and point the components at your font:
+
+```css
+:root { --chai-type-family-material: "Your Font", system-ui, sans-serif; }
+```
+
 ## What else this package ships
 
 - **`MediaAnalyzer`** — drop in an image, video, or audio clip and get a

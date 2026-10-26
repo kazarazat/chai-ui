@@ -76,7 +76,10 @@ for (const doc of DOCS) {
     if (/^\.\w+$/.test(token)) continue;
     if (!/\.(ts|tsx|vue|svelte|mjs|js|json|md|yml|yaml|css|sh)$|\/$/.test(token)) continue;
     // Build output (`dist/…`) isn't tracked, but exists next to the doc after `pnpm build`.
-    const built = existsSync(join(root, dirname(doc), token));
+    // The shared docs ship inside each binding, so a binding's build output counts for them.
+    const built =
+      existsSync(join(root, dirname(doc), token)) ||
+      (doc.startsWith("packages/shared/") && ["react", "vue", "svelte"].some((p) => existsSync(join(root, "packages", p, "dist", token))));
     if (!pathExists(token) && !built) errors.push(`${doc}: \`${token}\` doesn't exist`);
   }
 }

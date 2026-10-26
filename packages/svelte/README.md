@@ -40,6 +40,16 @@ Svelte 5, in SvelteKit or a plain Svelte app. No Chai-specific build setup:
 the package ships `.svelte` files that your app compiles, and the
 components render on the server too.
 
+### Your own font
+
+`style.css` loads Roboto, Material Design 3's typeface. If your app has its
+own font, import `@chai-ui/svelte/style-without-fonts.css` in its place (the
+same styles, without Roboto) and point the components at your font:
+
+```css
+:root { --chai-type-family-material: "Your Font", system-ui, sans-serif; }
+```
+
 ## Quick start
 
 ```svelte

@@ -63,9 +63,13 @@ check_file "@chai-ui/tokens/dist/css/tokens.css"
 check_file "@chai-ui/core/dist/index.js"
 check_file "@chai-ui/react/dist/index.js"
 check_file "@chai-ui/react/dist/style.css"
+check_file "@chai-ui/react/dist/style-without-fonts.css"
+grep -q "@fontsource/roboto" "$SANDBOX/node_modules/@chai-ui/react/dist/style.css" || fail "@chai-ui/react's style.css doesn't load Roboto."
+! grep -q "@fontsource/roboto" "$SANDBOX/node_modules/@chai-ui/react/dist/style-without-fonts.css" || fail "@chai-ui/react's style-without-fonts.css loads Roboto."
 [ -f "$VUE_SANDBOX/node_modules/@chai-ui/vue/dist/index.js" ] || fail "@chai-ui/vue/dist/index.js missing after install."
 [ -f "$VUE_SANDBOX/node_modules/@chai-ui/vue/dist/style.css" ] || fail "@chai-ui/vue/dist/style.css missing after install."
-for f in dist/index.js dist/index.d.ts dist/Composer.svelte dist/style.css DESIGN.md README.md; do
+[ -f "$VUE_SANDBOX/node_modules/@chai-ui/vue/dist/style-without-fonts.css" ] || fail "@chai-ui/vue/dist/style-without-fonts.css missing after install."
+for f in dist/index.js dist/index.d.ts dist/Composer.svelte dist/style.css dist/style-without-fonts.css DESIGN.md README.md; do
   [ -f "$SVELTE_SANDBOX/node_modules/@chai-ui/svelte/$f" ] || fail "@chai-ui/svelte/$f missing after install."
 done
 [ ! -e "$SVELTE_SANDBOX/node_modules/@chai-ui/svelte/dist/__tests__" ] || fail "@chai-ui/svelte ships its tests."

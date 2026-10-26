@@ -34,7 +34,8 @@
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./style-without-fonts.css": "./dist/style-without-fonts.css"
   },
   "files": [
     "dist",
@@ -46,7 +47,7 @@
     "**/*.css"
   ],
   "scripts": {
-    "build": "rimraf dist && svelte-package -i src -o dist && node -e \"require('fs').copyFileSync('../shared/src/style.css','dist/style.css');require('fs').copyFileSync('../shared/DESIGN.md','DESIGN.md')\"",
+    "build": "rimraf dist && svelte-package -i src -o dist && node ../shared/build-css.mjs",
     "dev": "svelte-package -i src -o dist --watch",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings && svelte-check --tsconfig ./tsconfig.test.json --fail-on-warnings",
     "lint": "echo \"(no lint configured yet)\"",
