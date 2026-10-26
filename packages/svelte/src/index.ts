@@ -1,6 +1,10 @@
 export { default as ChaiProvider } from "./ChaiProvider.svelte";
 export { default as ResultCard } from "./ResultCard.svelte";
+export { default as MediaAnalyzer } from "./MediaAnalyzer.svelte";
 export { default as Pagination } from "./primitives/Pagination.svelte";
+export { default as SearchMenu } from "./primitives/SearchMenu.svelte";
+export { default as Toggle } from "./primitives/Toggle.svelte";
+export type { SearchMenuOption, SearchMenuSection, SearchMenuToggleHeader } from "./primitives/search-menu.js";
 export type { ResultCardMoreAction, ResultCardVote } from "./result-card/types.js";
 export { useReasoning } from "./reasoning.js";
 export * from "./useComposer.svelte.js";
