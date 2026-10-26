@@ -101,6 +101,10 @@ The props are React's, unchanged: `value` and `onChange`, `attachments` and
 
 Call `useComposer`, `useMediaAnalyzer` and `useReasoning` while a component
 initializes (in its `<script>`), as with Svelte's own `getContext`.
+The `use` prefix is kept from React on purpose, so one name works across
+the docs. It marks a function you call during component setup, as Svelte
+libraries such as Runed and bits-ui also do, and it has nothing to do with
+Svelte's `use:` directive.
 
 Some controls show only when you pass their callback, as in React: the
 optimize button with `onEnhance`, stop with `onAbort`, the Model menu with
