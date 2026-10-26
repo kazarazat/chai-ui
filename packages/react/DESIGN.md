@@ -1,8 +1,8 @@
 # CHAI UI — DESIGN.md
 
-The rules for building with `@chai-ui/react` or `@chai-ui/vue`, written for
-the people and the coding agents who integrate them. Both packages ship
-this file. It uses React's names; "In Vue" below maps them. The API reference is the JSDoc on each
+The rules for building with `@chai-ui/react`, `@chai-ui/vue` or
+`@chai-ui/svelte`, written for the people and the coding agents who
+integrate them. All three packages ship this file. It uses React's names; "In Vue" and "In Svelte" below map them. The API reference is the JSDoc on each
 component's props and the docs site's `llms.txt`. This file covers how to
 use the pieces correctly: which component to pick, which tokens to use,
 which states you get for free, and what not to build.
@@ -80,6 +80,22 @@ The same components, rules and behavior, with Vue's names:
 - `useComposer` and `useMediaAnalyzer` are composables returning refs.
   Pass a getter for options that change: `useComposer(() => ({ engine, editImage: image.value }))`.
 - `ChaiProvider` is a component with the same props.
+
+### In Svelte
+
+The same components, rules and behavior, with React's prop names
+unchanged (`value` / `onChange`, `onSubmit`, `onEnhance`, `onEvent`), so
+rule 4 holds as written. Only these differ:
+
+- `class` in place of `className`, and `style` as a string.
+- `useComposer` and `useMediaAnalyzer` return an object whose fields stay
+  current: read `composer.run`, never destructure it. Pass a function for
+  options that change: `useComposer(() => ({ engine, editImage }))`. Call
+  them, and `useReasoning`, while a component initializes.
+- `<EditCard {...composer.edit} />` works as in React, inside
+  `{#if composer.edit}`.
+- The components render on the server in SvelteKit, and a builder needs
+  no Chai-specific config.
 
 ## 3. Material components, and where Chai uses its own
 
@@ -159,7 +175,7 @@ Rules:
 | Request in flight | Submit becomes a stop button (`submitting` + `onAbort`) | Pass `useComposer`'s `cancel` as `onAbort`; results show "Stopped" |
 | Prompt too thin | Optimize button rewrites the prompt, then offers undo (`onEnhance`) | Run the rewrite and call `onChange` with the new text |
 | No use case picked | The prompt is a text request and gets a text reply | Set `defaultUseCase` if your app's default should be image or video |
-| Voice input | A mic left of submit; while recording, a live waveform replaces the prompt and the mic becomes stop; the transcript is added to the prompt, never sent; submit hides until it's in; inline messages for a blocked or missing mic | Pass `voiceInput={{ model: "fal-ai/wizper" }}` (any Fal speech-to-text model, through your `/api/chai/fal` route) or `voiceInput={{ transcribe }}` for another provider. Chai never picks the model. |
+| Voice input | A mic left of submit; while recording, a live waveform replaces the prompt and the mic becomes stop; the transcript is added to the prompt (in a world, to the field the person was last in), never sent; submit hides until it's in; inline messages for a blocked or missing mic | Pass `voiceInput={{ model: "fal-ai/wizper" }}` (any Fal speech-to-text model, through your `/api/chai/fal` route) or `voiceInput={{ transcribe }}` for another provider. Chai never picks the model. |
 | Create world | Two prompts, Environment (required) and Character (optional), each with its own Enhance; a frame rate menu from the models' `frameRates`; submit waits for an environment and says so | Add `"create-world"` to `attachMenuActions`, pass your world models, `character` + `onCharacterChange`, and route `engineByKind.world` to your world engine. Show the world in your own viewer. |
 | Create speech, Create music | The attach menu's audio group, under a divider; speech asks for the words to speak, music for a description; Enhance keeps a speech script's words and only makes them read aloud well; once one model is picked, a Voice menu from its `voices` (speech), or a multi-select Genre menu from the picked models' `genres` (music, written into the prompt) | Add `"create-speech"` / `"create-music"` to `attachMenuActions`, set `CREATE_SPEECH_USE_CASE` / `CREATE_MUSIC_USE_CASE` on the pick, pass your audio models (with `voices` or `genres`) and `engineByKind.audio`, and wire `speechVoice` / `genres`. No duration, instrumental or reference-audio controls yet |
 | Result pending | `ResultCard` shows a spinner for `queued` / `running` | Nothing. `useComposer` sets the status. |
@@ -172,7 +188,7 @@ Rules:
 | Feedback | Like/dislike fire `onAction`, and the displayed vote comes from `getVote` | Store votes yourself |
 | Details | The flip side shows prompt, model, tokens, cost and duration | Supply `models` so ids resolve to labels |
 | Quality checks | Each result's `evaluations` render on the flip side: green with a check if it passed, red with a cross if it failed | Run your checks in your backend proxy and add a top-level `evaluations: [{ id, label, passed }]` field to the JSON it returns (for a stream, send it as its own `data:` chunk). The built-in Fal and OpenRouter engines read that field, a custom engine returns it from `generate`, and `useComposer` puts it on the matching `Result`. Or turn on the opt-in judge: `useComposer({ judgeModel, judgeChecks })` has a model you name check each text or image result against your criteria, one tag per check, after your backend's. It's off by default, with no default model, and there are no confidence scores. |
-| Analytics | Nothing visible: `Composer` and `ResultCard` report interactions through `onEvent` (`@event` in Vue), one `ChaiEvent` each | Pass one function to each component, e.g. `(e) => posthog.capture(e.name, e.properties)`. Events are front end only (what the person did and saw), with no prompt text, file names, URLs or outputs. Track model calls, latency and cost on your server. |
+| Analytics | Nothing visible: `Composer` and `ResultCard` report interactions through `onEvent` (`@event` in Vue, `onEvent` in Svelte), one `ChaiEvent` each | Pass one function to each component, e.g. `(e) => posthog.capture(e.name, e.properties)`. Events are front end only (what the person did and saw), with no prompt text, file names, URLs or outputs. Track model calls, latency and cost on your server. |
 
 `ResultCard` is where a run ends. Don't add a "use as input" action that
 feeds a result back into a `Composer`. Chaining steps like that is

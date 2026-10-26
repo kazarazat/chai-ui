@@ -10,6 +10,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     // Component tests run in a real browser (vitest.browser.config.ts).
-    exclude: ["**/node_modules/**", "**/dist/**", "**/.svelte-kit/**", "**/*.browser.test.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.svelte-kit/**", "**/*.browser.test.ts", "**/*.ssr.test.ts"],
   },
 });

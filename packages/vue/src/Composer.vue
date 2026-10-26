@@ -215,12 +215,17 @@ const enhanceField = (field: ComposerPromptField) =>
     props.onEnhance?.(current, field, view.value.enhanceMode);
   });
 
-// Voice input: a transcript is added to the prompt, never submitted.
+// Voice input: a transcript is added to a prompt, never submitted. In a
+// world, it goes to the field the person was last in.
+const voiceField = ref<ComposerPromptField>("environment");
 const voice = createVoiceInput(
   () => props.voiceInput ?? { transcribe: async () => "" },
   (text) => {
-    const current = props.modelValue;
-    emit("update:modelValue", current.trim() ? `${current.trimEnd()} ${text}` : text);
+    const onCharacter = view.value.world && voiceField.value === "character" ? props["onUpdate:character"] : undefined;
+    const current = onCharacter ? props.character : props.modelValue;
+    const next = current.trim() ? `${current.trimEnd()} ${text}` : text;
+    if (onCharacter) onCharacter(next);
+    else emit("update:modelValue", next);
   }
 );
 const voiceState = shallowRef(voice.getState());
@@ -321,6 +326,7 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
         :placeholder="view.placeholder"
         heading="Environment"
         note="(required)"
+        :on-focus="() => (voiceField = 'environment')"
         :hint="view.environmentHint"
         :on-enhance="enhanceField('environment')"
         :on-revert="() => revertField('environment')"
@@ -334,6 +340,7 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
         :placeholder="view.characterPlaceholder"
         heading="Character"
         note="(optional)"
+        :on-focus="() => (voiceField = 'character')"
         :on-enhance="enhanceField('character')"
         :on-revert="() => revertField('character')"
         :enhancing="Boolean(enhancing) && enhancingField === 'character'"

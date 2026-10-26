@@ -385,6 +385,17 @@ function App() {
 }
 ```
 
+Enhance's instruction is `buildEnhancePrompt` (exported, so you can read
+it). Pass `enhancePrompt` to `useComposer` to replace it, calling
+`buildEnhancePrompt` to add to it rather than rewrite it:
+
+```tsx
+useComposer({
+  engine,
+  enhancePrompt: (value, mode, field) => `${buildEnhancePrompt(value, mode, field)}\n\nKeep our brand's warm, natural style.`,
+});
+```
+
 `submit` takes `Composer`'s `ComposerSubmitPayload` directly — pass it
 straight to `onSubmit`. It turns each selection into a real
 `Request`/`Run`/`Result`: creates a `"queued"` `Result` per model up

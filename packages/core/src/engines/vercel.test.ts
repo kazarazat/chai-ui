@@ -4,7 +4,7 @@
  * injected so nothing here ever reaches ai-gateway.vercel.sh.
  */
 import { describe, expect, it, vi } from "vitest";
-import { createVercelEngine } from "./vercel.js";
+import { createVercelEngine, pingVercel } from "./vercel.js";
 
 const json = (body: unknown, init: ResponseInit = {}) =>
   new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" }, ...init });
@@ -95,5 +95,39 @@ describe("createVercelEngine (image)", () => {
     await expect(
       createVercelEngine({ fetchImpl, outputKind: "image", model: "m" }).generate({ prompt: "x", attachments: [] })
     ).rejects.toThrow("no image in the AI Gateway's response");
+  });
+});
+
+describe("pingVercel", () => {
+  it("asks the named model for one word through the route, and reports its reply", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ choices: [{ message: { content: " OK " } }] }));
+    await expect(pingVercel({ model: "openai/gpt-5-mini", endpoint: "/chai/vercel/", fetchImpl })).resolves.toEqual({ ok: true, reply: "OK" });
+
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe("/chai/vercel/chat");
+    expect(JSON.parse(init.body)).toMatchObject({ model: "openai/gpt-5-mini", max_tokens: 5 });
+  });
+
+  it("reports the gateway's error, or the status when it sends none", async () => {
+    const rejected = vi.fn().mockResolvedValue(json({ error: { message: "Add a card to use the AI Gateway." } }, { status: 402 }));
+    await expect(pingVercel({ model: "m", fetchImpl: rejected })).resolves.toEqual({
+      ok: false,
+      error: expect.stringContaining("Add a card to use the AI Gateway."),
+    });
+
+    const bare = vi.fn().mockResolvedValue(new Response("not json", { status: 503, statusText: "Service Unavailable" }));
+    await expect(pingVercel({ model: "m", fetchImpl: bare })).resolves.toEqual({ ok: false, error: expect.stringContaining("503") });
+  });
+
+  it("reports ok:false instead of throwing when the route can't be reached", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(pingVercel({ model: "m", fetchImpl })).resolves.toEqual({ ok: false, error: "Failed to fetch" });
+    const odd = vi.fn().mockRejectedValue("offline");
+    await expect(pingVercel({ model: "m", fetchImpl: odd })).resolves.toEqual({ ok: false, error: "offline" });
+  });
+
+  it("reads an empty reply as empty", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(json({ choices: [] }));
+    await expect(pingVercel({ model: "m", fetchImpl })).resolves.toEqual({ ok: true, reply: "" });
   });
 });

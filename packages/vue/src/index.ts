@@ -49,6 +49,7 @@ export {
   checkSuggestedModels,
   nextUseCases,
   combinesWithOthers,
+  buildEnhancePrompt,
   buildJudgePrompt,
   DEFAULT_EVALUATION_CHECKS,
   composerEvents,

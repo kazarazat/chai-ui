@@ -369,10 +369,13 @@ export function Composer({
       onEnhance(current, field, view.enhanceMode);
     });
 
-  // Voice input: a transcript is added to the prompt, never submitted.
-  const latestPrompt = useLatest({ value, onChange });
+  // Voice input: a transcript is added to a prompt, never submitted. In a
+  // world, it goes to the field the person was last in.
+  const [voiceField, setVoiceField] = useState<ComposerPromptField>("environment");
+  const latestPrompt = useLatest({ value, onChange, character, onCharacterChange, toCharacter: view.world && voiceField === "character" });
   const voice = useVoice(voiceInput, (text) => {
-    const { value: current, onChange: change } = latestPrompt.current;
+    const p = latestPrompt.current;
+    const [current, change] = p.toCharacter && p.onCharacterChange ? [p.character, p.onCharacterChange] : [p.value, p.onChange];
     change(current.trim() ? `${current.trimEnd()} ${text}` : text);
   });
 
@@ -435,6 +438,7 @@ export function Composer({
             placeholder={view.placeholder}
             heading="Environment"
             note="(required)"
+            onFocus={() => setVoiceField("environment")}
             hint={view.environmentHint}
             onEnhance={enhanceField("environment")}
             onRevert={() => onEvent?.(composerEvents.enhanceReverted("environment"))}
@@ -448,6 +452,7 @@ export function Composer({
               placeholder={view.characterPlaceholder}
               heading="Character"
               note="(optional)"
+              onFocus={() => setVoiceField("character")}
               onEnhance={enhanceField("character")}
               onRevert={() => onEvent?.(composerEvents.enhanceReverted("character"))}
               enhancing={enhancing && enhancingField === "character"}
@@ -805,6 +810,7 @@ function PromptField({
   hint,
   onEnhance,
   onRevert,
+  onFocus,
   enhancing,
   disabled,
 }: {
@@ -820,6 +826,8 @@ function PromptField({
   onEnhance?: (value: string) => void;
   /** After an Enhance, the button's "Revert to original" click. */
   onRevert?: () => void;
+  /** The field took focus: voice input fills the field the person was last in. */
+  onFocus?: () => void;
   enhancing: boolean;
   disabled: boolean;
 }) {
@@ -931,6 +939,7 @@ function PromptField({
         className={`chai-composer__input chai-composer__type${animating ? " chai-composer__input--revealing" : ""}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
         placeholder={placeholder}
         aria-label={heading ? undefined : (label ?? placeholder)}
         aria-describedby={hint ? hintId : undefined}

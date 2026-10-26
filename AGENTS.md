@@ -13,7 +13,7 @@ This block is written and re-added by `turbo` before repository-scoped commands 
 
 Chai UI is the front-end surface of AI apps: components for prompting,
 analyzing media, showing results and editing images. It's published to npm
-as four packages that share one version:
+as five packages that share one version:
 
 - `packages/tokens` (`@chai-ui/tokens`): design tokens. `src/tokens.json` is
   the only source; `build.mjs` emits CSS variables, JS/TS and a Figma set.
@@ -28,12 +28,14 @@ as four packages that share one version:
   `packages/vue` (`@chai-ui/vue`, Vue 3.5): thin bindings with the same
   components (`Composer`, `MediaAnalyzer`, `ResultCard`, `EditCard`),
   `ChaiProvider`, `useComposer`, `useMediaAnalyzer` and the primitives.
-- `packages/svelte` (`@chai-ui/svelte`, Svelte 5): the third binding, in
-  progress and `private` until its components are done. Same prop and hook
-  names as React. Built with `svelte-package`, which ships the `.svelte`
+- `packages/svelte` (`@chai-ui/svelte`, Svelte 5.20 and later): the same
+  components with React's prop and hook names (only `class` and a string
+  `style` differ). Built with `svelte-package`, which ships the `.svelte`
   files for the app's own compiler. The hooks use runes
   (`useComposer.svelte.ts`) and return objects with getters, so they're read
-  as `composer.run`.
+  as `composer.run`. Components render on the server (SvelteKit), so
+  browser-only APIs belong in effects or event handlers, never in
+  `onDestroy` or the script body; `server-render.ssr.test.ts` checks it.
 
 ## Commands
 
@@ -43,7 +45,7 @@ pnpm build        # turbo: tokens -> core -> react, vue and svelte
 pnpm lint         # token rules + the rules of React (eslint-plugin-react-hooks)
 pnpm typecheck
 pnpm test         # unit tests, then real-browser component + axe tests, for every binding
-pnpm pack-test    # packs, installs into sandbox/consumer-app with npm, builds it
+pnpm pack-test    # packs, installs into the sandbox apps (React, Vue, SvelteKit) with npm, builds them
 pnpm check-docs   # after build: docs name real paths and exports (scripts/check-docs.mjs)
 ```
 
