@@ -138,3 +138,50 @@ Throw a `GenerationError(message, reasons?)` to fail a call with
 user-facing content rather than a bare network error. API keys never
 belong in an engine: call a server route that adds the key, like
 `createChaiHandler` above.
+
+## Without a server route
+
+Desktop apps (Tauri, Electron) have no server route for the built-in
+engines to call, and their CSP usually limits connect-src to the app
+itself. Chai doesn't ship a desktop engine: write your own that hands each
+run to your app's backend (a Tauri command, or a local daemon), which
+holds the key and calls the model. In Tauri:
+
+```ts
+// src/lib/desktop-engine.ts: one run per call, through your app's backend.
+import { invoke } from "@tauri-apps/api/core";
+import type { GenerationEngine, MediaKind } from "@chai-ui/core";
+
+export const desktopEngine: GenerationEngine = {
+  // signal and onText can't cross to the backend; every other field goes.
+  async generate({ signal, onText, ...run }) {
+    const result = await invoke<{ src: string; kind: MediaKind }>("chai_generate", run);
+    signal?.throwIfAborted();
+    return result;
+  },
+};
+```
+
+Pass it as `useComposer`'s `engine`, and give the same engine to
+`ChaiProvider` as `reasoningEngine`: Enhance, auto-select, text requests,
+media analysis and the judge otherwise still call the server route.
+Attachments arrive as data URLs, so the backend gets the whole file. The
+key never reaches the webview, and nothing needs connect-src beyond the
+app. For a local daemon, swap invoke for a fetch to its localhost address
+and add that address to connect-src.
+
+Voice input works the same way: `voiceInput={{ model }}` calls the server
+route, so pass your own `Transcribe` instead, which gets the recording as
+a data URL and returns the text:
+
+```ts
+import type { Transcribe } from "@chai-ui/core";
+
+const transcribe: Transcribe = (clip) => invoke<string>("chai_transcribe", { clip });
+// voiceInput={{ transcribe }}
+```
+
+**Stop.** Results turn cancelled at once, and `throwIfAborted()` keeps a
+late reply from replacing them, but the backend run keeps going, and
+billing. To end it too, give the backend a cancel command and call it
+from the signal's abort event.

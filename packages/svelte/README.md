@@ -178,30 +178,11 @@ server's environment (`.env` works in development). Other servers, and
 `authorize` and `allowedModels` for production, are in the
 [`@chai-ui/core` README](https://github.com/kazarazat/chai-ui/tree/main/packages/core#the-server-route-chai-uicoreserver).
 
-## Without a server (desktop apps)
+## Without a server route
 
-Tauri and Electron apps have no server route for the engines to call, and
-their CSP usually limits `connect-src` to the app itself. Write your own
-`GenerationEngine` that hands each run to your app's backend (a Tauri
-command, or a local daemon), which holds the key and calls the model:
-
-```ts
-// src/lib/desktop-engine.ts: one run per call, through your app's backend.
-import { invoke } from "@tauri-apps/api/core";
-import type { GenerationEngine, MediaKind } from "@chai-ui/svelte";
-
-export const desktopEngine: GenerationEngine = {
-  async generate({ modelId, prompt, attachments, aspectRatio, signal }) {
-    const result = await invoke<{ src: string; kind: MediaKind }>("chai_generate", {
-      modelId, prompt, attachments, aspectRatio,
-    });
-    signal?.throwIfAborted();
-    return result;
-  },
-};
-```
-
-Pass it as usual: `useComposer(() => ({ engine: desktopEngine }))`. The key
-never reaches the webview, and nothing needs `connect-src` beyond the app.
-For a local daemon, swap `invoke` for a `fetch` to its localhost address
-and add that address to `connect-src`.
+In a desktop app (Tauri, Electron) with no server route, write an engine
+that hands each run to your app's backend. Pass it to
+`useComposer({ engine: desktopEngine })` and to
+`<ChaiProvider reasoningEngine={desktopEngine}>`. The
+[`@chai-ui/core` README](https://github.com/kazarazat/chai-ui/tree/main/packages/core#without-a-server-route)
+has a Tauri example, voice input, and what Stop does there.
