@@ -1,5 +1,14 @@
 # @chai-ui/vue
 
+## 1.1.2
+
+### Patch Changes
+
+- 5b66e15: READMEs: "Without a server route" for desktop apps (Tauri, Electron). The core README has the full pattern: a custom engine that forwards every run to your app's backend, the same engine as `ChaiProvider`'s `reasoningEngine`, your own `Transcribe` for voice input, and what Stop does. The React, Vue and Svelte READMEs link to it. Based on #79 by @iksnae.
+- Updated dependencies [5b66e15]
+  - @chai-ui/core@1.1.2
+  - @chai-ui/tokens@1.1.2
+
 ## 1.1.1
 
 ### Patch Changes
