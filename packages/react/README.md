@@ -430,6 +430,13 @@ export const { GET, POST, PUT } = createChaiHandler();
 Other frameworks, and the `authorize` / `allowedModels` settings to add
 before going live, are in the `@chai-ui/core` README.
 
+**Without a server route.** In a desktop app (Tauri, Electron), write an
+engine that hands each run to your app's backend. Pass it to
+`useComposer({ engine: desktopEngine })` and to
+`<ChaiProvider reasoningEngine={desktopEngine}>`. The
+[`@chai-ui/core` README](https://github.com/kazarazat/chai-ui/tree/main/packages/core#without-a-server-route)
+has a Tauri example, voice input, and what Stop does there.
+
 Every default is a suggestion. Swap any of them:
 
 ```tsx

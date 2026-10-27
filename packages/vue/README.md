@@ -140,3 +140,12 @@ export default defineEventHandler((event) => chai.handle(toWebRequest(event)));
 Then set `FAL_KEY`, `OPENROUTER_API_KEY` or `AI_GATEWAY_API_KEY` on your server. Other servers,
 and `authorize` and `allowedModels` for production, are in the
 [`@chai-ui/core` README](https://github.com/kazarazat/chai-ui/tree/main/packages/core#the-server-route-chai-uicoreserver).
+
+## Without a server route
+
+In a desktop app (Tauri, Electron) with no server route, write an engine
+that hands each run to your app's backend. Pass it to
+`useComposer({ engine: desktopEngine })` and to
+`<ChaiProvider :reasoning-engine="desktopEngine">`. The
+[`@chai-ui/core` README](https://github.com/kazarazat/chai-ui/tree/main/packages/core#without-a-server-route)
+has a Tauri example, voice input, and what Stop does there.
