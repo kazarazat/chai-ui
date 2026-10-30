@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Composer, ResultCard, useComposer, type ComposerAttachment } from "@chai-ui/react";
+import { Composer, ResultCard, SidePanel, useComposer, type ComposerAttachment } from "@chai-ui/react";
 
 /**
  * Not a demo of CHAI's design — a packaging smoke test. If this renders a
@@ -32,6 +32,7 @@ export function App() {
         onSubmit={submit}
       />
       {run && <ResultCard results={run.results} prompt={run.request.prompt} onAction={() => {}} />}
+      <SidePanel title="Assistant" mode="overlay" promptTips={["Draft a reply"]} />
     </main>
   );
 }

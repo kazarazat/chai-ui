@@ -44,7 +44,12 @@ export type ChaiEvent =
     }
   | { name: "chai_result_action"; properties: { action: string } }
   | { name: "chai_result_paged"; properties: { index: number; count: number } }
-  | { name: "chai_result_info_opened"; properties: Record<string, never> };
+  | { name: "chai_result_info_opened"; properties: Record<string, never> }
+  | { name: "chai_side_panel_opened"; properties: Record<string, never> }
+  | { name: "chai_side_panel_closed"; properties: { turn_count: number } }
+  | { name: "chai_side_panel_new_chat"; properties: { turn_count: number } }
+  | { name: "chai_side_panel_tip_used"; properties: { index: number } }
+  | { name: "chai_side_panel_page_context_toggled"; properties: { on: boolean } };
 
 export type ChaiEventName = ChaiEvent["name"];
 
@@ -103,4 +108,14 @@ export const resultCardEvents = {
   action: (action: string): ChaiEvent => ({ name: "chai_result_action", properties: { action } }),
   paged: (index: number, count: number): ChaiEvent => ({ name: "chai_result_paged", properties: { index, count } }),
   infoOpened: (): ChaiEvent => ({ name: "chai_result_info_opened", properties: {} }),
+};
+
+/** The events `SidePanel` reports. Its Composer and answers report theirs too (`composerEvents`, `resultCardEvents`). */
+export const sidePanelEvents = {
+  opened: (): ChaiEvent => ({ name: "chai_side_panel_opened", properties: {} }),
+  closed: (turnCount: number): ChaiEvent => ({ name: "chai_side_panel_closed", properties: { turn_count: turnCount } }),
+  newChat: (turnCount: number): ChaiEvent => ({ name: "chai_side_panel_new_chat", properties: { turn_count: turnCount } }),
+  /** Which prompt tip, by position: never its text. */
+  tipUsed: (index: number): ChaiEvent => ({ name: "chai_side_panel_tip_used", properties: { index } }),
+  pageContextToggled: (on: boolean): ChaiEvent => ({ name: "chai_side_panel_page_context_toggled", properties: { on } }),
 };

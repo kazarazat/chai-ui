@@ -229,10 +229,38 @@ export interface ComposerProps {
    */
   voiceInput?: VoiceInputConfig;
   disabled?: boolean;
+  /**
+   * Your own items at the top of the `+` menu, above the built-in ones, e.g.
+   * "Use this page" in a side panel. Each runs its own `onSelect`.
+   */
+  extraMenuItems?: ComposerMenuItem[];
+  /**
+   * Chips after the use-case chip for context sent with the prompt, e.g.
+   * "This page". With `onRemove`, a chip can be removed like the use-case chip.
+   */
+  contextChips?: ComposerContextChip[];
   /** Extra class names for the root element, added after `chai-composer`. */
   className?: string;
   /** Inline styles for the root element, e.g. `{ maxWidth: 720 }` to size the bar. */
   style?: React.CSSProperties;
+}
+
+/** One of your own `+` menu items: see `extraMenuItems`. */
+export interface ComposerMenuItem {
+  id: string;
+  label: string;
+  /** A 20px icon, like the built-in items'. */
+  icon?: React.ReactNode;
+  onSelect: () => void;
+}
+
+/** A context chip: see `contextChips`. */
+export interface ComposerContextChip {
+  id: string;
+  label: string;
+  /** A 16px icon before the label. */
+  icon?: React.ReactNode;
+  onRemove?: () => void;
 }
 
 /**
@@ -295,6 +323,8 @@ export function Composer({
   onRegionsChange,
   voiceInput,
   disabled = false,
+  extraMenuItems = [],
+  contextChips = [],
   className,
   style,
 }: ComposerProps) {
@@ -489,9 +519,10 @@ export function Composer({
 
       <div className="chai-composer__controls">
         <div className="chai-composer__controls-start">
-          {menuItems.length > 0 && (
+          {(menuItems.length > 0 || extraMenuItems.length > 0) && (
             <ComposerAttachMenu
               items={menuItems}
+              extraItems={extraMenuItems}
               onSelect={(action) => {
                 if (action !== "add-media") onEvent?.(composerEvents.useCasePicked(action));
                 onAttachMenuSelect?.(action);
@@ -517,6 +548,24 @@ export function Composer({
               }
               disabled={disabled}
             />
+          ))}
+
+          {contextChips.map((chip) => (
+            <span key={chip.id} className="chai-composer__chip chai-composer__chip--context">
+              {chip.icon && <span className="chai-composer__chip-icon">{chip.icon}</span>}
+              {chip.label}
+              {chip.onRemove && (
+                <button
+                  type="button"
+                  className="chai-composer__chip-remove"
+                  onClick={chip.onRemove}
+                  disabled={disabled}
+                  aria-label={`Remove ${chip.label}`}
+                >
+                  <CloseSymbolIcon />
+                </button>
+              )}
+            </span>
           ))}
 
           {/* A Model menu shows whenever there are models for the use case,
@@ -844,8 +893,16 @@ function PromptField({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
+    // Empty, the placeholder sets the height: a long one wraps in a narrow
+    // bar (a side panel) instead of being cut off at one line.
+    if (!value && placeholder) {
+      el.value = placeholder;
+      el.style.height = `${el.scrollHeight}px`;
+      el.value = "";
+    } else {
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [value, placeholder]);
 
   // The optimize/undo cycle (§ its own button below). `value` is already
   // the final rewritten text the instant `enhancing` drops back to false —
@@ -999,6 +1056,7 @@ const ATTACH_MENU_ICONS: Record<ComposerAttachMenuAction, React.ReactNode> = {
  */
 function ComposerAttachMenu({
   items,
+  extraItems = [],
   onSelect,
   onAddMediaFiles,
   imagesOnly,
@@ -1006,6 +1064,7 @@ function ComposerAttachMenu({
   placement,
 }: {
   items: ReturnType<typeof composerAttachMenuItems>;
+  extraItems?: ComposerMenuItem[];
   onSelect?: (action: ComposerAttachMenuAction) => void;
   onAddMediaFiles: (files: FileList | null) => void;
   /** Edit mode: one image file at a time. */
@@ -1057,13 +1116,30 @@ function ComposerAttachMenu({
         disabled={disabled}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={open ? "Close attach menu" : "Add media"}
+        aria-label={open ? "Close attach menu" : extraItems.length > 0 ? "Add" : "Add media"}
       >
         {open ? <CloseSymbolIcon /> : <AddIcon />}
       </button>
 
       {open && (
         <ul ref={menuRef} className={`chai-composer__attach-menu${above ? " chai-composer__attach-menu--above" : ""}`} role="menu">
+          {extraItems.map((item, i) => (
+            <li key={`extra-${item.id}`} role="none">
+              <button
+                type="button"
+                role="menuitem"
+                className="chai-composer__attach-menu-item"
+                onClick={() => {
+                  setOpen(false);
+                  item.onSelect();
+                }}
+              >
+                <span className="chai-composer__attach-menu-icon">{item.icon}</span>
+                {item.label}
+              </button>
+              {i === extraItems.length - 1 && items.length > 0 && <hr className="chai-composer__attach-menu-divider" role="separator" />}
+            </li>
+          ))}
           {items.map((item, i) => (
             <li key={item.action} role="none">
               <button

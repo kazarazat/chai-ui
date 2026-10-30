@@ -34,11 +34,12 @@ behavior as small framework-free stores. No framework, no rendering:
 - `reasoning.ts` — the reasoning engine and models a `ChaiProvider` shares: `createReasoning`, `pickReasoning`, `reasoningModelFor` and the suggested defaults.
 - `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance (`buildEnhancePrompt`, its default instruction), cancel, image edit versions and the evaluation judge. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
 - `composer-view.ts` — what the `Composer` shows and submits, worked out from its props, for every binding: model menus, aspect ratios, use-case rules (`nextUseCases`).
-- `analytics-events.ts` — front-end analytics: the `ChaiEvent` type and the `composerEvents` and `resultCardEvents` the components report through `onEvent`.
+- `analytics-events.ts` — front-end analytics: the `ChaiEvent` type and the `composerEvents`, `resultCardEvents` and `sidePanelEvents` the components report through `onEvent`.
 - `evaluation-judge.ts` — the opt-in judge: `EvaluationCheck`, `DEFAULT_EVALUATION_CHECKS`, `buildJudgePrompt`, `parseJudgeReply`.
 - `image-fit.ts` — `fitImageToRatio`: crops or pads a video's start image to the picked ratio (`startImageFit`).
 - `region-edit.ts` — region editing: the region shape, the models that read regions as boxes, and `buildRegionEditPrompt`.
 - `edit-card.ts` — `EditCard`'s geometry: region boxes, zoom and pan, and where the instruction field goes.
+- `side-panel.ts` — `SidePanel`'s behavior: `readPageContext` (the page's title, URL, selection and main text), `buildSidePanelPrompt` (the question with the page and recent turns), and the thread helpers.
 - `voice-input.ts` — the Composer's voice input: record, send to a speech-to-text model, return the transcript.
 - `result-format.ts` — how `ResultCard` shows a result's details.
 - `media-actions.ts` — download and share for generated media.

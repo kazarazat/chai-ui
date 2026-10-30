@@ -112,6 +112,8 @@ The props are React's, with Vue's conventions:
 | `onSubmit`, `onAction`, `onEnhance`, `onAbort` | `@submit`, `@action`, `@enhance`, `@abort` |
 | `useComposer` / `useMediaAnalyzer` hooks | composables returning refs; pass a getter for options that change |
 | `<EditCard {...edit} />` | `edit`'s fields one by one, with `@update:active-version` and `@update:regions` |
+| `SidePanel`'s `open` + `onOpenChange`, `logo` and `footer` | `v-model:open`, and the `#logo` and `#footer` slots (`footer` also takes text) |
+| A Composer chip or menu item's `icon` | A component |
 
 Some controls show only with a listener, as in React: the optimize button
 with `@enhance`, stop with `@abort`, the Model menu with `@update:model-id`.
@@ -130,11 +132,16 @@ into the page. Left out, it's `"auto"`: each menu goes where it fits.
 - **`ResultCard`**: one prompt's results, paged, with votes, retry,
   download, share, details, streaming text and quality-check tags (from
   your backend, or the opt-in judge: `useComposer({ judgeModel, judgeChecks })`).
-- **Analytics:** `@event` on `Composer` and `ResultCard` reports what the
+- **Analytics:** `@event` on `Composer`, `ResultCard` and `SidePanel` reports what the
   person does and sees, one `ChaiEvent` each, for any analytics tool:
   `@event="(e) => posthog.capture(e.name, e.properties)"`.
 - **`EditCard`**: marked regions with their own instructions, and each
   edit as a new version.
+- **`SidePanel`**: a panel beside your page with a Composer and its
+  answers, for questions about the page (opt-in `page-context`, shown as a
+  removable chip) or anything else, with prompt tips, push or overlay, and
+  either side. Same props as React's, with `v-model:open`; `#logo` and `#footer` slots. See the React
+  README's "A side panel" for the details.
 - **`useComposer`**, **`ChaiProvider`**, and the `Toggle`, `SearchMenu`
   and `Pagination` building blocks.
 - The engines and types from `@chai-ui/core`, re-exported.

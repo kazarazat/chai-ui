@@ -3,6 +3,7 @@ export * from "./Composer.js";
 export * from "./MediaAnalyzer.js";
 export * from "./ResultCard.js";
 export * from "./EditCard.js";
+export * from "./SidePanel.js";
 export * from "./useComposer.js";
 export * from "./ChaiProvider.js";
 export * from "./useMediaAnalyzer.js";
@@ -38,6 +39,9 @@ export {
   DEFAULT_EVALUATION_CHECKS,
   composerEvents,
   resultCardEvents,
+  readPageContext,
+  buildSidePanelPrompt,
+  sidePanelEvents,
 } from "@chai-ui/core";
 export type {
   DroppedMedia,
@@ -70,4 +74,7 @@ export type {
   SuggestedModelsCheck,
   FalInputFormat,
   Usage,
+  PageContext,
+  ReadPageContextOptions,
+  SidePanelTurn,
 } from "@chai-ui/core";

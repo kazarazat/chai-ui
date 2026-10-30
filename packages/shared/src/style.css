@@ -2551,6 +2551,450 @@
   to { transform: translateX(100%); }
 }
 
+/* --- Side panel -------------------------------------------------------------
+   A panel on one side of the page holding the Composer and answers. Push
+   mode sits in the builder's layout as a flex sibling of their content;
+   overlay floats over the page. `--chai-side-panel-width` sets the width. */
+.chai-side-panel {
+  --chai-side-panel-width: 400px;
+  box-sizing: border-box;
+  width: var(--chai-side-panel-width);
+  max-width: 100%;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--chai-color-semantic-control-surface-raised);
+  color: var(--chai-color-semantic-control-text-strong);
+  font-family: var(--chai-type-family-material);
+}
+
+/* Push: full height beside the content, staying in view as the page scrolls. */
+.chai-side-panel--push {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+}
+
+.chai-side-panel--push.chai-side-panel--contained {
+  position: relative;
+  height: auto;
+  align-self: stretch;
+}
+
+.chai-side-panel--push.chai-side-panel--right {
+  border-left: 1px solid var(--chai-color-semantic-control-divider);
+}
+
+.chai-side-panel--push.chai-side-panel--left {
+  order: -1;
+  border-right: 1px solid var(--chai-color-semantic-control-divider);
+}
+
+.chai-side-panel--overlay {
+  position: fixed;
+  top: var(--chai-space-3);
+  bottom: var(--chai-space-3);
+  z-index: 1000;
+  border: 1px solid var(--chai-color-semantic-control-divider);
+  border-radius: var(--chai-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--chai-shadow-menu);
+}
+
+.chai-side-panel--overlay.chai-side-panel--contained {
+  position: absolute;
+  z-index: 2;
+}
+
+.chai-side-panel--overlay.chai-side-panel--right {
+  right: var(--chai-space-3);
+}
+
+.chai-side-panel--overlay.chai-side-panel--left {
+  left: var(--chai-space-3);
+}
+
+/* Narrow screens: a full-screen sheet, either mode. */
+@media (max-width: 600px) {
+  .chai-side-panel:not(.chai-side-panel--contained) {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    width: auto;
+    height: auto;
+    border: none;
+    border-radius: 0;
+  }
+}
+
+.chai-side-panel__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--chai-space-2);
+  height: 56px;
+  padding: 0 var(--chai-space-2) 0 var(--chai-space-4);
+}
+
+.chai-side-panel__head--divided {
+  border-bottom: 1px solid var(--chai-color-semantic-control-divider);
+}
+
+.chai-side-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Headings: scoped twice so a site's own `h2` styles don't reach them. */
+.chai-side-panel .chai-side-panel__title-text {
+  margin: 0;
+  font-family: inherit;
+  letter-spacing: normal;
+  color: inherit;
+  font-size: var(--chai-type-size-title-medium);
+  font-weight: var(--chai-type-weight-material-medium);
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chai-side-panel__actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+/* Rounded-square hovers, like every icon button in CHAI. */
+.chai-side-panel__icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: var(--chai-radius-sm);
+  background: transparent;
+  color: var(--chai-color-semantic-control-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chai-side-panel__icon-btn:hover {
+  background: var(--chai-color-semantic-control-surface-hover);
+}
+
+.chai-side-panel__icon-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* The mark's box. A builder's `logo` fills it as given (an img or svg at
+   100%); the default sparkle sits on a green tile. */
+.chai-side-panel__logo {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chai-side-panel__logo > :is(img, svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.chai-side-panel__logo--default {
+  border-radius: 8px;
+  background: var(--chai-color-semantic-accent-soft);
+  color: var(--chai-color-semantic-accent-text);
+}
+
+.chai-side-panel__logo--default > svg {
+  width: 16px;
+  height: 16px;
+}
+
+.chai-side-panel__logo--large {
+  width: 44px;
+  height: 44px;
+}
+
+.chai-side-panel__logo--default.chai-side-panel__logo--large {
+  border-radius: 12px;
+}
+
+.chai-side-panel__logo--default.chai-side-panel__logo--large > svg {
+  width: 24px;
+  height: 24px;
+}
+
+.chai-side-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--chai-space-2) var(--chai-space-4) var(--chai-space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.chai-side-panel__dock {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-2);
+  padding: var(--chai-space-2) var(--chai-space-4) var(--chai-space-3);
+}
+
+.chai-side-panel__footer {
+  margin: 0;
+  font-size: var(--chai-type-size-xs);
+  line-height: 16px;
+  text-align: center;
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+/* Empty state: greeting, Composer and prompt tips, centered as one group. */
+.chai-side-panel__empty {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: var(--chai-space-5);
+}
+
+.chai-side-panel__hello {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chai-space-3);
+}
+
+.chai-side-panel .chai-side-panel__heading {
+  margin: 0;
+  font-family: inherit;
+  letter-spacing: normal;
+  color: inherit;
+  font-size: var(--chai-type-size-title-large);
+  font-weight: var(--chai-type-weight-material-regular);
+  line-height: 28px;
+}
+
+.chai-side-panel .chai-side-panel__description {
+  margin: 0;
+  font-size: var(--chai-type-size-body-medium);
+  line-height: 20px;
+  color: var(--chai-color-semantic-control-text);
+}
+
+.chai-side-panel__tips {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--chai-space-2);
+}
+
+.chai-side-panel__tips-label {
+  font-size: var(--chai-type-size-label-large);
+  font-weight: var(--chai-type-weight-material-medium);
+  color: var(--chai-color-semantic-control-text);
+}
+
+.chai-side-panel__tip {
+  padding: var(--chai-space-2) 14px;
+  border: 1px solid var(--chai-color-semantic-control-border-faint);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--chai-color-semantic-control-text-strong);
+  font: inherit;
+  font-size: var(--chai-type-size-body-medium);
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chai-side-panel__tip:hover {
+  background: var(--chai-color-semantic-menu-item-hover);
+}
+
+/* Conversation. */
+.chai-side-panel__thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-4);
+}
+
+.chai-side-panel__turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-3);
+}
+
+.chai-side-panel__sent-with {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: var(--chai-space-1);
+  margin-bottom: calc(var(--chai-space-2) * -1);
+  font-size: var(--chai-type-size-xs);
+  line-height: 16px;
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-side-panel__sent-with svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chai-side-panel__prompt {
+  align-self: flex-end;
+  max-width: 85%;
+  margin: 0;
+  padding: 10px var(--chai-space-4);
+  border-radius: 18px 18px 4px 18px;
+  background: var(--chai-color-semantic-control-surface-hover);
+  font-size: var(--chai-type-size-body-medium);
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chai-side-panel .chai-result-card {
+  --chai-result-card-width: 100%;
+}
+
+.chai-side-panel .chai-result-card__text-output {
+  min-height: 0;
+}
+
+.chai-side-panel__answer-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-1);
+}
+
+.chai-side-panel__answer {
+  margin: 0;
+  font-size: var(--chai-type-size-body-medium);
+  line-height: 21px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--chai-color-semantic-control-text-strong);
+}
+
+.chai-side-panel__answer--error {
+  color: var(--chai-color-semantic-danger);
+}
+
+.chai-side-panel__answer--muted {
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-side-panel__answer--streaming::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--chai-color-semantic-control-text);
+  animation: chai-caret-blink calc(var(--chai-motion-duration-steep) * 1.2) steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chai-side-panel__answer--streaming::after {
+    animation: none;
+  }
+}
+
+.chai-side-panel__answer-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: -6px;
+}
+
+.chai-side-panel__answer-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--chai-radius-sm);
+  background: transparent;
+  color: var(--chai-color-semantic-control-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chai-side-panel__answer-btn:hover {
+  background: var(--chai-color-semantic-control-surface-hover);
+}
+
+.chai-side-panel__answer-btn--active {
+  color: var(--chai-color-semantic-accent-text);
+}
+
+.chai-side-panel__answer-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The launcher: shown while the panel is closed, with the panel's mark (a
+   builder's `logo`, or the sparkle). Builders restyle it through this class,
+   or hide it and open the panel from their own button. */
+.chai-side-panel__launcher {
+  position: fixed;
+  bottom: 20px;
+  z-index: 1000;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: var(--chai-radius-lg);
+  background: var(--chai-color-semantic-accent-soft);
+  color: var(--chai-color-semantic-accent-text);
+  box-shadow: var(--chai-shadow-menu);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chai-side-panel__launcher--contained {
+  position: absolute;
+  z-index: 2;
+}
+
+.chai-side-panel__launcher--right {
+  right: 20px;
+}
+
+.chai-side-panel__launcher--left {
+  left: 20px;
+}
+
+.chai-side-panel__launcher svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* A context chip's icon, e.g. the side panel's "This page". */
+.chai-composer__chip-icon {
+  display: flex;
+  margin-right: 6px;
+}
+
+.chai-composer__chip-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* --- Focus rings ------------------------------------------------------------
    On by default: every CHAI control shows a visible keyboard-focus ring,
    which WCAG 2.4.7 Focus Visible requires. Buttons and menu items
@@ -2583,6 +3027,8 @@
     .chai-result-card,
     .chai-result-card__expand-overlay,
     .chai-edit-card,
+    .chai-side-panel,
+    .chai-side-panel__launcher,
     .chai-search-menu,
     .chai-pagination,
     .chai-switch
@@ -2599,8 +3045,10 @@
     .chai-result-card,
     .chai-result-card__expand-overlay,
     .chai-edit-card,
+    .chai-side-panel,
     .chai-search-menu,
     .chai-pagination
-  ) :focus-visible {
+  ) :focus-visible,
+[data-chai-focus-ring="hidden"] .chai-side-panel__launcher:focus-visible {
   outline: none;
 }

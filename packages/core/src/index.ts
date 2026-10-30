@@ -21,3 +21,4 @@ export * from "./menu-placement.js";
 export * from "./image-fit.js";
 export * from "./evaluation-judge.js";
 export * from "./analytics-events.js";
+export * from "./side-panel.js";

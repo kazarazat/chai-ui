@@ -922,5 +922,47 @@ export function composerContract(render: Render<ComposerProps>) {
       await screen.rerender({ value: "", onChange: () => {}, onSubmit: () => {}, promptLabel: "Prompt" });
       await expect.element(screen.getByRole("textbox", { name: "Prompt" })).toBeInTheDocument();
     });
+
+    it("puts your own + menu items above the built-in ones", async () => {
+      const onSelect = vi.fn();
+      const screen = harness({ extraMenuItems: [{ id: "page", label: "Use this page", onSelect }] }, { holdAttachments: true });
+      await screen.getByRole("button", { name: "Add" }).click();
+      const items = [...document.querySelectorAll(".chai-composer__attach-menu-item")].map((el) => el.textContent?.trim());
+      expect(items).toEqual(["Use this page", "Add media"]);
+      await screen.getByRole("menuitem", { name: "Use this page" }).click();
+      expect(onSelect).toHaveBeenCalledOnce();
+      expect(document.querySelector(".chai-composer__attach-menu")).toBeNull();
+    });
+
+    it("shows the + button for your own items alone", async () => {
+      const screen = harness({ extraMenuItems: [{ id: "page", label: "Use this page", onSelect: () => {} }] });
+      await screen.getByRole("button", { name: "Add" }).click();
+      await expect.element(screen.getByRole("menuitem", { name: "Use this page" })).toBeInTheDocument();
+    });
+
+    it("shows context chips, removable when they have onRemove", async () => {
+      const onRemove = vi.fn();
+      const screen = harness({
+        contextChips: [
+          { id: "page", label: "This page", onRemove },
+          { id: "fixed", label: "Pinned" },
+        ],
+      });
+      const chips = [...document.querySelectorAll(".chai-composer__chip--context")].map((el) => el.textContent?.trim());
+      expect(chips).toEqual(["This page", "Pinned"]);
+      await screen.getByRole("button", { name: "Remove This page" }).click();
+      expect(onRemove).toHaveBeenCalledOnce();
+      expect(document.querySelector('[aria-label="Remove Pinned"]')).toBeNull();
+    });
+
+    it("grows to fit a long placeholder while empty", async () => {
+      const screen = harness({ placeholder: "Ask" });
+      screen.container.style.width = "240px";
+      const field = () => screen.getByRole("textbox").element() as HTMLTextAreaElement;
+      await screen.rerender({ placeholder: "Ask" });
+      const oneLine = field().offsetHeight;
+      await screen.rerender({ placeholder: "Ask about this page, or ask something else entirely" });
+      await expect.poll(() => field().offsetHeight).toBeGreaterThan(oneLine);
+    });
   });
 }

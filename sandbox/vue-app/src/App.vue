@@ -3,7 +3,7 @@
 // whose submit produces a ResultCard, the installed tarballs work as a real
 // Vue app would use them. Offline: with no engine, useComposer uses mockEngine.
 import { ref } from "vue";
-import { ChaiProvider, Composer, ResultCard, useComposer, type ComposerAttachment } from "@chai-ui/vue";
+import { ChaiProvider, Composer, ResultCard, SidePanel, useComposer, type ComposerAttachment } from "@chai-ui/vue";
 
 const value = ref("");
 const attachments = ref<ComposerAttachment[]>([]);
@@ -24,6 +24,7 @@ const { run, submit } = useComposer();
         @submit="submit"
       />
       <ResultCard v-if="run" :results="run.results" :prompt="run.request.prompt" @action="() => {}" />
+      <SidePanel title="Assistant" mode="overlay" :prompt-tips="['Draft a reply']" />
     </main>
   </ChaiProvider>
 </template>

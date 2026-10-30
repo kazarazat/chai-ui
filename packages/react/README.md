@@ -238,7 +238,7 @@ rather than rewrite it.
 
 ### Analytics: `onEvent`
 
-`Composer` and `ResultCard` report what the person does and sees, one
+`Composer`, `ResultCard` and `SidePanel` report what the person does and sees, one
 `ChaiEvent` each, for whatever analytics tool you use. Write one function
 and pass it to each component:
 
@@ -250,11 +250,13 @@ const track = (e: ChaiEvent) => posthog.capture(e.name, e.properties);
 
 <Composer onEvent={track} … />
 <ResultCard onEvent={track} … />
+<SidePanel onEvent={track} … />
 ```
 
 Events cover submits, Stop, use case, model and option picks, attachments,
-Enhance, voice input, results shown (once each), result actions, paging and
-the details side. They're front end only: no prompt text, file names, URLs
+Enhance, voice input, results shown (once each), result actions, paging,
+the details side, and the side panel opening, closing, New chat, prompt
+tips (by position) and its page chip. They're front end only: no prompt text, file names, URLs
 or outputs, only lengths, counts and Chai's own ids. Track model calls,
 latency and cost on your server, where they're accurate.
 
@@ -312,6 +314,9 @@ themselves are in the
 - **`EditCard`** — edit an attached image by marking regions on it, each
   with its own instruction, then page through the edits as versions. See
   "Editing an image" below.
+- **`SidePanel`** — a panel beside your page with a Composer and its
+  answers, with opt-in page context and prompt tips. See "A side panel"
+  below.
 - **Primitives** (`src/primitives/`) — `Toggle` (an MD3 switch),
   `SearchMenu` (the model/option menu behind every picker — Chai's own rather than Material's `<md-menu>`; DESIGN.md §3 says why), and
   `Pagination` (a progress-style pager any paginated surface can reuse).
@@ -525,4 +530,60 @@ const model = SUGGESTED_EDIT_MODELS.find((m) => m.id === modelId) ?? SUGGESTED_E
 - **Versions.** Each edit's result is a new version, shown in the card with
   dots to page back. The next edit applies to the version showing.
 - **Images only** for now.
+
+## A side panel: `SidePanel`
+
+A panel on one side of your page with a Composer and its answers, for quick
+model use without leaving the page. People can ask about the page they're
+on or about anything else:
+
+```tsx
+import { SidePanel } from "@chai-ui/react";
+
+<div style={{ display: "flex" }}>
+  <main style={{ flex: 1 }}>{page}</main>
+  <SidePanel
+    title="Northwind Assistant"
+    description="Ask about this page, or anything else."
+    pageContext
+    promptTips={["Summarize this page", "What changed for free accounts?", "Draft a polite out-of-office reply"]}
+  />
+</div>
+```
+
+- **Answers** come from your `ChaiProvider`'s reasoning engine, or pass
+  `textEngine` (and `textModel`). There's no model menu, aspect ratio or
+  Enhance in the panel; voice input works as on the Composer (`voiceInput`).
+- **Page context** is off by default. With `pageContext`, the panel reads
+  the page's title, URL, selected text and main text (`readPageContext`:
+  `<main>`, then `<article>`, then `<body>`, capped at 12,000 characters) and
+  sends it with each question. A "This page" chip shows it's on; the
+  person can remove it to ask something else, and put it back from the `+`
+  menu. Pass a function instead of `true` to read the page your own way.
+  Mark anything to leave out with `data-chai-page-context="skip"`. Sending
+  a page's text to a model is your decision to make on purpose.
+- **Prompt tips**: two to four short examples under "Getting started"
+  (`promptTipsLabel`). A tap sends one. Include at least one that isn't
+  about the page.
+- **Layout**: `side="right"` (default) or `"left"`. `mode="push"` (default)
+  takes its own width beside your content, so place it as a flex sibling;
+  `mode="overlay"` floats over the page. `contained` keeps an overlay
+  inside its positioned parent. Below 600px wide, both open as a
+  full-screen sheet. `--chai-side-panel-width` sets the width (400px).
+- **Opening**: a launcher button opens it; Close clears the conversation,
+  and New chat starts over without closing. Control it with `open` and
+  `onOpenChange`, and set `launcher={false}` to use your own button.
+  Opening moves focus to the prompt, Esc closes the panel (after any open
+  menu), and closing returns focus to the launcher.
+- **Your mark**: `logo` replaces the default sparkle in the launcher, the
+  greeting (44px) and the header (28px), shown as given (an `img` or `svg`
+  fills the box) without the sparkle's green tile.
+- **Follow-ups** work: the last six exchanges go with each question
+  (`buildSidePanelPrompt`).
+- **Answers style**: `answers="simple"` (default) shows text on the panel
+  with like, dislike, retry and copy; `"card"` puts each answer in a
+  ResultCard. `footer` adds a note under the Composer, such as a disclaimer.
+- **Analytics**: `onEvent` reports opening, closing, New chat, prompt tips
+  (by position) and the page chip, plus the Composer's and the answers'
+  own events.
 

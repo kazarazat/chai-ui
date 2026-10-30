@@ -3,11 +3,13 @@ export { default as Composer } from "./Composer.vue";
 export { default as EditCard } from "./EditCard.vue";
 export { default as ResultCard } from "./ResultCard.vue";
 export { default as MediaAnalyzer } from "./MediaAnalyzer.vue";
+export { default as SidePanel } from "./SidePanel.vue";
 export { default as Pagination } from "./primitives/Pagination.vue";
 export { default as SearchMenu } from "./primitives/SearchMenu.vue";
 export { default as Toggle } from "./primitives/Toggle.vue";
 export type { SearchMenuOption, SearchMenuSection, SearchMenuToggleHeader } from "./primitives/search-menu.js";
 export type { ResultCardMoreAction, ResultCardVote } from "./result-card/types.js";
+export type { ComposerContextChip, ComposerMenuItem } from "./composer/types.js";
 export * from "./reasoning.js";
 export * from "./useComposer.js";
 export * from "./useMediaAnalyzer.js";
@@ -54,6 +56,9 @@ export {
   DEFAULT_EVALUATION_CHECKS,
   composerEvents,
   resultCardEvents,
+  sidePanelEvents,
+  readPageContext,
+  buildSidePanelPrompt,
 } from "@chai-ui/core";
 export type {
   AudioUseCase,
@@ -97,4 +102,7 @@ export type {
   SuggestedModelsCheck,
   FalInputFormat,
   Usage,
+  PageContext,
+  ReadPageContextOptions,
+  SidePanelTurn,
 } from "@chai-ui/core";

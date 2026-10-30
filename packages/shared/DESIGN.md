@@ -18,6 +18,7 @@ mismatch.
 | Media (image, video, audio) in, a generation-ready prompt out | `MediaAnalyzer` + `useMediaAnalyzer` | A file input plus your own model call |
 | One prompt's generated output (image, video, audio, text) | `ResultCard` | A custom media card |
 | Editing an image: marked regions, each with its own instruction | `EditCard` + `EDIT_IMAGE_USE_CASE` + `useComposer`'s `editImage` | A canvas or box-drawing library of your own |
+| A panel beside the page for quick questions, about the page or anything else | `SidePanel` (`pageContext`, `promptTips`) | A chat drawer of your own around a `Composer` |
 | Submit → engine → result state, wired together | `useComposer` | Your own fetch/loading/error state |
 | One reasoning model shared by every component | `ChaiProvider`, `useReasoning` | A text model picked per component |
 | A switch, an option menu, a pager | `Toggle`, `SearchMenu`, `Pagination` | Another UI kit's versions inside a CHAI surface |
@@ -193,7 +194,9 @@ Rules:
 | Feedback | Like/dislike fire `onAction`, and the displayed vote comes from `getVote` | Store votes yourself |
 | Details | The flip side shows prompt, model, tokens, cost and duration | Supply `models` so ids resolve to labels |
 | Quality checks | Each result's `evaluations` render on the flip side: green with a check if it passed, red with a cross if it failed | Run your checks in your backend proxy and add a top-level `evaluations: [{ id, label, passed }]` field to the JSON it returns (for a stream, send it as its own `data:` chunk). The built-in Fal and OpenRouter engines read that field, a custom engine returns it from `generate`, and `useComposer` puts it on the matching `Result`. Or turn on the opt-in judge: `useComposer({ judgeModel, judgeChecks })` has a model you name check each text or image result against your criteria, one tag per check, after your backend's. It's off by default, with no default model, and there are no confidence scores. |
-| Analytics | Nothing visible: `Composer` and `ResultCard` report interactions through `onEvent` (`@event` in Vue, `onEvent` in Svelte), one `ChaiEvent` each | Pass one function to each component, e.g. `(e) => posthog.capture(e.name, e.properties)`. Events are front end only (what the person did and saw), with no prompt text, file names, URLs or outputs. Track model calls, latency and cost on your server. |
+| Side panel conversation | `SidePanel` keeps the thread, docks the Composer under it, streams answers, sends the last six exchanges with each follow-up, and clears on Close or New chat. Opening moves focus to the prompt, Esc closes, and closing returns focus to the launcher | Give it a `title` and a reasoning engine (`ChaiProvider` or `textEngine`) |
+| Page context | With `pageContext`, a removable "This page" chip; the page's title, URL, selection and main text go with each question while it's on, and turns that carried it say so | Turn it on deliberately (it sends page text to your model), and mark anything private with `data-chai-page-context="skip"` |
+| Analytics | Nothing visible: `Composer`, `ResultCard` and `SidePanel` report interactions through `onEvent` (`@event` in Vue, `onEvent` in Svelte), one `ChaiEvent` each | Pass one function to each component, e.g. `(e) => posthog.capture(e.name, e.properties)`. Events are front end only (what the person did and saw), with no prompt text, file names, URLs or outputs. Track model calls, latency and cost on your server. |
 
 `ResultCard` is where a run ends. Don't add a "use as input" action that
 feeds a result back into a `Composer`. Chaining steps like that is
