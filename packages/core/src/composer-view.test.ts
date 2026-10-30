@@ -18,13 +18,17 @@ const model = (id: string, aspectRatios?: string[]): ModelOption => ({ id, label
 const photo = { id: "a", src: "x", kind: "image" as const };
 
 describe("composerView", () => {
-  it("runs the default use case when none is picked, and needs a prompt or an attachment", () => {
+  it("runs the default use case when none is picked, and needs a prompt", () => {
     const empty = composerView({ value: " " });
     expect(empty.activeUseCases).toEqual([TEXT_USE_CASE]);
     expect(empty.isSubmitDisabled).toBe(true);
     expect(composerView({ value: "a mug" }).isSubmitDisabled).toBe(false);
     expect(composerView({ value: "a mug" }).payload()).toMatchObject({ useCase: TEXT_USE_CASE, modelId: null, aspectRatio: null, regions: [] });
-    expect(composerView({ value: "", attachments: [photo] }).isSubmitDisabled).toBe(false);
+    // An attachment alone doesn't say what to make, for any use case.
+    for (const useCase of [null, { kind: "image" as const, label: "Image" }, { kind: "video" as const, label: "Video" }, CREATE_SPEECH_USE_CASE, CREATE_MUSIC_USE_CASE]) {
+      expect(composerView({ value: " ", useCase, attachments: [photo] }).isSubmitDisabled).toBe(true);
+      expect(composerView({ value: "make it blue", useCase, attachments: [photo] }).isSubmitDisabled).toBe(false);
+    }
     // An app's own rule wins, except that retry always stays available.
     expect(composerView({ value: "", submitDisabled: false }).isSubmitDisabled).toBe(false);
     expect(composerView({ value: "", submitDisabled: true, submitError: "x" }).isSubmitDisabled).toBe(false);
@@ -36,7 +40,10 @@ describe("composerView", () => {
     expect(withImage.placeholder).toMatch(/whole image/);
     expect(withImage.isSubmitDisabled).toBe(true);
     const region = { id: "r", number: 1, box: { x: 0, y: 0, width: 1, height: 1 }, prompt: "x" };
-    expect(composerView({ value: "", useCase: EDIT_IMAGE_USE_CASE, attachments: [photo], regions: [region] }).payload().regions).toEqual([region]);
+    const withRegion = composerView({ value: "", useCase: EDIT_IMAGE_USE_CASE, attachments: [photo], regions: [region] });
+    // A region carries its own instruction, so it's enough.
+    expect(withRegion.isSubmitDisabled).toBe(false);
+    expect(withRegion.payload().regions).toEqual([region]);
     expect(composerView({ value: "x", placeholder: "Mine" }).placeholder).toBe("Mine");
   });
 

@@ -68,6 +68,22 @@ export function composerContract(render: Render<ComposerProps>) {
     );
 
   describe("Composer", () => {
+    it("won't submit an attachment without a prompt, for any use case", async () => {
+      for (const useCase of [null, IMAGE, VIDEO]) {
+        const onSubmit = vi.fn();
+        // No Model menu (`models: []`), so a pick isn't what holds submit back.
+        const screen = harness({ onSubmit, useCase, models: [] }, { holdAttachments: true });
+        await userEvent.upload(fileInput(), file("photo.png", "image/png"));
+        await expect.poll(() => document.querySelector(".chai-composer__thumb")).not.toBeNull();
+        await screen.getByRole("button", { name: "Submit" }).click();
+        expect(onSubmit).not.toHaveBeenCalled();
+        await userEvent.fill(screen.getByRole("textbox"), "make it blue");
+        await screen.getByRole("button", { name: "Submit" }).click();
+        expect(onSubmit).toHaveBeenCalledOnce();
+        screen.unmount();
+      }
+    });
+
     it("submits the typed prompt as a text request when no use case is picked", async () => {
       const onSubmit = vi.fn();
       const screen = harness({ onSubmit });
