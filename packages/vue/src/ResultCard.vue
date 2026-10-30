@@ -246,7 +246,7 @@ function onOverlayKeydown(e: KeyboardEvent) {
           </div>
 
           <!-- Floating over the bottom of the media: votes and retry in one pill, details on the right. -->
-          <div class="chai-card-bottom">
+          <div :class="['chai-card-bottom', { 'chai-card-bottom--on-surface': !overMedia }]">
             <div class="chai-card-actions">
               <div class="chai-card-pill">
                 <IconButton variant="pill" label="Like" :active="vote === 'like'" :disabled="disabled" @click="act('like')">

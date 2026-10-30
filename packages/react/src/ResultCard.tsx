@@ -302,7 +302,7 @@ export function ResultCard({
 
             {/* Floating over the bottom of the media: votes and retry in one
                 pill, details on the right. */}
-            <div className="chai-card-bottom">
+            <div className={`chai-card-bottom${overMedia ? "" : " chai-card-bottom--on-surface"}`}>
               <div className="chai-card-actions">
                 <div className="chai-card-pill">
                   <ResultIconButton

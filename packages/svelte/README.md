@@ -50,6 +50,20 @@ same styles, without Roboto) and point the components at your font:
 :root { --chai-type-family-material: "Your Font", system-ui, sans-serif; }
 ```
 
+### Dark theme
+
+The components have a dark theme. It's opt-in: set `data-chai-theme="dark"`
+on `<html>`, or on any element, and every component inside it switches.
+
+```html
+<html data-chai-theme="dark">
+```
+
+Chai doesn't follow the system setting on its own, because your app decides
+its theme. Following it, overriding a single color, and the dark values
+themselves are in the
+[`@chai-ui/tokens` README](https://github.com/kazarazat/chai-ui/tree/main/packages/tokens#dark-theme).
+
 ## Quick start
 
 ```svelte

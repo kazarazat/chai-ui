@@ -28,7 +28,8 @@ Edit `src/tokens.json` only. It's a DTCG-flavored format: every leaf is
 `{color.root.green-50}` — see `color.semantic.*` for examples of referencing
 `color.root.*`. Always add new components against `color.semantic.*` (or add
 a new semantic alias) rather than `color.root.*` directly, so a future
-re-theme only touches the root palette.
+re-theme only touches the root palette. A new semantic role also needs its
+dark theme value in `color.dark.*` (see below); the build fails without one.
 
 Run `pnpm build` (from here, or `pnpm --filter @chai-ui/tokens build` from
 the repo root) to regenerate `dist/`.
@@ -64,5 +65,46 @@ already resolved, so no reference-following is required at the Figma end.
 
 This is a design-tokens pipeline only: it does not keep Figma *components*
 in sync with the code components.
+
+## Dark theme
+
+The dark theme is opt-in: set `data-chai-theme="dark"` on `<html>`, or on
+any element, to switch every Chai component inside it. Without the
+attribute nothing changes.
+
+```html
+<html data-chai-theme="dark">
+```
+
+Chai doesn't follow the system setting on its own, because your app decides
+its theme. To follow it:
+
+```ts
+const dark = matchMedia("(prefers-color-scheme: dark)");
+const sync = () =>
+  dark.matches
+    ? document.documentElement.setAttribute("data-chai-theme", "dark")
+    : document.documentElement.removeAttribute("data-chai-theme");
+sync();
+dark.addEventListener("change", sync);
+```
+
+In `src/tokens.json`, `color.dark` holds what each semantic role becomes in
+the dark theme, using the same root palette. The roles that sit on images
+and video (the overlays, `media-backdrop` and the edit-region colors) look
+the same in both themes. Every text pair in the dark theme meets WCAG 2.2 AA
+contrast. The brand green moves to `green-60`, because `green-50` is too
+dark for text on dark surfaces.
+
+The build emits the dark values under `[data-chai-theme="dark"]` in
+`@chai-ui/tokens/css`, along with the Material color roles again, so the switch,
+submit button and text field follow the theme too. To adjust one role in
+the dark theme only, override it under the same selector:
+
+```css
+[data-chai-theme="dark"] {
+  --chai-color-semantic-control-surface: #202124;
+}
+```
 
 [Tokens Studio for Figma]: https://tokens.studio/
