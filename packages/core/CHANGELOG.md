@@ -1,5 +1,9 @@
 # @chai-ui/core
 
+## 1.2.0
+
+No changes in this release.
+
 ## 1.1.2
 
 ### Patch Changes
