@@ -270,7 +270,7 @@
 }
 
 .chai-search-menu__option:hover:not(:disabled) {
-  background: var(--chai-color-semantic-control-surface-hover);
+  background: var(--chai-color-semantic-menu-item-hover);
 }
 
 .chai-search-menu__option--selected {
@@ -966,7 +966,7 @@
 }
 
 .chai-composer__attach-menu-item:hover {
-  background: var(--chai-composer-hover);
+  background: var(--chai-color-semantic-menu-item-hover);
 }
 
 .chai-composer__attach-menu-icon {
@@ -1188,11 +1188,10 @@
   min-height: 140px;
   padding: var(--chai-space-4);
   border-radius: var(--chai-radius-md);
-  border: 1.5px dashed var(--chai-color-semantic-control-text-strong);
-  /* Brand-green wash, same token `.chai-drop-zone` reads for the same
-     reason (see that rule's own comment) — this dashed box is this
-     component's equivalent surface. */
-  background: var(--chai-color-semantic-accent-subtle);
+  border: 1.5px dashed var(--chai-color-semantic-dropzone-border);
+  /* A brand-green wash; neutral with a green border in the dark theme,
+     where a green fill this large outshouts everything around it. */
+  background: var(--chai-color-semantic-dropzone-surface);
   text-align: center;
   cursor: pointer;
   transition: background var(--chai-motion-duration-fast) var(--chai-motion-easing-standard),
@@ -1893,7 +1892,7 @@
 }
 
 .chai-result-card__more-menu-item:hover {
-  background: var(--chai-color-semantic-control-surface-hover);
+  background: var(--chai-color-semantic-menu-item-hover);
 }
 
 .chai-result-card__more-menu-icon {
@@ -2478,6 +2477,13 @@
   background: var(--chai-color-semantic-control-surface-raised);
 }
 
+/* On a text or audio result the pills sit on the card, not over media:
+   the same in light, solid gray in the dark theme. */
+.chai-card-bottom--on-surface .chai-card-pill,
+.chai-card-bottom--on-surface .chai-card-round {
+  background: var(--chai-color-semantic-control-pill);
+}
+
 /* A vote that's on: green, on a solid surface. */
 .chai-card-pill-btn--active {
   color: var(--chai-color-semantic-accent-text);
@@ -2557,6 +2563,12 @@
 .chai-composer__field--boxed:has(.chai-composer__input:focus-visible) {
   outline: 3px solid var(--chai-color-semantic-accent);
   outline-offset: 2px;
+}
+
+/* The pill has its own border: the ring is drawn over it rather than
+   outside it, so focus shows one green edge, not a ring plus a border. */
+.chai-composer:has(.chai-composer__field:not(.chai-composer__field--boxed) .chai-composer__input:focus-visible) {
+  outline-offset: -1px;
 }
 
 /* Off switch: `data-chai-focus-ring="hidden"` on any ancestor hides every

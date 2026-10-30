@@ -16,7 +16,8 @@ analyzing media, showing results and editing images. It's published to npm
 as five packages that share one version:
 
 - `packages/tokens` (`@chai-ui/tokens`): design tokens. `src/tokens.json` is
-  the only source; `build.mjs` emits CSS variables, JS/TS and a Figma set.
+  the only source; `build.mjs` emits CSS variables (with the opt-in dark
+  theme from `color.dark`), JS/TS and a Figma set.
 - `packages/core` (`@chai-ui/core`): everything framework-free. The data
   model (`run.ts`), the stores and the components' derived state
   (`composer.ts`, `composer-view.ts`, `edit-card.ts`, `media-analyzer.ts`),

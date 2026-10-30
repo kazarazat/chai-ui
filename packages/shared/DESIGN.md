@@ -142,8 +142,10 @@ colors are driven by Chai tokens, not the other way around.
 |---|---|---|
 | Root palette | `--chai-color-root-{gray, green, amber, red}-*` | Nothing directly. It only feeds the layers below. `green-50` (`#009747`) is the brand green. |
 | Brand and state | `--chai-color-semantic-{accent, accent-hover, accent-subtle, accent-soft, accent-text, text-on-accent, warning, warning-subtle, danger, danger-subtle}` | The brand green and state colors. Use `accent` for fills, icons and focus rings, and `accent-text` for green text (`accent` is only 3.8:1 on white). |
-| Controls | `--chai-color-semantic-control-{surface, surface-hover, surface-raised, track, divider, border, border-soft, border-faint, text-strong, text, text-muted}` | The pure grays the components are built from. |
-| Overlays and media | `--chai-color-semantic-{overlay, on-overlay, scrim, media-backdrop}` | Buttons and backdrops on top of images and video |
+| Controls | `--chai-color-semantic-control-{surface, surface-hover, surface-raised, field, pill, track, divider, border, border-soft, border-faint, text-strong, text, text-muted}`, `--chai-color-semantic-menu-item-hover` | The pure grays the components are built from. `menu-item-hover` is gray, and green in the dark theme. |
+| Drop zone | `--chai-color-semantic-dropzone-{surface, border}` | The Media Analyzer's drop zone: a green wash, neutral with a green border in the dark theme. |
+| Overlays and media | `--chai-color-semantic-{overlay, on-overlay, scrim, media-backdrop}` | Buttons and backdrops on top of images and video. The same in both themes. |
+| Dark theme | `data-chai-theme="dark"` on `<html>` or any ancestor | Opt-in. Every semantic role except the overlays and media roles takes its dark value (`color.dark` in `tokens.json`), and Material follows. The accent becomes `green-60`. |
 | Space | `--chai-space-0` … `--chai-space-8` (0, 4, 8, 12, 16, 24, 32, 48, 64px) | Padding, gaps, margins |
 | Radius | `--chai-radius-{sm, md, lg, full}` | Corners |
 | Type | `--chai-type-{family, size, weight, leading, tracking}-*` | Text. The components use `--chai-type-family-material` (Roboto, loaded by `style.css`). With an app font, import `style-without-fonts.css` instead and set that variable. |
@@ -160,6 +162,9 @@ Rules:
 - **Never put a literal color on a component.** Use a semantic role. If a
   design needs a color that has no role yet, add the role to
   `packages/tokens/src/tokens.json` instead of writing the hex.
+- **Every new role gets a dark value.** Add it to `color.dark` and check its
+  text pairs against WCAG 2.2 AA in the dark theme; the build fails without
+  one. Only roles that sit on images and video are exempt.
 - **Restyle by overriding variables, not selectors.** Override the
   semantic roles on `:root` to restyle everything, including the Material
   components, or set a component variable like `--chai-composer-bg` on
