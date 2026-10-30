@@ -3,10 +3,13 @@
 import { nextTick, ref, watch, type Component } from "vue";
 import { menuOpensAbove, type ComposerAttachMenuAction, type composerAttachMenuItems, type MenuPlacement } from "@chai-ui/core";
 import { useDismiss } from "../dismiss.js";
+import type { ComposerMenuItem } from "./types.js";
 import { AttachFileIcon, CloseSymbolIcon, ContentCutIcon, ImageIcon, MusicNoteIcon, PlusIcon, GlobeIcon, VideocamIcon, VolumeUpIcon } from "../icons.js";
 
 const props = defineProps<{
   items: ReturnType<typeof composerAttachMenuItems>;
+  /** Your own items, above the built-in ones. */
+  extraItems?: ComposerMenuItem[];
   /** Edit mode: one image file at a time. */
   imagesOnly?: boolean;
   disabled?: boolean;
@@ -43,6 +46,11 @@ function pick(action: ComposerAttachMenuAction) {
   emit("select", action);
 }
 
+function pickExtra(item: ComposerMenuItem) {
+  open.value = false;
+  item.onSelect();
+}
+
 function onFileChange(e: Event) {
   const el = e.target as HTMLInputElement;
   emit("files", el.files);
@@ -58,12 +66,18 @@ function onFileChange(e: Event) {
       :disabled="disabled"
       :aria-expanded="open"
       aria-haspopup="menu"
-      :aria-label="open ? 'Close attach menu' : 'Add media'"
+      :aria-label="open ? 'Close attach menu' : extraItems?.length ? 'Add' : 'Add media'"
       @click="open = !open"
     >
       <CloseSymbolIcon v-if="open" /><PlusIcon v-else />
     </button>
     <ul v-if="open" ref="menu" :class="['chai-composer__attach-menu', { 'chai-composer__attach-menu--above': above }]" role="menu">
+      <li v-for="(item, i) in extraItems ?? []" :key="`extra-${item.id}`" role="none">
+        <button type="button" role="menuitem" class="chai-composer__attach-menu-item" @click="pickExtra(item)">
+          <span class="chai-composer__attach-menu-icon"><component :is="item.icon" v-if="item.icon" /></span>{{ item.label }}
+        </button>
+        <hr v-if="i === extraItems!.length - 1 && items.length > 0" class="chai-composer__attach-menu-divider" role="separator" />
+      </li>
       <li v-for="(item, i) in items" :key="item.action" role="none">
         <button type="button" role="menuitem" class="chai-composer__attach-menu-item" @click="pick(item.action)">
           <span class="chai-composer__attach-menu-icon"><component :is="ICONS[item.action]" /></span>{{ item.label }}

@@ -122,6 +122,7 @@ The props are React's, unchanged: `value` and `onChange`, `attachments` and
 | `useComposer` / `useMediaAnalyzer` return values | They return an object whose fields stay current: read `composer.run`, don't destructure it |
 | Options that change between renders | Pass a function: `useComposer(() => ({ engine, editImage }))` |
 | `<EditCard {...edit} />` | The same: `{#if composer.edit}<EditCard {...composer.edit} />{/if}` |
+| `SidePanel`'s `logo` and `footer`, a Composer chip or menu item's `icon` | Snippets (`footer` also takes text) |
 
 Call `useComposer`, `useMediaAnalyzer` and `useReasoning` while a component
 initializes (in its `<script>`), as with Svelte's own `getContext`.
@@ -148,11 +149,16 @@ into the page. Left out, it's `"auto"`: each menu goes where it fits.
 - **`ResultCard`**: one prompt's results, paged, with votes, retry,
   download, share, details, streaming text and quality-check tags (from
   your backend, or the opt-in judge: `useComposer({ judgeModel, judgeChecks })`).
-- **Analytics:** `onEvent` on `Composer` and `ResultCard` reports what the
+- **Analytics:** `onEvent` on `Composer`, `ResultCard` and `SidePanel` reports what the
   person does and sees, one `ChaiEvent` each, for any analytics tool:
   `onEvent={(e) => posthog.capture(e.name, e.properties)}`.
 - **`EditCard`**: marked regions with their own instructions, and each
   edit as a new version.
+- **`SidePanel`**: a panel beside your page with a Composer and its
+  answers, for questions about the page (opt-in `pageContext`, shown as a
+  removable chip) or anything else, with prompt tips, push or overlay, and
+  either side. Same props as React's, with `logo` and `footer` as snippets. See the React
+  README's "A side panel" for the details.
 - **`useComposer`**, **`ChaiProvider`**, and the `Toggle`, `SearchMenu`
   and `Pagination` building blocks.
 - The engines and types from `@chai-ui/core`, re-exported.

@@ -48,7 +48,15 @@
     void value;
     if (!textarea) return;
     textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    // Empty, the placeholder sets the height: a long one wraps in a narrow
+    // bar (a side panel) instead of being cut off at one line.
+    if (!value && placeholder) {
+      textarea.value = placeholder;
+      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.value = "";
+    } else {
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
   });
 
   // Enhance and undo. The prompt already holds the rewrite once `enhancing`

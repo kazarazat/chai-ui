@@ -43,6 +43,7 @@ import Chip from "./composer/Chip.vue";
 import PromptField from "./composer/PromptField.vue";
 import VoiceButton from "./composer/VoiceButton.vue";
 import VoiceWaveform from "./composer/VoiceWaveform.vue";
+import type { ComposerContextChip, ComposerMenuItem } from "./composer/types.js";
 import { ArrowForwardIcon, CloseSymbolIcon, ErrorIcon, ImageIcon, MusicNoteIcon, RetryIcon, StopIcon, VideocamIcon } from "./icons.js";
 import SearchMenu from "./primitives/SearchMenu.vue";
 
@@ -130,6 +131,10 @@ const props = withDefaults(
      */
     voiceInput?: VoiceInputConfig;
     disabled?: boolean;
+    /** Your own items at the top of the `+` menu, above the built-in ones, e.g. "Use this page" in a side panel. */
+    extraMenuItems?: ComposerMenuItem[];
+    /** Chips after the use-case chip for context sent with the prompt, e.g. "This page". With `onRemove`, a chip can be removed. */
+    contextChips?: ComposerContextChip[];
   }>(),
   {
     attachments: () => [],
@@ -148,6 +153,8 @@ const props = withDefaults(
     // which reads as "never disable".
     submitDisabled: undefined,
     regions: () => [],
+    extraMenuItems: () => [],
+    contextChips: () => [],
   }
 );
 const emit = defineEmits<{
@@ -366,8 +373,9 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
     <div class="chai-composer__controls">
       <div class="chai-composer__controls-start">
         <AttachMenu
-          v-if="menuItems.length > 0"
+          v-if="menuItems.length > 0 || extraMenuItems.length > 0"
           :items="menuItems"
+          :extra-items="extraMenuItems"
           :images-only="view.editing"
           :disabled="disabled"
           :placement="menuPlacement"
@@ -382,6 +390,17 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
           :removable="Boolean(multiSelectUseCases ? props['onUpdate:useCases'] : onClearUseCase)"
           :disabled="disabled"
           @remove="removeUseCase(u)"
+        />
+
+        <Chip
+          v-for="chip in contextChips"
+          :key="`context-${chip.id}`"
+          :label="chip.label"
+          :icon="chip.icon"
+          context
+          :removable="Boolean(chip.onRemove)"
+          :disabled="disabled"
+          @remove="chip.onRemove?.()"
         />
 
         <!-- One Model menu, or one per use case with multi-use-case select. The auto-select switch lives inside each, so with it shown the trigger stays enabled: it's the only way back to the switch. -->

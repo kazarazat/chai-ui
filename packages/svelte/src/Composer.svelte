@@ -40,6 +40,7 @@
   import AttachMenu from "./composer/AttachMenu.svelte";
   import Chip from "./composer/Chip.svelte";
   import PromptField from "./composer/PromptField.svelte";
+  import type { ComposerContextChip, ComposerMenuItem } from "./composer/types.js";
   import VoiceButton from "./composer/VoiceButton.svelte";
   import VoiceWaveform from "./composer/VoiceWaveform.svelte";
   import Icon from "./Icon.svelte";
@@ -142,6 +143,10 @@
      */
     voiceInput?: VoiceInputConfig;
     disabled?: boolean;
+    /** Your own items at the top of the `+` menu, above the built-in ones, e.g. "Use this page" in a side panel. */
+    extraMenuItems?: ComposerMenuItem[];
+    /** Chips after the use-case chip for context sent with the prompt, e.g. "This page". With `onRemove`, a chip can be removed. */
+    contextChips?: ComposerContextChip[];
     /** On the bar's root, e.g. to size it. */
     class?: ClassValue;
     style?: string;
@@ -372,9 +377,10 @@
 
   <div class="chai-composer__controls">
     <div class="chai-composer__controls-start">
-      {#if menuItems.length > 0}
+      {#if menuItems.length > 0 || (props.extraMenuItems?.length ?? 0) > 0}
         <AttachMenu
           items={menuItems}
+          extraItems={props.extraMenuItems}
           imagesOnly={view.editing}
           disabled={props.disabled}
           placement={menuPlacement}
@@ -389,6 +395,17 @@
           removable={Boolean(props.multiSelectUseCases ? props.onUseCasesChange : props.onClearUseCase)}
           disabled={props.disabled}
           onRemove={() => removeUseCase(u)}
+        />
+      {/each}
+
+      {#each props.contextChips ?? [] as chip (chip.id)}
+        <Chip
+          label={chip.label}
+          icon={chip.icon}
+          context
+          removable={Boolean(chip.onRemove)}
+          disabled={props.disabled}
+          onRemove={() => chip.onRemove?.()}
         />
       {/each}
 

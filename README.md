@@ -38,6 +38,7 @@ option.
 | `MediaAnalyzer` | Turns a dropped image, video or audio clip into a generation-ready prompt, with the analysis model and prompt length chosen by the user. |
 | `ResultCard` | Shows one prompt's results from one or several models in a single card, paging between them, as image, video, audio or streaming text with like, retry, download, share, a details flip and pass or fail quality checks. |
 | `EditCard` | Edits an image through regions drawn on it, each with its own instruction, then pages from the original through every edited version. |
+| `SidePanel` | A panel on the left or right of your page holding a Composer and its answers, for quick questions about the page or anything else, with opt-in page context, prompt tips, and push or overlay layouts. |
 
 ## Install
 

@@ -3,6 +3,7 @@
   import { tick } from "svelte";
   import { menuOpensAbove, type ComposerAttachMenuAction, type composerAttachMenuItems, type MenuPlacement } from "@chai-ui/core";
   import { useDismiss } from "../dismiss.svelte.js";
+  import type { ComposerMenuItem } from "./types.js";
   import Icon from "../Icon.svelte";
   import {
     AttachFileIcon,
@@ -19,6 +20,7 @@
 
   let {
     items,
+    extraItems = [],
     imagesOnly = false,
     disabled = false,
     placement,
@@ -26,6 +28,8 @@
     onFiles,
   }: {
     items: ReturnType<typeof composerAttachMenuItems>;
+    /** Your own items, above the built-in ones. */
+    extraItems?: ComposerMenuItem[];
     /** Edit mode: one image file at a time. */
     imagesOnly?: boolean;
     disabled?: boolean;
@@ -68,6 +72,11 @@
     onSelect(action);
   }
 
+  function pickExtra(item: ComposerMenuItem) {
+    open = false;
+    item.onSelect();
+  }
+
   function onchange(e: Event) {
     const el = e.target as HTMLInputElement;
     onFiles(el.files);
@@ -82,13 +91,21 @@
     {disabled}
     aria-expanded={open}
     aria-haspopup="menu"
-    aria-label={open ? "Close attach menu" : "Add media"}
+    aria-label={open ? "Close attach menu" : extraItems.length > 0 ? "Add" : "Add media"}
     onclick={toggle}
   >
     <Icon icon={open ? CloseSymbolIcon : PlusIcon} />
   </button>
   {#if open}
     <ul bind:this={menu} class={["chai-composer__attach-menu", { "chai-composer__attach-menu--above": above }]} role="menu">
+      {#each extraItems as item, i (item.id)}
+        <li role="none">
+          <button type="button" role="menuitem" class="chai-composer__attach-menu-item" onclick={() => pickExtra(item)}>
+            <span class="chai-composer__attach-menu-icon">{@render item.icon?.()}</span>{item.label}
+          </button>
+          {#if i === extraItems.length - 1 && items.length > 0}<hr class="chai-composer__attach-menu-divider" />{/if}
+        </li>
+      {/each}
       {#each items as item, i (item.action)}
         <li role="none">
           <button type="button" role="menuitem" class="chai-composer__attach-menu-item" onclick={() => pick(item.action)}>

@@ -7,6 +7,7 @@ import Composer from "./Composer.svelte";
 import EditCard from "./EditCard.svelte";
 import MediaAnalyzer from "./MediaAnalyzer.svelte";
 import ResultCard from "./ResultCard.svelte";
+import SidePanel from "./SidePanel.svelte";
 import Setup from "./__tests__/fixtures/Setup.svelte";
 import { useComposer } from "./useComposer.svelte.js";
 import { useMediaAnalyzer } from "./useMediaAnalyzer.svelte.js";
@@ -89,6 +90,18 @@ describe("server render", () => {
       },
     });
     expect(body).toContain('class="chai-edit-card');
+  });
+
+  it("renders the SidePanel open, with page context and prompt tips, and closed as its launcher", async () => {
+    // Page context is read at submit, never during render.
+    const open = await render(SidePanel, {
+      props: { title: "Assistant", defaultOpen: true, pageContext: true, promptTips: ["Summarize this page"], footer: "Check answers." },
+    });
+    expect(open.body).toContain('class="chai-side-panel');
+    expect(open.body).toContain("This page");
+    expect(open.body).toContain("Summarize this page");
+    const closed = await render(SidePanel, { props: { title: "Assistant" } });
+    expect(closed.body).toContain("chai-side-panel__launcher");
   });
 
   it("runs the hooks inside a ChaiProvider", async () => {

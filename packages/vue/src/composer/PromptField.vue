@@ -32,12 +32,20 @@ const id = useId();
 // Grows with wrapped text from one line, instead of a fixed row count.
 const textarea = ref<HTMLTextAreaElement>();
 watch(
-  () => props.value,
+  () => [props.value, props.placeholder],
   () => {
     const el = textarea.value;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    // Empty, the placeholder sets the height: a long one wraps in a narrow
+    // bar (a side panel) instead of being cut off at one line.
+    if (!props.value && props.placeholder) {
+      el.value = props.placeholder;
+      el.style.height = `${el.scrollHeight}px`;
+      el.value = "";
+    } else {
+      el.style.height = `${el.scrollHeight}px`;
+    }
   },
   { flush: "post", immediate: true }
 );

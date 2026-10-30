@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composerEvents, resultCardEvents, useCaseId } from "./analytics-events.js";
+import { composerEvents, resultCardEvents, sidePanelEvents, useCaseId } from "./analytics-events.js";
 import { CREATE_MUSIC_USE_CASE, EDIT_IMAGE_USE_CASE, type ComposerSubmitPayload } from "./composer.js";
 
 describe("analytics events", () => {
@@ -48,6 +48,11 @@ describe("analytics events", () => {
       resultCardEvents.action("download"),
       resultCardEvents.paged(1, 3),
       resultCardEvents.infoOpened(),
+      sidePanelEvents.opened(),
+      sidePanelEvents.closed(3),
+      sidePanelEvents.newChat(2),
+      sidePanelEvents.tipUsed(1),
+      sidePanelEvents.pageContextToggled(false),
     ]).toEqual([
       { name: "chai_composer_media_attached", properties: { count: 2, unsupported_count: 1 } },
       { name: "chai_composer_auto_select_toggled", properties: { on: true } },
@@ -64,6 +69,11 @@ describe("analytics events", () => {
       { name: "chai_result_action", properties: { action: "download" } },
       { name: "chai_result_paged", properties: { index: 1, count: 3 } },
       { name: "chai_result_info_opened", properties: {} },
+      { name: "chai_side_panel_opened", properties: {} },
+      { name: "chai_side_panel_closed", properties: { turn_count: 3 } },
+      { name: "chai_side_panel_new_chat", properties: { turn_count: 2 } },
+      { name: "chai_side_panel_tip_used", properties: { index: 1 } },
+      { name: "chai_side_panel_page_context_toggled", properties: { on: false } },
     ]);
   });
 });
