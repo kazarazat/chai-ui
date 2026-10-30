@@ -5,6 +5,7 @@ import { MdFab } from "@material/web/fab/fab.js";
 import {
   DEFAULT_MAX_ATTACHMENTS_BY_KIND,
   isMediaAnalyzerAtCap,
+  mediaAnalyzerEvents,
   mediaAnalyzerModelSections,
   nextMediaAnalyzerAttachments,
   PROMPT_LENGTH_HINT,
@@ -12,7 +13,7 @@ import {
   replacedNote,
   SUGGESTED_ANALYSIS_MODELS,
 } from "@chai-ui/core";
-import type { ModelOption, MediaKind, MediaAnalysisPromptLength } from "@chai-ui/core";
+import type { ChaiEvent, ModelOption, MediaKind, MediaAnalysisPromptLength } from "@chai-ui/core";
 import { SearchMenu } from "./primitives/SearchMenu.js";
 import { ArrowForwardIcon, StopIcon } from "./icons.js";
 import type { MediaAnalyzerAttachment, MediaAnalyzerSubmitPayload } from "@chai-ui/core";
@@ -86,6 +87,14 @@ export interface MediaAnalyzerProps {
   onSubmit: (payload: MediaAnalyzerSubmitPayload) => void;
   /** Fires when the stop button is pressed while `submitting`. With it, submit turns into stop during an analysis (wire it to `useMediaAnalyzer`'s `cancel`); without it, submit is just disabled. */
   onAbort?: () => void;
+  /**
+   * Front-end analytics: what the person does in the analyzer (attach and
+   * remove media, model, auto-select and prompt length picks, submit, stop)
+   * and when an analysis finishes, one `ChaiEvent` each:
+   * `onEvent={(e) => posthog.capture(e.name, e.properties)}`. No file names
+   * or contents, only kinds and counts.
+   */
+  onEvent?: (event: ChaiEvent) => void;
 }
 
 export function MediaAnalyzer({
@@ -107,6 +116,7 @@ export function MediaAnalyzer({
   submitError,
   onSubmit,
   onAbort,
+  onEvent,
 }: MediaAnalyzerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const kind = attachments[0]?.kind;
@@ -128,6 +138,7 @@ export function MediaAnalyzer({
     if (!fileList || fileList.length === 0) return;
     const { media, unsupported } = await readMediaFiles(fileList);
     unsupported.forEach((name) => onUnsupportedFile?.(name));
+    onEvent?.(mediaAnalyzerEvents.mediaAttached(media.length, unsupported.length));
     if (media.length === 0) return;
     const next = media.reduce((acc, m) => nextMediaAnalyzerAttachments(acc, m, maxAttachmentsByKind), attachments);
     const note = replacedNote(attachments, next);
@@ -136,8 +147,22 @@ export function MediaAnalyzer({
   }
 
   function handleRemove(id: string) {
-    onAttachmentsChange(attachments.filter((a) => a.id !== id));
+    const next = attachments.filter((a) => a.id !== id);
+    onEvent?.(mediaAnalyzerEvents.mediaRemoved(next.length));
+    onAttachmentsChange(next);
   }
+
+  // "Finished" when an analysis stops running: done, or failed (`submitError`
+  // set). Not after Stop, which reports its own event.
+  const wasSubmitting = useRef(submitting);
+  const stoppedRef = useRef(false);
+  useEffect(() => {
+    if (wasSubmitting.current && !submitting) {
+      if (!stoppedRef.current) onEvent?.(mediaAnalyzerEvents.finished(submitError ? "error" : "done"));
+      stoppedRef.current = false;
+    }
+    wasSubmitting.current = submitting;
+  }, [submitting, submitError, onEvent]);
 
   const sections = mediaAnalyzerModelSections(kind, modelsByKind, models);
   // Looked up across every section (not just `modelOptions`, which is empty
@@ -240,12 +265,18 @@ export function MediaAnalyzer({
             toggleHeader={{
               label: "Auto-select model",
               value: autoSelectModel,
-              onChange: onAutoSelectModelChange,
+              onChange: (on) => {
+                onEvent?.(mediaAnalyzerEvents.autoSelectToggled(on));
+                onAutoSelectModelChange(on);
+              },
             }}
             value={modelId}
             triggerLabel={modelTriggerLabel}
             menuLabel="Select model"
-            onSelect={(opt) => onModelChange(opt.id)}
+            onSelect={(opt) => {
+              onEvent?.(mediaAnalyzerEvents.modelPicked(kind, opt.id));
+              onModelChange(opt.id);
+            }}
             searchable={false}
             triggerVariant="text"
             disabled={disabled}
@@ -263,7 +294,10 @@ export function MediaAnalyzer({
             value={promptLength}
             triggerLabel={selectedLength?.label ?? "Prompt length"}
             menuLabel="Prompt length"
-            onSelect={(opt) => onPromptLengthChange(opt.id as MediaAnalysisPromptLength)}
+            onSelect={(opt) => {
+              onEvent?.(mediaAnalyzerEvents.promptLengthPicked(opt.id as MediaAnalysisPromptLength));
+              onPromptLengthChange(opt.id as MediaAnalysisPromptLength);
+            }}
             searchable={false}
             triggerVariant="text"
             disabled={disabled}
@@ -286,14 +320,20 @@ export function MediaAnalyzer({
             ariaDisabled: showStop ? "false" : submitting ? "true" : isSubmitDisabled ? "true" : "false",
           } as Record<string, unknown>)}
           onClick={() => {
-            if (showStop) onAbort?.();
-            else if (!isSubmitDisabled && !submitting) onSubmit({
-              attachments,
-              modelId,
-              autoSelectModel,
-              models: kind ? (modelsByKind[kind] ?? models) : [],
-              promptLength,
-            });
+            if (showStop) {
+              stoppedRef.current = true;
+              onEvent?.(mediaAnalyzerEvents.stopped());
+              onAbort?.();
+            } else if (!isSubmitDisabled && !submitting) {
+              onEvent?.(mediaAnalyzerEvents.submitted(kind, attachments.length, autoSelectModel, promptLength, Boolean(submitError)));
+              onSubmit({
+                attachments,
+                modelId,
+                autoSelectModel,
+                models: kind ? (modelsByKind[kind] ?? models) : [],
+                promptLength,
+              });
+            }
           }}
         >
           <span slot="icon">{showStop ? <StopIcon /> : <ArrowForwardIcon />}</span>

@@ -8,12 +8,14 @@
   import {
     DEFAULT_MAX_ATTACHMENTS_BY_KIND,
     isMediaAnalyzerAtCap,
+    mediaAnalyzerEvents,
     mediaAnalyzerModelSections,
     nextMediaAnalyzerAttachments,
     PROMPT_LENGTH_HINT,
     readMediaFiles,
     replacedNote,
     SUGGESTED_ANALYSIS_MODELS,
+    type ChaiEvent,
     type MediaAnalysisPromptLength,
     type MediaAnalyzerAttachment,
     type MediaAnalyzerSubmitPayload,
@@ -43,6 +45,7 @@
     submitError,
     onSubmit,
     onAbort,
+    onEvent,
   }: {
     attachments: MediaAnalyzerAttachment[];
     onAttachmentsChange: (next: MediaAnalyzerAttachment[]) => void;
@@ -68,6 +71,8 @@
     onSubmit: (payload: MediaAnalyzerSubmitPayload) => void;
     /** With it, submit turns into stop while `submitting` (wire it to `useMediaAnalyzer`'s `cancel`); without it, submit is just disabled. */
     onAbort?: () => void;
+    /** Front-end analytics: attach and remove media, model, auto-select and prompt length picks, submit, stop, and an analysis finishing, one `ChaiEvent` each. No file names or contents. */
+    onEvent?: (event: ChaiEvent) => void;
   } = $props();
 
   let input = $state<HTMLInputElement>();
@@ -108,6 +113,7 @@
     if (!files || files.length === 0) return;
     const { media, unsupported } = await readMediaFiles(files);
     unsupported.forEach((name) => onUnsupportedFile?.(name));
+    onEvent?.(mediaAnalyzerEvents.mediaAttached(media.length, unsupported.length));
     if (media.length === 0) return;
     const next = media.reduce((acc, m) => nextMediaAnalyzerAttachments(acc, m, maxAttachmentsByKind), attachments);
     const note = replacedNote(attachments, next);
@@ -127,9 +133,38 @@
     el.value = "";
   }
 
+  function remove(id: string) {
+    const next = attachments.filter((x) => x.id !== id);
+    onEvent?.(mediaAnalyzerEvents.mediaRemoved(next.length));
+    onAttachmentsChange(next);
+  }
+
+  function toggleAutoSelect(on: boolean) {
+    onEvent?.(mediaAnalyzerEvents.autoSelectToggled(on));
+    onAutoSelectModelChange(on);
+  }
+
+  // "Finished" when an analysis stops running: done, or failed (`submitError`
+  // set). Not after Stop, which reports its own event.
+  // svelte-ignore state_referenced_locally
+  let wasSubmitting = submitting;
+  let stopped = false;
+  $effect(() => {
+    const now = submitting;
+    if (wasSubmitting && !now) {
+      if (!stopped) onEvent?.(mediaAnalyzerEvents.finished(submitError ? "error" : "done"));
+      stopped = false;
+    }
+    wasSubmitting = now;
+  });
+
   function onSubmitClick() {
-    if (showStop) onAbort?.();
-    else if (!isSubmitDisabled && !submitting) {
+    if (showStop) {
+      stopped = true;
+      onEvent?.(mediaAnalyzerEvents.stopped());
+      onAbort?.();
+    } else if (!isSubmitDisabled && !submitting) {
+      onEvent?.(mediaAnalyzerEvents.submitted(kind, attachments.length, autoSelectModel, promptLength, Boolean(submitError)));
       onSubmit({
         attachments,
         modelId,
@@ -180,7 +215,7 @@
             type="button"
             class="chai-media-analyzer__thumb-remove"
             aria-label={`Remove ${a.name ?? a.kind}`}
-            onclick={() => onAttachmentsChange(attachments.filter((x) => x.id !== a.id))}
+            onclick={() => remove(a.id)}
           >
             <Icon icon={RemoveIcon} />
           </button>
@@ -199,7 +234,7 @@
       <SearchMenu
         options={sections.length === 1 ? sections[0]!.options : undefined}
         sections={sections.length > 1 ? sections : undefined}
-        toggleHeader={{ label: "Auto-select model", value: autoSelectModel, onChange: onAutoSelectModelChange }}
+        toggleHeader={{ label: "Auto-select model", value: autoSelectModel, onChange: toggleAutoSelect }}
         value={modelId}
         triggerLabel={modelTriggerLabel}
         menuLabel="Select model"
@@ -207,7 +242,10 @@
         triggerVariant="text"
         {disabled}
         panelWidth={320}
-        onSelect={(m) => onModelChange(m.id)}
+        onSelect={(m) => {
+          onEvent?.(mediaAnalyzerEvents.modelPicked(kind, m.id));
+          onModelChange(m.id);
+        }}
       />
       <SearchMenu
         options={lengthOptions}
@@ -217,7 +255,10 @@
         searchable={false}
         triggerVariant="text"
         {disabled}
-        onSelect={(o) => onPromptLengthChange(o.id)}
+        onSelect={(o) => {
+          onEvent?.(mediaAnalyzerEvents.promptLengthPicked(o.id));
+          onPromptLengthChange(o.id);
+        }}
       />
     </div>
 

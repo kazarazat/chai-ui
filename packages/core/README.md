@@ -34,7 +34,7 @@ behavior as small framework-free stores. No framework, no rendering:
 - `reasoning.ts` — the reasoning engine and models a `ChaiProvider` shares: `createReasoning`, `pickReasoning`, `reasoningModelFor` and the suggested defaults.
 - `composer.ts` — `createComposerStore`, what `useComposer` wraps: submit payload → runs, auto-select routing, Enhance (`buildEnhancePrompt`, its default instruction), cancel, image edit versions and the evaluation judge. Plus the Composer's shared types (`ComposerSubmitPayload`, `EditVersion`, …).
 - `composer-view.ts` — what the `Composer` shows and submits, worked out from its props, for every binding: model menus, aspect ratios, use-case rules (`nextUseCases`).
-- `analytics-events.ts` — front-end analytics: the `ChaiEvent` type and the `composerEvents`, `resultCardEvents` and `sidePanelEvents` the components report through `onEvent`.
+- `analytics-events.ts` — front-end analytics: the `ChaiEvent` type and the `composerEvents`, `resultCardEvents`, `sidePanelEvents`, `mediaAnalyzerEvents` and `editCardEvents` the components report through `onEvent`.
 - `evaluation-judge.ts` — the opt-in judge: `EvaluationCheck`, `DEFAULT_EVALUATION_CHECKS`, `buildJudgePrompt`, `parseJudgeReply`.
 - `image-fit.ts` — `fitImageToRatio`: crops or pads a video's start image to the picked ratio (`startImageFit`).
 - `region-edit.ts` — region editing: the region shape, the models that read regions as boxes, and `buildRegionEditPrompt`.

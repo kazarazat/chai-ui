@@ -238,9 +238,9 @@ rather than rewrite it.
 
 ### Analytics: `onEvent`
 
-`Composer`, `ResultCard` and `SidePanel` report what the person does and sees, one
-`ChaiEvent` each, for whatever analytics tool you use. Write one function
-and pass it to each component:
+Every component reports what the person does and sees, one `ChaiEvent`
+each, for whatever analytics tool you use. Write one function and pass it
+to each component you use:
 
 ```tsx
 import posthog from "posthog-js";
@@ -251,12 +251,18 @@ const track = (e: ChaiEvent) => posthog.capture(e.name, e.properties);
 <Composer onEvent={track} … />
 <ResultCard onEvent={track} … />
 <SidePanel onEvent={track} … />
+<MediaAnalyzer onEvent={track} … />
+<EditCard onEvent={track} … />
 ```
 
 Events cover submits, Stop, use case, model and option picks, attachments,
 Enhance, voice input, results shown (once each), result actions, paging,
-the details side, and the side panel opening, closing, New chat, prompt
-tips (by position) and its page chip. They're front end only: no prompt text, file names, URLs
+the details side; the side panel opening, closing, New chat, prompt tips
+(by position) and its page chip; the media analyzer's attach and remove,
+model, auto-select and prompt length picks, submit, Stop and each analysis
+finishing (done or error); and the edit card's regions added, confirmed and
+removed, zoom, paging through versions, download and share. Moving and
+resizing a region aren't reported. They're front end only: no prompt text, file names, URLs
 or outputs, only lengths, counts and Chai's own ids. Track model calls,
 latency and cost on your server, where they're accurate.
 

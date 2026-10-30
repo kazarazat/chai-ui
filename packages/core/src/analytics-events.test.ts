@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composerEvents, resultCardEvents, sidePanelEvents, useCaseId } from "./analytics-events.js";
+import { composerEvents, editCardEvents, mediaAnalyzerEvents, resultCardEvents, sidePanelEvents, useCaseId } from "./analytics-events.js";
 import { CREATE_MUSIC_USE_CASE, EDIT_IMAGE_USE_CASE, type ComposerSubmitPayload } from "./composer.js";
 
 describe("analytics events", () => {
@@ -53,6 +53,22 @@ describe("analytics events", () => {
       sidePanelEvents.newChat(2),
       sidePanelEvents.tipUsed(1),
       sidePanelEvents.pageContextToggled(false),
+      mediaAnalyzerEvents.mediaAttached(2, 1),
+      mediaAnalyzerEvents.mediaRemoved(1),
+      mediaAnalyzerEvents.modelPicked("video", "m"),
+      mediaAnalyzerEvents.modelPicked(undefined, "m"),
+      mediaAnalyzerEvents.autoSelectToggled(true),
+      mediaAnalyzerEvents.promptLengthPicked("terse"),
+      mediaAnalyzerEvents.submitted("image", 3, false, "detailed", false),
+      mediaAnalyzerEvents.submitted(undefined, 1, true, null, true),
+      mediaAnalyzerEvents.stopped(),
+      mediaAnalyzerEvents.finished("error"),
+      editCardEvents.regionAdded(2),
+      editCardEvents.regionConfirmed(2, 14),
+      editCardEvents.regionRemoved(1),
+      editCardEvents.zoomed(2),
+      editCardEvents.versionPaged(1, 3),
+      editCardEvents.action("share"),
     ]).toEqual([
       { name: "chai_composer_media_attached", properties: { count: 2, unsupported_count: 1 } },
       { name: "chai_composer_auto_select_toggled", properties: { on: true } },
@@ -74,6 +90,25 @@ describe("analytics events", () => {
       { name: "chai_side_panel_new_chat", properties: { turn_count: 2 } },
       { name: "chai_side_panel_tip_used", properties: { index: 1 } },
       { name: "chai_side_panel_page_context_toggled", properties: { on: false } },
+      { name: "chai_media_analyzer_media_attached", properties: { count: 2, unsupported_count: 1 } },
+      { name: "chai_media_analyzer_media_removed", properties: { remaining: 1 } },
+      { name: "chai_media_analyzer_model_picked", properties: { media_kind: "video", model_id: "m" } },
+      { name: "chai_media_analyzer_model_picked", properties: { model_id: "m" } },
+      { name: "chai_media_analyzer_auto_select_toggled", properties: { on: true } },
+      { name: "chai_media_analyzer_prompt_length_picked", properties: { length: "terse" } },
+      {
+        name: "chai_media_analyzer_submitted",
+        properties: { media_kind: "image", attachment_count: 3, auto_select: false, prompt_length: "detailed", retry: false },
+      },
+      { name: "chai_media_analyzer_submitted", properties: { attachment_count: 1, auto_select: true, retry: true } },
+      { name: "chai_media_analyzer_stopped", properties: {} },
+      { name: "chai_media_analyzer_finished", properties: { status: "error" } },
+      { name: "chai_edit_region_added", properties: { region_count: 2 } },
+      { name: "chai_edit_region_confirmed", properties: { region_count: 2, instruction_length: 14 } },
+      { name: "chai_edit_region_removed", properties: { region_count: 1 } },
+      { name: "chai_edit_zoomed", properties: { zoom: 2 } },
+      { name: "chai_edit_version_paged", properties: { index: 1, count: 3 } },
+      { name: "chai_edit_action", properties: { action: "share" } },
     ]);
   });
 });
