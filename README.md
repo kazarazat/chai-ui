@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://chai-ui.com/docs"><img src=".github/composer-bar.gif" alt="Chai UI Composer bar demo" width="640" /></a>
+  <a href="https://chai-ui.com/docs"><img src=".github/composer-bar-demo.gif" alt="Chai UI Composer bar demo" width="640" /></a>
 </p>
 
 **A design system for AI model interactions.** Every component comes with
