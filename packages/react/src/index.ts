@@ -42,6 +42,8 @@ export {
   readPageContext,
   buildSidePanelPrompt,
   sidePanelEvents,
+  mediaAnalyzerEvents,
+  editCardEvents,
 } from "@chai-ui/core";
 export type {
   DroppedMedia,

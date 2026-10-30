@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
 import {
   MEDIA_ANALYSIS_PROMPT_LENGTHS,
+  type ChaiEvent,
   type MediaAnalysisPromptLength,
   type MediaAnalyzerAttachment,
   type MediaAnalyzerSubmitPayload,
@@ -29,6 +30,7 @@ export interface MediaAnalyzerProps {
   submitError?: string | null;
   onSubmit: (payload: MediaAnalyzerSubmitPayload) => void;
   onAbort?: () => void;
+  onEvent?: (event: ChaiEvent) => void;
 }
 
 const model = (id: string): ModelOption => ({ id, label: id, provider: "p", speed: "fast" });
@@ -194,6 +196,66 @@ export function mediaAnalyzerContract(render: Render<MediaAnalyzerProps>) {
       // Polled: the thumbnail appears once the file is read and the parent re-renders.
       await expect.poll(() => document.querySelector(".chai-media-analyzer__thumb")).not.toBeNull();
       expect(await wcagViolations()).toEqual([]);
+    });
+  });
+
+  describe("MediaAnalyzer analytics events", () => {
+    const names = (onEvent: ReturnType<typeof vi.fn>) => onEvent.mock.calls.map((c) => (c[0] as ChaiEvent).name);
+
+    it("reports attach, picks, submit and remove, with kinds and counts but no file names", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ onEvent });
+      await userEvent.upload(fileInput(), [file("photo.png", "image/png"), file("notes.txt", "text/plain")]);
+      await expect.element(screen.getByRole("button", { name: "Remove photo.png" })).toBeInTheDocument();
+      await screen.getByText("Select model").click();
+      await screen.getByRole("button", { name: "vision/b" }).click();
+      await screen.getByText("Prompt length").click();
+      await screen.getByRole("button", { name: "Detailed (long)" }).click();
+      await screen.getByRole("button", { name: "Analyze media" }).click();
+      await screen.getByRole("button", { name: "Remove photo.png" }).click();
+
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_media_analyzer_media_attached", properties: { count: 1, unsupported_count: 1 } },
+        { name: "chai_media_analyzer_model_picked", properties: { media_kind: "image", model_id: "vision/b" } },
+        { name: "chai_media_analyzer_prompt_length_picked", properties: { length: "detailed" } },
+        {
+          name: "chai_media_analyzer_submitted",
+          properties: { media_kind: "image", attachment_count: 1, auto_select: false, prompt_length: "detailed", retry: false },
+        },
+        { name: "chai_media_analyzer_media_removed", properties: { remaining: 0 } },
+      ]);
+      expect(JSON.stringify(onEvent.mock.calls)).not.toContain("photo.png");
+    });
+
+    it("reports the auto-select switch", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ onEvent });
+      await screen.getByText("Select model").click();
+      await screen.getByRole("switch", { name: "Auto-select model" }).click();
+      expect(onEvent).toHaveBeenCalledWith({ name: "chai_media_analyzer_auto_select_toggled", properties: { on: true } });
+    });
+
+    it("reports a retry, and each analysis finishing done or with an error", async () => {
+      const onEvent = vi.fn();
+      const attachments: MediaAnalyzerAttachment[] = [{ id: "a", src: "data:image/png;base64,x", kind: "image", name: "a.png" }];
+      const screen = harness({ attachments, onEvent, submitting: true });
+      await screen.rerender({ submitting: false, submitError: "The model timed out." });
+      await screen.getByRole("button", { name: "Retry" }).click();
+      await screen.rerender({ submitting: true, submitError: null });
+      await screen.rerender({ submitting: false });
+      expect(names(onEvent)).toEqual(["chai_media_analyzer_finished", "chai_media_analyzer_submitted", "chai_media_analyzer_finished"]);
+      expect(onEvent.mock.calls[0]![0]).toEqual({ name: "chai_media_analyzer_finished", properties: { status: "error" } });
+      expect(onEvent.mock.calls[1]![0].properties.retry).toBe(true);
+      expect(onEvent.mock.calls[2]![0]).toEqual({ name: "chai_media_analyzer_finished", properties: { status: "done" } });
+    });
+
+    it("reports Stop, and no finish for the stopped analysis", async () => {
+      const onEvent = vi.fn();
+      const attachments: MediaAnalyzerAttachment[] = [{ id: "a", src: "data:image/png;base64,x", kind: "image", name: "a.png" }];
+      const screen = harness({ attachments, onEvent, submitting: true, onAbort: () => {} });
+      await screen.getByRole("button", { name: "Stop" }).click();
+      await screen.rerender({ submitting: false });
+      expect(names(onEvent)).toEqual(["chai_media_analyzer_stopped"]);
     });
   });
 }

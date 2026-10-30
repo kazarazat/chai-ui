@@ -21,6 +21,7 @@
     downloadFilename,
     downloadMedia,
     EDIT_ZOOM_STEPS,
+    editCardEvents,
     editCardWidth,
     fitBox,
     freeRegionNumber,
@@ -32,6 +33,7 @@
     regionPopoverPosition,
     resizeBox,
     shareMedia,
+    type ChaiEvent,
     type EditRegion,
     type EditVersion,
     type Pan,
@@ -74,6 +76,7 @@
     alt = "Image being edited",
     onAction,
     disabled = false,
+    onEvent,
   }: {
     /** The original image first, then each edit. Paged with the dots in the card's bottom row. */
     versions: EditVersion[];
@@ -97,6 +100,8 @@
     /** After the card downloads or shares the version showing. */
     onAction?: (action: "download" | "share", version: EditVersion) => void;
     disabled?: boolean;
+    /** Front-end analytics: regions added, confirmed and removed, zoom, paging through versions, download and share, one `ChaiEvent` each. Moving and resizing aren't reported. */
+    onEvent?: (event: ChaiEvent) => void;
   } = $props();
 
   type Drag =
@@ -184,14 +189,20 @@
     else onRegionsChange(regions.map((r) => (r.id === id ? { ...r, box } : r)));
   }
 
+  // A confirmed region going is reported; discarding an unconfirmed draft isn't.
   function removeRegion(region: EditRegion) {
     if (region.id === draft?.id) draft = null;
-    else onRegionsChange(regions.filter((r) => r.id !== region.id));
+    else {
+      const next = regions.filter((r) => r.id !== region.id);
+      onEvent?.(editCardEvents.regionRemoved(next.length));
+      onRegionsChange(next);
+    }
     select(null);
   }
 
   function addRegion() {
     const region = newRegion(regions, zoom, pan, size);
+    onEvent?.(editCardEvents.regionAdded(regions.length + 1));
     draft = region;
     hidden = false;
     select(region);
@@ -201,6 +212,7 @@
     const region = selected;
     if (!region || !canCheck) return;
     const prompt = text.trim();
+    onEvent?.(editCardEvents.regionConfirmed(isDraft ? regions.length + 1 : regions.length, prompt.length));
     if (isDraft) {
       onRegionsChange([...regions, { ...region, prompt }]);
       draft = null;
@@ -213,6 +225,7 @@
   function clearAll() {
     draft = null;
     select(null);
+    if (regions.length > 0) onEvent?.(editCardEvents.regionRemoved(0));
     onRegionsChange([]);
   }
 
@@ -221,7 +234,13 @@
     select(null);
   }
 
+  function pageTo(next: number) {
+    onEvent?.(editCardEvents.versionPaged(next, versions.length));
+    onActiveVersionChange(next);
+  }
+
   function zoomTo(next: number) {
+    onEvent?.(editCardEvents.zoomed(next));
     pan = panForZoom(pan, zoom, next, size);
     zoom = next;
   }
@@ -305,6 +324,7 @@
     const v = version;
     if (!v?.src) return;
     await downloadMedia(v.src, downloadFilename(v.id, "image", v.src));
+    onEvent?.(editCardEvents.action("download"));
     onAction?.("download", v);
   }
 
@@ -316,6 +336,7 @@
       linkCopied = true;
       setTimeout(() => (linkCopied = false), 1500);
     }
+    onEvent?.(editCardEvents.action("share"));
     onAction?.("share", v);
   }
 
@@ -515,7 +536,7 @@
     <!-- The version dots are the card's last row, under the image. -->
     {#if paginated}
       <div class={["chai-card-pager-bar", { "chai-card-pager-bar--over-media": hasImage }]}>
-        <Pagination count={versions.length} {index} label="Versions" itemLabel="Version" {disabled} onChange={onActiveVersionChange} />
+        <Pagination count={versions.length} {index} label="Versions" itemLabel="Version" {disabled} onChange={pageTo} />
       </div>
     {/if}
   </div>

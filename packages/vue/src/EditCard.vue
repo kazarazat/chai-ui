@@ -21,6 +21,7 @@ import {
   downloadFilename,
   downloadMedia,
   EDIT_ZOOM_STEPS,
+  editCardEvents,
   editCardWidth,
   fitBox,
   freeRegionNumber,
@@ -32,6 +33,7 @@ import {
   regionPopoverPosition,
   resizeBox,
   shareMedia,
+  type ChaiEvent,
   type EditRegion,
   type EditVersion,
   type Pan,
@@ -78,6 +80,8 @@ const props = withDefaults(
     /** Alt text for the image. */
     alt?: string;
     disabled?: boolean;
+    /** Front-end analytics (`@event`): regions added, confirmed and removed, zoom, paging through versions, download and share, one `ChaiEvent` each. Moving and resizing aren't reported. */
+    onEvent?: (event: ChaiEvent) => void;
   }>(),
   { maxRegions: DEFAULT_MAX_REGIONS, maxWidth: 630, maxHeight: 630, alt: "Image being edited" }
 );
@@ -188,14 +192,20 @@ function setBox(id: string, box: RegionBox) {
   else emit("update:regions", props.regions.map((r) => (r.id === id ? { ...r, box } : r)));
 }
 
+// A confirmed region going is reported; discarding an unconfirmed draft isn't.
 function removeRegion(region: EditRegion) {
   if (region.id === draft.value?.id) draft.value = null;
-  else emit("update:regions", props.regions.filter((r) => r.id !== region.id));
+  else {
+    const next = props.regions.filter((r) => r.id !== region.id);
+    props.onEvent?.(editCardEvents.regionRemoved(next.length));
+    emit("update:regions", next);
+  }
   select(null);
 }
 
 function addRegion() {
   const region = newRegion(props.regions, zoom.value, pan.value, size.value);
+  props.onEvent?.(editCardEvents.regionAdded(props.regions.length + 1));
   draft.value = region;
   hidden.value = false;
   select(region);
@@ -205,6 +215,7 @@ function check() {
   const region = selected.value;
   if (!region || !canCheck.value) return;
   const prompt = text.value.trim();
+  props.onEvent?.(editCardEvents.regionConfirmed(isDraft.value ? props.regions.length + 1 : props.regions.length, prompt.length));
   if (isDraft.value) {
     emit("update:regions", [...props.regions, { ...region, prompt }]);
     draft.value = null;
@@ -217,6 +228,7 @@ function check() {
 function clearAll() {
   draft.value = null;
   select(null);
+  if (props.regions.length > 0) props.onEvent?.(editCardEvents.regionRemoved(0));
   emit("update:regions", []);
 }
 
@@ -225,7 +237,13 @@ function toggleHidden() {
   select(null);
 }
 
+function pageTo(next: number) {
+  props.onEvent?.(editCardEvents.versionPaged(next, props.versions.length));
+  emit("update:activeVersion", next);
+}
+
 function zoomTo(next: number) {
+  props.onEvent?.(editCardEvents.zoomed(next));
   pan.value = panForZoom(pan.value, zoom.value, next, size.value);
   zoom.value = next;
 }
@@ -310,6 +328,7 @@ async function download() {
   const v = version.value;
   if (!v?.src) return;
   await downloadMedia(v.src, downloadFilename(v.id, "image", v.src));
+  props.onEvent?.(editCardEvents.action("download"));
   emit("action", "download", v);
 }
 
@@ -321,6 +340,7 @@ async function share() {
     linkCopied.value = true;
     setTimeout(() => (linkCopied.value = false), 1500);
   }
+  props.onEvent?.(editCardEvents.action("share"));
   emit("action", "share", v);
 }
 
@@ -509,7 +529,7 @@ function onImageLoad(e: Event) {
           label="Versions"
           item-label="Version"
           :disabled="disabled"
-          @update:index="emit('update:activeVersion', $event)"
+          @update:index="pageTo($event)"
         />
       </div>
     </div>

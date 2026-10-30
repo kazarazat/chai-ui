@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "@vitest/browser/context";
-import type { EditRegion, EditVersion } from "@chai-ui/core";
+import type { ChaiEvent, EditRegion, EditVersion } from "@chai-ui/core";
 import { wcagViolations } from "./axe.js";
 import { controlled, type Render } from "./render.js";
 
@@ -16,6 +16,7 @@ export interface EditCardProps {
   maxWidth?: number;
   maxHeight?: number;
   onAction?: (action: "download" | "share", version: EditVersion) => void;
+  onEvent?: (event: ChaiEvent) => void;
 }
 
 const svg = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600"><rect width="400" height="600" fill="#09f"/></svg>')}`;
@@ -328,6 +329,19 @@ export function editCardContract(render: Render<EditCardProps>) {
       expect(onAction.mock.calls.map((c) => c[0])).toEqual(["download", "share"]);
     });
 
+    it("reports download and share as analytics events", async () => {
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+      const onEvent = vi.fn();
+      const screen = harness({ onEvent });
+      await screen.getByRole("button", { name: "Download" }).click();
+      await screen.getByRole("button", { name: "Share" }).click();
+      await expect.poll(() => onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_edit_action", properties: { action: "download" } },
+        { name: "chai_edit_action", properties: { action: "share" } },
+      ]);
+    });
+
     it("expands to a dialog that keeps focus and closes with Escape or the backdrop", async () => {
       const screen = harness();
       await screen.getByRole("button", { name: "Expand" }).click();
@@ -384,6 +398,60 @@ export function editCardContract(render: Render<EditCardProps>) {
       expect(await wcagViolations()).toEqual([]);
       await screen.rerender({ versions, activeVersion: 1, onActiveVersionChange: () => {}, regions: [], onRegionsChange: () => {} });
       expect(await wcagViolations()).toEqual([]);
+    });
+  });
+
+  describe("EditCard analytics events", () => {
+    it("reports regions added, confirmed and removed, and zoom, with no instruction text", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ regions: [wide(1, "x")], onEvent });
+      await screen.getByRole("button", { name: "New region" }).click();
+      await userEvent.type(screen.getByRole("textbox", { name: "Instruction for region 2" }), "Make it green");
+      await screen.getByRole("button", { name: "Add region to prompt" }).click();
+      // The new region sits on top of region 1, so it's the one that takes the click.
+      await screen.getByRole("button", { name: /^Region 2/ }).click();
+      await screen.getByRole("button", { name: "Delete region" }).click();
+      await screen.getByRole("button", { name: "Zoom in" }).click();
+      await screen.getByRole("button", { name: "Clear regions" }).click();
+
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_edit_region_added", properties: { region_count: 2 } },
+        { name: "chai_edit_region_confirmed", properties: { region_count: 2, instruction_length: 13 } },
+        { name: "chai_edit_region_removed", properties: { region_count: 1 } },
+        { name: "chai_edit_zoomed", properties: { zoom: 1.25 } },
+        { name: "chai_edit_region_removed", properties: { region_count: 0 } },
+      ]);
+      expect(JSON.stringify(onEvent.mock.calls)).not.toContain("green");
+    });
+
+    it("doesn't report discarding an unconfirmed region, or Clear with nothing to clear", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ onEvent });
+      await screen.getByRole("button", { name: "New region" }).click();
+      await screen.getByRole("button", { name: "Delete region" }).click();
+      expect(onEvent.mock.calls.map((c) => (c[0] as ChaiEvent).name)).toEqual(["chai_edit_region_added"]);
+    });
+
+    it("reports confirming a changed instruction on an existing region, and a region deleted by keyboard", async () => {
+      const onEvent = vi.fn();
+      const screen = harness({ regions: [wide(1, "x"), wide(2, "make it green")], onEvent });
+      await screen.getByRole("button", { name: /^Region 2/ }).click();
+      await userEvent.fill(screen.getByRole("textbox", { name: "Instruction for region 2" }), "make it green and shiny");
+      await screen.getByRole("button", { name: "Add region to prompt" }).click();
+      (screen.getByRole("button", { name: /^Region 1/ }).element() as HTMLElement).focus();
+      await userEvent.keyboard("{Delete}");
+      expect(onEvent.mock.calls.map((c) => c[0])).toEqual([
+        { name: "chai_edit_region_confirmed", properties: { region_count: 2, instruction_length: 23 } },
+        { name: "chai_edit_region_removed", properties: { region_count: 1 } },
+      ]);
+    });
+
+    it("reports paging between versions", async () => {
+      const onEvent = vi.fn();
+      const versions: EditVersion[] = [original, { id: "e1", src: original.src, status: "done", regions: [] }];
+      const screen = render({ versions, activeVersion: 1, onActiveVersionChange: () => {}, regions: [], onRegionsChange: () => {}, onEvent });
+      await screen.getByRole("slider", { name: "Versions" }).click({ position: { x: 4, y: 12 } });
+      expect(onEvent).toHaveBeenCalledWith({ name: "chai_edit_version_paged", properties: { index: 0, count: 2 } });
     });
   });
 }

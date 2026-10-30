@@ -10,6 +10,7 @@
  */
 import type { ComposerAttachMenuAction, ComposerPromptField } from "./composer-view.js";
 import type { ComposerSubmitPayload, ComposerUseCase } from "./composer.js";
+import type { MediaAnalysisPromptLength } from "./media-analysis-prompts.js";
 import type { MediaKind } from "./types.js";
 
 export type ChaiEvent =
@@ -49,7 +50,30 @@ export type ChaiEvent =
   | { name: "chai_side_panel_closed"; properties: { turn_count: number } }
   | { name: "chai_side_panel_new_chat"; properties: { turn_count: number } }
   | { name: "chai_side_panel_tip_used"; properties: { index: number } }
-  | { name: "chai_side_panel_page_context_toggled"; properties: { on: boolean } };
+  | { name: "chai_side_panel_page_context_toggled"; properties: { on: boolean } }
+  | { name: "chai_media_analyzer_media_attached"; properties: { count: number; unsupported_count: number } }
+  | { name: "chai_media_analyzer_media_removed"; properties: { remaining: number } }
+  | { name: "chai_media_analyzer_model_picked"; properties: { media_kind?: MediaKind; model_id: string } }
+  | { name: "chai_media_analyzer_auto_select_toggled"; properties: { on: boolean } }
+  | { name: "chai_media_analyzer_prompt_length_picked"; properties: { length: MediaAnalysisPromptLength } }
+  | {
+      name: "chai_media_analyzer_submitted";
+      properties: {
+        media_kind?: MediaKind;
+        attachment_count: number;
+        auto_select: boolean;
+        prompt_length?: MediaAnalysisPromptLength;
+        retry: boolean;
+      };
+    }
+  | { name: "chai_media_analyzer_stopped"; properties: Record<string, never> }
+  | { name: "chai_media_analyzer_finished"; properties: { status: "done" | "error" } }
+  | { name: "chai_edit_region_added"; properties: { region_count: number } }
+  | { name: "chai_edit_region_confirmed"; properties: { region_count: number; instruction_length: number } }
+  | { name: "chai_edit_region_removed"; properties: { region_count: number } }
+  | { name: "chai_edit_zoomed"; properties: { zoom: number } }
+  | { name: "chai_edit_version_paged"; properties: { index: number; count: number } }
+  | { name: "chai_edit_action"; properties: { action: "download" | "share" } };
 
 export type ChaiEventName = ChaiEvent["name"];
 
@@ -118,4 +142,53 @@ export const sidePanelEvents = {
   /** Which prompt tip, by position: never its text. */
   tipUsed: (index: number): ChaiEvent => ({ name: "chai_side_panel_tip_used", properties: { index } }),
   pageContextToggled: (on: boolean): ChaiEvent => ({ name: "chai_side_panel_page_context_toggled", properties: { on } }),
+};
+
+/** The events `MediaAnalyzer` reports. Where its prompt goes next is the app's, and so are that component's events (e.g. the Composer's). */
+export const mediaAnalyzerEvents = {
+  mediaAttached: (count: number, unsupportedCount: number): ChaiEvent => ({
+    name: "chai_media_analyzer_media_attached",
+    properties: { count, unsupported_count: unsupportedCount },
+  }),
+  mediaRemoved: (remaining: number): ChaiEvent => ({ name: "chai_media_analyzer_media_removed", properties: { remaining } }),
+  modelPicked: (mediaKind: MediaKind | undefined, modelId: string): ChaiEvent => ({
+    name: "chai_media_analyzer_model_picked",
+    properties: { ...(mediaKind && { media_kind: mediaKind }), model_id: modelId },
+  }),
+  autoSelectToggled: (on: boolean): ChaiEvent => ({ name: "chai_media_analyzer_auto_select_toggled", properties: { on } }),
+  promptLengthPicked: (length: MediaAnalysisPromptLength): ChaiEvent => ({
+    name: "chai_media_analyzer_prompt_length_picked",
+    properties: { length },
+  }),
+  submitted: (
+    mediaKind: MediaKind | undefined,
+    attachmentCount: number,
+    autoSelect: boolean,
+    promptLength: MediaAnalysisPromptLength | null,
+    retry: boolean
+  ): ChaiEvent => ({
+    name: "chai_media_analyzer_submitted",
+    properties: {
+      ...(mediaKind && { media_kind: mediaKind }),
+      attachment_count: attachmentCount,
+      auto_select: autoSelect,
+      ...(promptLength && { prompt_length: promptLength }),
+      retry,
+    },
+  }),
+  stopped: (): ChaiEvent => ({ name: "chai_media_analyzer_stopped", properties: {} }),
+  finished: (status: "done" | "error"): ChaiEvent => ({ name: "chai_media_analyzer_finished", properties: { status } }),
+};
+
+/** The events `EditCard` reports. Moving and resizing a region aren't reported: every drag would send one. */
+export const editCardEvents = {
+  regionAdded: (regionCount: number): ChaiEvent => ({ name: "chai_edit_region_added", properties: { region_count: regionCount } }),
+  regionConfirmed: (regionCount: number, instructionLength: number): ChaiEvent => ({
+    name: "chai_edit_region_confirmed",
+    properties: { region_count: regionCount, instruction_length: instructionLength },
+  }),
+  regionRemoved: (regionCount: number): ChaiEvent => ({ name: "chai_edit_region_removed", properties: { region_count: regionCount } }),
+  zoomed: (zoom: number): ChaiEvent => ({ name: "chai_edit_zoomed", properties: { zoom } }),
+  versionPaged: (index: number, count: number): ChaiEvent => ({ name: "chai_edit_version_paged", properties: { index, count } }),
+  action: (action: "download" | "share"): ChaiEvent => ({ name: "chai_edit_action", properties: { action } }),
 };

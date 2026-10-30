@@ -57,6 +57,8 @@ export {
   composerEvents,
   resultCardEvents,
   sidePanelEvents,
+  mediaAnalyzerEvents,
+  editCardEvents,
   readPageContext,
   buildSidePanelPrompt,
 } from "@chai-ui/core";

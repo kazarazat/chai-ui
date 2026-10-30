@@ -5,6 +5,7 @@ import {
   downloadFilename,
   downloadMedia,
   EDIT_ZOOM_STEPS,
+  editCardEvents,
   editCardWidth,
   fitBox,
   freeRegionNumber,
@@ -17,6 +18,7 @@ import {
   regionPopoverPosition,
   resizeBox,
   shareMedia,
+  type ChaiEvent,
   type EditRegion,
   type EditVersion,
   type Pan,
@@ -71,6 +73,13 @@ export interface EditCardProps {
   /** Fires after the card downloads or shares the version showing. */
   onAction?: (action: "download" | "share", version: EditVersion) => void;
   disabled?: boolean;
+  /**
+   * Front-end analytics: regions added, confirmed and removed, zoom, paging
+   * through versions, download and share, one `ChaiEvent` each:
+   * `onEvent={(e) => posthog.capture(e.name, e.properties)}`. Moving and
+   * resizing aren't reported. No instruction text, only its length.
+   */
+  onEvent?: (event: ChaiEvent) => void;
 }
 
 type Drag =
@@ -109,6 +118,7 @@ export function EditCard({
   alt = "Image being edited",
   onAction,
   disabled = false,
+  onEvent,
 }: EditCardProps) {
   const index = clamp(activeVersion, 0, Math.max(0, versions.length - 1));
   const version = versions[index];
@@ -191,6 +201,7 @@ export function EditCard({
 
   function addRegion() {
     const region = newRegion(regions, zoom, pan, size);
+    onEvent?.(editCardEvents.regionAdded(regions.length + 1));
     setDraft(region);
     setHidden(false);
     select(region);
@@ -199,6 +210,7 @@ export function EditCard({
   function check() {
     if (!selected || !canCheck) return;
     const prompt = text.trim();
+    onEvent?.(editCardEvents.regionConfirmed(isDraft ? regions.length + 1 : regions.length, prompt.length));
     if (isDraft) {
       onRegionsChange([...regions, { ...selected, prompt }]);
       setDraft(null);
@@ -211,17 +223,26 @@ export function EditCard({
   function remove() {
     if (!selected) return;
     if (isDraft) setDraft(null);
-    else onRegionsChange(regions.filter((r) => r.id !== selected.id));
+    else removeRegion(selected.id);
     select(null);
+  }
+
+  // A confirmed region going; discarding an unconfirmed draft isn't reported.
+  function removeRegion(id: string) {
+    const next = regions.filter((r) => r.id !== id);
+    onEvent?.(editCardEvents.regionRemoved(next.length));
+    onRegionsChange(next);
   }
 
   function clearAll() {
     setDraft(null);
     select(null);
+    if (regions.length > 0) onEvent?.(editCardEvents.regionRemoved(0));
     onRegionsChange([]);
   }
 
   function zoomTo(next: number) {
+    onEvent?.(editCardEvents.zoomed(next));
     setPan(panForZoom(pan, zoom, next, size));
     setZoom(next);
   }
@@ -278,7 +299,7 @@ export function EditCard({
     } else if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
       if (region.id === draft?.id) setDraft(null);
-      else onRegionsChange(regions.filter((r) => r.id !== region.id));
+      else removeRegion(region.id);
       select(null);
     }
   }
@@ -307,6 +328,7 @@ export function EditCard({
   const handleDownload = async () => {
     if (!version?.src) return;
     await downloadMedia(version.src, downloadFilename(version.id, "image", version.src));
+    onEvent?.(editCardEvents.action("download"));
     onAction?.("download", version);
   };
 
@@ -317,6 +339,7 @@ export function EditCard({
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 1500);
     }
+    onEvent?.(editCardEvents.action("share"));
     onAction?.("share", version);
   };
 
@@ -536,7 +559,17 @@ export function EditCard({
         {/* The version dots are the card's last row, under the image. */}
         {paginated && (
           <div className={`chai-card-pager-bar${hasImage ? " chai-card-pager-bar--over-media" : ""}`}>
-            <Pagination count={versions.length} index={index} onChange={onActiveVersionChange} label="Versions" itemLabel="Version" disabled={disabled} />
+            <Pagination
+              count={versions.length}
+              index={index}
+              onChange={(next) => {
+                onEvent?.(editCardEvents.versionPaged(next, versions.length));
+                onActiveVersionChange(next);
+              }}
+              label="Versions"
+              itemLabel="Version"
+              disabled={disabled}
+            />
           </div>
         )}
       </div>

@@ -11,12 +11,14 @@ import { computed, ref, watch } from "vue";
 import {
   DEFAULT_MAX_ATTACHMENTS_BY_KIND,
   isMediaAnalyzerAtCap,
+  mediaAnalyzerEvents,
   mediaAnalyzerModelSections,
   nextMediaAnalyzerAttachments,
   PROMPT_LENGTH_HINT,
   readMediaFiles,
   replacedNote,
   SUGGESTED_ANALYSIS_MODELS,
+  type ChaiEvent,
   type MediaAnalysisPromptLength,
   type MediaAnalyzerAttachment,
   type MediaAnalyzerSubmitPayload,
@@ -46,6 +48,8 @@ const props = withDefaults(
     submitError?: string | null;
     /** With a listener, submit turns into stop while `submitting` (wire it to `useMediaAnalyzer`'s `cancel`); without one, submit is just disabled. */
     onAbort?: () => void;
+    /** Front-end analytics (`@event`): attach and remove media, model, auto-select and prompt length picks, submit, stop, and an analysis finishing, one `ChaiEvent` each. No file names or contents. */
+    onEvent?: (event: ChaiEvent) => void;
   }>(),
   { maxAttachmentsByKind: () => DEFAULT_MAX_ATTACHMENTS_BY_KIND, models: () => [], modelsByKind: () => SUGGESTED_ANALYSIS_MODELS }
 );
@@ -98,6 +102,7 @@ async function handleFiles(files: FileList | null | undefined) {
   if (!files || files.length === 0) return;
   const { media, unsupported } = await readMediaFiles(files);
   unsupported.forEach((name) => emit("unsupportedFile", name));
+  props.onEvent?.(mediaAnalyzerEvents.mediaAttached(media.length, unsupported.length));
   if (media.length === 0) return;
   const next = media.reduce((acc, m) => nextMediaAnalyzerAttachments(acc, m, props.maxAttachmentsByKind), props.attachments);
   const note = replacedNote(props.attachments, next);
@@ -117,15 +122,48 @@ function onFileChange(e: Event) {
 }
 
 function remove(id: string) {
-  emit(
-    "update:attachments",
-    props.attachments.filter((a) => a.id !== id)
-  );
+  const next = props.attachments.filter((a) => a.id !== id);
+  props.onEvent?.(mediaAnalyzerEvents.mediaRemoved(next.length));
+  emit("update:attachments", next);
 }
 
+function toggleAutoSelect(on: boolean) {
+  props.onEvent?.(mediaAnalyzerEvents.autoSelectToggled(on));
+  emit("update:autoSelectModel", on);
+}
+
+function pickModel(id: string) {
+  props.onEvent?.(mediaAnalyzerEvents.modelPicked(kind.value, id));
+  emit("update:modelId", id);
+}
+
+function pickLength(length: MediaAnalysisPromptLength) {
+  props.onEvent?.(mediaAnalyzerEvents.promptLengthPicked(length));
+  emit("update:promptLength", length);
+}
+
+// "Finished" when an analysis stops running: done, or failed (`submitError`
+// set). Not after Stop, which reports its own event.
+let stopped = false;
+watch(
+  () => props.submitting,
+  (now, was) => {
+    if (was && !now) {
+      if (!stopped) props.onEvent?.(mediaAnalyzerEvents.finished(props.submitError ? "error" : "done"));
+      stopped = false;
+    }
+  }
+);
+
 function onSubmitClick() {
-  if (showStop.value) props.onAbort?.();
-  else if (!isSubmitDisabled.value && !props.submitting) {
+  if (showStop.value) {
+    stopped = true;
+    props.onEvent?.(mediaAnalyzerEvents.stopped());
+    props.onAbort?.();
+  } else if (!isSubmitDisabled.value && !props.submitting) {
+    props.onEvent?.(
+      mediaAnalyzerEvents.submitted(kind.value, props.attachments.length, props.autoSelectModel, props.promptLength, Boolean(props.submitError))
+    );
     emit("submit", {
       attachments: props.attachments,
       modelId: props.modelId,
@@ -174,7 +212,7 @@ function onSubmitClick() {
         <SearchMenu
           :options="sections.length === 1 ? sections[0]!.options : undefined"
           :sections="sections.length > 1 ? sections : undefined"
-          :toggle-header="{ label: 'Auto-select model', value: autoSelectModel, onChange: (next) => emit('update:autoSelectModel', next) }"
+          :toggle-header="{ label: 'Auto-select model', value: autoSelectModel, onChange: toggleAutoSelect }"
           :value="modelId"
           :trigger-label="modelTriggerLabel"
           menu-label="Select model"
@@ -182,7 +220,7 @@ function onSubmitClick() {
           trigger-variant="text"
           :disabled="disabled"
           :panel-width="320"
-          @select="emit('update:modelId', $event.id)"
+          @select="pickModel($event.id)"
         />
         <SearchMenu
           :options="lengthOptions"
@@ -192,7 +230,7 @@ function onSubmitClick() {
           :searchable="false"
           trigger-variant="text"
           :disabled="disabled"
-          @select="emit('update:promptLength', $event.id as MediaAnalysisPromptLength)"
+          @select="pickLength($event.id as MediaAnalysisPromptLength)"
         />
       </div>
 
