@@ -72,6 +72,33 @@ Browser tests need Chromium once:
   (private, never published) with the contracts, and every binding copies
   them at build. Edit only those; the bindings' copies are ignored by git.
 
+## Adding a component
+
+A new component touches more than its own files. In this repo:
+
+1. **Core:** its logic and derived state in `packages/core/src/<name>.ts`,
+   with unit tests, exported from `index.ts`. Its analytics events in
+   `analytics-events.ts` (and `analytics-events.test.ts`).
+2. **Bindings:** the component in React, Vue and Svelte, exported from each
+   `index.ts`, with any new core exports re-exported. Shared icons go in each
+   binding's `icons` file.
+3. **Styles:** one section in `packages/shared/src/style.css`, tokens only.
+   Add its root class to the `data-chai-focus-ring="hidden"` lists.
+4. **Tests:** a contract in `packages/shared/contracts/<name>.contract.ts`
+   (including "passes axe"), run by a `<Name>.browser.test` in every
+   binding, and a case in Svelte's `server-render.ssr.test.ts`.
+5. **Packaging:** use it in each smoke-test app under `sandbox/`, so
+   `pnpm pack-test` proves the export ships.
+6. **Docs:** the root README's component table; each binding's README
+   ("What's in the package", and the React README's section with an
+   example); `packages/shared/DESIGN.md` (§1 "Pick the component" and §5's
+   built-in states); `packages/core/README.md`'s layout; this file; and the
+   `description` in each binding's `package.json`.
+7. **Changeset:** `minor` for each package that changed.
+
+The docs site has its own list (catalog entry, detail page, routes,
+sitemap, llms.txt) in its repository.
+
 ## Rules
 
 - **Front end only.** Chai covers what the person sees and does. Model
