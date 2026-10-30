@@ -1,6 +1,6 @@
 {
   "name": "@chai-ui/react",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Chai UI React components \u2014 smart, drop-in UI for AI apps: Composer, Media Analyzer, Result Card, Edit Card, Side Panel, and the useComposer hook.",
   "license": "MIT",
   "author": "kazarazat",
