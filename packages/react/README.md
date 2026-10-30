@@ -573,6 +573,8 @@ import { SidePanel } from "@chai-ui/react";
 - **Opening**: a launcher button opens it; Close clears the conversation,
   and New chat starts over without closing. Control it with `open` and
   `onOpenChange`, and set `launcher={false}` to use your own button.
+  Opening moves focus to the prompt, Esc closes the panel (after any open
+  menu), and closing returns focus to the launcher.
 - **Follow-ups** work: the last six exchanges go with each question
   (`buildSidePanelPrompt`).
 - **Answers style**: `answers="simple"` (default) shows text on the panel

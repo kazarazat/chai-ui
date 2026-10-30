@@ -107,6 +107,8 @@
   let votes = $state.raw<Record<string, ResultCardVote>>({});
   const composer = useComposer(() => ({ textEngine, textModel }));
   let body = $state<HTMLElement>();
+  let panel = $state<HTMLElement>();
+  let launcherButton = $state<HTMLButtonElement>();
   const headingId = $props.id();
 
   const usePage = $derived(Boolean(pageContext) && pageOn);
@@ -123,6 +125,26 @@
       if (body) body.scrollTop = body.scrollHeight;
     });
   });
+
+  // Focus follows the panel: into the prompt when it opens, back to the
+  // launcher when it closes. Not on first render, so a panel that starts
+  // open doesn't take focus from the page.
+  let wasOpen: boolean | undefined;
+  $effect(() => {
+    const open = isOpen;
+    if (wasOpen !== undefined && wasOpen !== open) {
+      tick().then(() => {
+        if (open) panel?.querySelector("textarea")?.focus();
+        else launcherButton?.focus();
+      });
+    }
+    wasOpen = open;
+  });
+
+  // Esc closes the panel, unless a menu inside it is open: Esc closes that first.
+  function onkeydown(e: KeyboardEvent) {
+    if (e.key === "Escape" && !(e.currentTarget as HTMLElement).querySelector('[aria-expanded="true"]')) setOpen(false);
+  }
 
   function reset() {
     composer.cancel();
@@ -222,6 +244,7 @@
 {#if !isOpen}
   {#if launcher}
     <button
+      bind:this={launcherButton}
       type="button"
       class={["chai-side-panel__launcher", `chai-side-panel__launcher--${side}`, { "chai-side-panel__launcher--contained": contained }]}
       aria-label={`Open ${title}`}
@@ -232,10 +255,14 @@
     </button>
   {/if}
 {:else}
+  <!-- The listener only catches Esc bubbling up from the controls inside, to close the panel. -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <aside
+    bind:this={panel}
     class={["chai-side-panel", `chai-side-panel--${side}`, `chai-side-panel--${mode}`, { "chai-side-panel--contained": contained }]}
     aria-labelledby={headingId}
     data-chai-page-context="skip"
+    {onkeydown}
   >
     <div class={["chai-side-panel__head", { "chai-side-panel__head--divided": conversation }]}>
       {#if conversation}

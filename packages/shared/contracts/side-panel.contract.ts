@@ -75,6 +75,30 @@ export function sidePanelContract(render: Render<SidePanelProps>) {
       ]);
     });
 
+    it("moves focus into the prompt on open, and back to the launcher on Esc", async () => {
+      const { screen } = panel({ defaultOpen: false });
+      await screen.getByRole("button", { name: "Open Northwind Assistant" }).click();
+      await expect.poll(() => document.activeElement?.tagName).toBe("TEXTAREA");
+      await userEvent.keyboard("{Escape}");
+      await expect.poll(() => document.activeElement?.getAttribute("aria-label")).toBe("Open Northwind Assistant");
+    });
+
+    it("closes a menu with Esc before the panel", async () => {
+      const { screen } = panel({ pageContext: () => PAGE });
+      await userEvent.hover(screen.getByText("This page", { exact: true }));
+      await screen.getByRole("button", { name: "Remove This page" }).click();
+      await screen.getByRole("button", { name: "Add" }).click();
+      await expect.element(screen.getByRole("menuitem", { name: "Use this page" })).toBeInTheDocument();
+      await userEvent.keyboard("{Escape}");
+      expect(document.querySelector(".chai-composer__attach-menu")).toBeNull();
+      expect(document.querySelector(".chai-side-panel")).not.toBeNull();
+    });
+
+    it("doesn't take focus when it starts open", () => {
+      panel();
+      expect(document.activeElement?.tagName).not.toBe("TEXTAREA");
+    });
+
     it("leaves out the launcher when the builder opens the panel", () => {
       panel({ defaultOpen: false, launcher: false });
       expect(document.querySelector(".chai-side-panel__launcher")).toBeNull();

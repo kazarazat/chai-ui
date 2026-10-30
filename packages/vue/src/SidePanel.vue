@@ -92,6 +92,8 @@ const pageOn = ref(true);
 const votes = ref<Record<string, ResultCardVote>>({});
 const composer = useComposer(() => ({ textEngine: props.textEngine, textModel: props.textModel }));
 const body = ref<HTMLElement>();
+const panel = ref<HTMLElement>();
+const launcherButton = ref<HTMLButtonElement>();
 const headingId = useId();
 
 const usePage = computed(() => Boolean(props.pageContext) && pageOn.value);
@@ -112,6 +114,20 @@ watch(
     if (body.value) body.value.scrollTop = body.value.scrollHeight;
   }
 );
+
+// Focus follows the panel: into the prompt when it opens, back to the
+// launcher when it closes. Not on first render, so a panel that starts open
+// doesn't take focus from the page.
+watch(isOpen, async (open) => {
+  await nextTick();
+  if (open) panel.value?.querySelector("textarea")?.focus();
+  else launcherButton.value?.focus();
+});
+
+// Esc closes the panel, unless a menu inside it is open: Esc closes that first.
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === "Escape" && !(e.currentTarget as HTMLElement).querySelector('[aria-expanded="true"]')) setOpen(false);
+}
 
 function reset() {
   composer.cancel();
@@ -202,6 +218,7 @@ const composerProps = computed(() => ({
 <template>
   <button
     v-if="!isOpen && launcher"
+    ref="launcherButton"
     type="button"
     :class="['chai-side-panel__launcher', `chai-side-panel__launcher--${side}`, { 'chai-side-panel__launcher--contained': contained }]"
     :aria-label="`Open ${title}`"
@@ -212,9 +229,11 @@ const composerProps = computed(() => ({
   </button>
   <aside
     v-else-if="isOpen"
+    ref="panel"
     :class="['chai-side-panel', `chai-side-panel--${side}`, `chai-side-panel--${mode}`, { 'chai-side-panel--contained': contained }]"
     :aria-labelledby="headingId"
     data-chai-page-context="skip"
+    @keydown="onKeydown"
   >
     <div :class="['chai-side-panel__head', { 'chai-side-panel__head--divided': conversation }]">
       <div v-if="conversation" class="chai-side-panel__title">

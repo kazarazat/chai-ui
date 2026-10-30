@@ -128,6 +128,12 @@ export function SidePanel({
   const [votes, setVotes] = useState<Record<string, ResultCardVote>>({});
   const composer = useComposer({ textEngine, textModel });
   const bodyRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const launcherRef = useRef<HTMLButtonElement>(null);
+  // Focus follows the panel: into the prompt when it opens, back to the
+  // launcher when it closes. Not on first render, so a panel that starts
+  // open doesn't take focus from the page.
+  const wasOpen = useRef(open);
   const headingId = useId();
 
   const usePage = Boolean(pageContext) && pageOn;
@@ -143,6 +149,13 @@ export function SidePanel({
     const el = bodyRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [turns.length, lastText, lastStatus]);
+
+  useEffect(() => {
+    if (wasOpen.current === open) return;
+    wasOpen.current = open;
+    if (open) panelRef.current?.querySelector("textarea")?.focus();
+    else launcherRef.current?.focus();
+  }, [open]);
 
   function reset() {
     composer.cancel();
@@ -204,6 +217,7 @@ export function SidePanel({
   if (!open) {
     return launcher ? (
       <button
+        ref={launcherRef}
         type="button"
         className={`chai-side-panel__launcher chai-side-panel__launcher--${side}${contained ? " chai-side-panel__launcher--contained" : ""}`}
         aria-label={`Open ${title}`}
@@ -218,7 +232,17 @@ export function SidePanel({
   const conversation = turns.length > 0;
 
   return (
-    <aside className={rootClass} style={style} aria-labelledby={headingId} data-chai-page-context="skip">
+    <aside
+      ref={panelRef}
+      className={rootClass}
+      style={style}
+      aria-labelledby={headingId}
+      data-chai-page-context="skip"
+      // Esc closes the panel, unless a menu inside it is open: Esc closes that first.
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && !e.currentTarget.querySelector('[aria-expanded="true"]')) setOpen(false);
+      }}
+    >
       <div className={`chai-side-panel__head${conversation ? " chai-side-panel__head--divided" : ""}`}>
         {conversation && (
           <div className="chai-side-panel__title">
