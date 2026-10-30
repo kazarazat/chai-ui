@@ -35,7 +35,7 @@ export interface SidePanelProps extends Pick<UseComposerOptions, "textEngine" | 
   title: string;
   /** One line under the greeting. */
   description?: string;
-  /** Your mark, about 44px in the greeting and 28px in the header. Defaults to a sparkle. */
+  /** Your mark, in the launcher, the greeting (44px) and the header (28px), shown as given. Defaults to a sparkle on a green tile. */
   logo?: ReactNode;
   /** Which edge of the page the panel sits on. */
   side?: "right" | "left";
@@ -214,6 +214,8 @@ export function SidePanel({
     .filter(Boolean)
     .join(" ");
 
+  // The launcher shows the same mark: `logo` when given. Builders can also
+  // hide it (`launcher={false}`) and open the panel from their own button.
   if (!open) {
     return launcher ? (
       <button
@@ -230,6 +232,9 @@ export function SidePanel({
   }
 
   const conversation = turns.length > 0;
+  // Builders replace the default sparkle with `logo`, shown as given: the
+  // green tile is only for the default.
+  const logoClass = `chai-side-panel__logo${logo ? "" : " chai-side-panel__logo--default"}`;
 
   return (
     <aside
@@ -246,7 +251,7 @@ export function SidePanel({
       <div className={`chai-side-panel__head${conversation ? " chai-side-panel__head--divided" : ""}`}>
         {conversation && (
           <div className="chai-side-panel__title">
-            <span className="chai-side-panel__logo">{logo ?? <SparkleIcon />}</span>
+            <span className={logoClass}>{logo ?? <SparkleIcon />}</span>
             <h2 id={headingId} className="chai-side-panel__title-text">
               {title}
             </h2>
@@ -321,7 +326,7 @@ export function SidePanel({
         ) : (
           <div className="chai-side-panel__empty">
             <div className="chai-side-panel__hello">
-              <span className="chai-side-panel__logo chai-side-panel__logo--large">{logo ?? <SparkleIcon />}</span>
+              <span className={`${logoClass} chai-side-panel__logo--large`}>{logo ?? <SparkleIcon />}</span>
               <h2 id={headingId} className="chai-side-panel__heading">
                 {title}
               </h2>

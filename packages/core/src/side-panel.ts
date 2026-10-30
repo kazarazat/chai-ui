@@ -63,8 +63,8 @@ export function readPageContext(options: ReadPageContextOptions = {}): PageConte
 
   return {
     title: document.title,
-    url: typeof location === "undefined" ? "" : location.href,
-    selection: tidyPageText(typeof window === "undefined" ? "" : window.getSelection()?.toString() ?? ""),
+    url: location.href,
+    selection: tidyPageText(window.getSelection()?.toString() ?? ""),
     text: text.length > maxLength ? `${text.slice(0, maxLength)}…` : text,
   };
 }

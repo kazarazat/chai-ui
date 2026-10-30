@@ -2693,19 +2693,29 @@
   height: 20px;
 }
 
+/* The mark's box. A builder's `logo` fills it as given (an img or svg at
+   100%); the default sparkle sits on a green tile. */
 .chai-side-panel__logo {
   flex: none;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.chai-side-panel__logo > :is(img, svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.chai-side-panel__logo--default {
+  border-radius: 8px;
   background: var(--chai-color-semantic-accent-soft);
   color: var(--chai-color-semantic-accent-text);
 }
 
-.chai-side-panel__logo svg {
+.chai-side-panel__logo--default > svg {
   width: 16px;
   height: 16px;
 }
@@ -2713,10 +2723,13 @@
 .chai-side-panel__logo--large {
   width: 44px;
   height: 44px;
+}
+
+.chai-side-panel__logo--default.chai-side-panel__logo--large {
   border-radius: 12px;
 }
 
-.chai-side-panel__logo--large svg {
+.chai-side-panel__logo--default.chai-side-panel__logo--large > svg {
   width: 24px;
   height: 24px;
 }
@@ -2932,7 +2945,9 @@
   height: 18px;
 }
 
-/* The launcher: shown while the panel is closed. */
+/* The launcher: shown while the panel is closed, with the panel's mark (a
+   builder's `logo`, or the sparkle). Builders restyle it through this class,
+   or hide it and open the panel from their own button. */
 .chai-side-panel__launcher {
   position: fixed;
   bottom: 20px;

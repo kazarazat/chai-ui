@@ -104,6 +104,9 @@ const shown = computed(() =>
 );
 const conversation = computed(() => turns.value.length > 0);
 const hasFooter = computed(() => Boolean(props.footer || slots.footer));
+// Builders replace the default sparkle with the `#logo` slot, shown as
+// given: the green tile is only for the default.
+const logoClass = computed(() => ["chai-side-panel__logo", { "chai-side-panel__logo--default": !slots.logo }]);
 
 // Follow the newest answer as it streams in, and once more when it ends
 // and its actions appear below it.
@@ -216,6 +219,7 @@ const composerProps = computed(() => ({
 </script>
 
 <template>
+  <!-- The launcher shows the same mark. Builders can also hide it (:launcher="false") and open the panel with v-model:open. -->
   <button
     v-if="!isOpen && launcher"
     ref="launcherButton"
@@ -237,7 +241,7 @@ const composerProps = computed(() => ({
   >
     <div :class="['chai-side-panel__head', { 'chai-side-panel__head--divided': conversation }]">
       <div v-if="conversation" class="chai-side-panel__title">
-        <span class="chai-side-panel__logo"><slot name="logo"><SparkleIcon /></slot></span>
+        <span :class="logoClass"><slot name="logo"><SparkleIcon /></slot></span>
         <h2 :id="headingId" class="chai-side-panel__title-text">{{ title }}</h2>
       </div>
       <div class="chai-side-panel__actions">
@@ -276,7 +280,7 @@ const composerProps = computed(() => ({
       </div>
       <div v-else class="chai-side-panel__empty">
         <div class="chai-side-panel__hello">
-          <span class="chai-side-panel__logo chai-side-panel__logo--large"><slot name="logo"><SparkleIcon /></slot></span>
+          <span :class="[logoClass, 'chai-side-panel__logo--large']"><slot name="logo"><SparkleIcon /></slot></span>
           <h2 :id="headingId" class="chai-side-panel__heading">{{ title }}</h2>
           <p v-if="description" class="chai-side-panel__description">{{ description }}</p>
         </div>

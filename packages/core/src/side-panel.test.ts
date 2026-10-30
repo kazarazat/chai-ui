@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildSidePanelPrompt,
   readPageContext,
@@ -36,6 +36,22 @@ describe("readPageContext", () => {
   it("skips scripts, the panel and anything the builder excludes", () => {
     document.body.innerHTML = `<main><p>Keep</p><script>bad()</script><aside data-chai-page-context="skip">Panel</aside><div class="ad">Ad</div></main>`;
     expect(readPageContext({ exclude: ".ad" }).text).toBe("Keep");
+  });
+
+  it("reads the selected text", () => {
+    document.body.innerHTML = `<main><p id="p">Pick  this bit</p><p>Not this</p></main>`;
+    window.getSelection()!.selectAllChildren(document.getElementById("p")!);
+    expect(readPageContext().selection).toBe("Pick this bit");
+    window.getSelection()!.removeAllRanges();
+  });
+
+  it("returns an empty page on the server", () => {
+    vi.stubGlobal("document", undefined);
+    try {
+      expect(readPageContext()).toEqual({ title: "", url: "", selection: "", text: "" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("caps the text", () => {

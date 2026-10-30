@@ -575,6 +575,9 @@ import { SidePanel } from "@chai-ui/react";
   `onOpenChange`, and set `launcher={false}` to use your own button.
   Opening moves focus to the prompt, Esc closes the panel (after any open
   menu), and closing returns focus to the launcher.
+- **Your mark**: `logo` replaces the default sparkle in the launcher, the
+  greeting (44px) and the header (28px), shown as given (an `img` or `svg`
+  fills the box) without the sparkle's green tile.
 - **Follow-ups** work: the last six exchanges go with each question
   (`buildSidePanelPrompt`).
 - **Answers style**: `answers="simple"` (default) shows text on the panel

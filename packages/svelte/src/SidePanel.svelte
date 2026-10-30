@@ -36,7 +36,7 @@
     title: string;
     /** One line under the greeting. */
     description?: string;
-    /** Your mark, about 44px in the greeting and 28px in the header. Defaults to a sparkle. */
+    /** Your mark, in the launcher, the greeting (44px) and the header (28px), shown as given. Defaults to a sparkle on a green tile. */
     logo?: Snippet;
     /** Which edge of the page the panel sits on. */
     side?: "right" | "left";
@@ -116,6 +116,9 @@
   const busy = $derived(live.some((r) => r.status === "queued" || r.status === "running"));
   const shown = $derived(turns.map((t, i) => (i === turns.length - 1 && composer.run ? { ...t, results: live } : t)));
   const conversation = $derived(turns.length > 0);
+  // Builders replace the default sparkle with `logo`, shown as given: the
+  // green tile is only for the default.
+  const logoClass = $derived(["chai-side-panel__logo", { "chai-side-panel__logo--default": !logo }]);
 
   // Follow the newest answer as it streams in, and once more when it ends
   // and its actions appear below it.
@@ -241,6 +244,7 @@
   />
 {/snippet}
 
+<!-- The launcher shows the same mark. Builders can also hide it (launcher={false}) and open the panel with `open`. -->
 {#if !isOpen}
   {#if launcher}
     <button
@@ -267,7 +271,7 @@
     <div class={["chai-side-panel__head", { "chai-side-panel__head--divided": conversation }]}>
       {#if conversation}
         <div class="chai-side-panel__title">
-          <span class="chai-side-panel__logo">{@render mark()}</span>
+          <span class={logoClass}>{@render mark()}</span>
           <h2 id={headingId} class="chai-side-panel__title-text">{title}</h2>
         </div>
       {/if}
@@ -316,7 +320,7 @@
       {:else}
         <div class="chai-side-panel__empty">
           <div class="chai-side-panel__hello">
-            <span class="chai-side-panel__logo chai-side-panel__logo--large">{@render mark()}</span>
+            <span class={[logoClass, "chai-side-panel__logo--large"]}>{@render mark()}</span>
             <h2 id={headingId} class="chai-side-panel__heading">{title}</h2>
             {#if description}<p class="chai-side-panel__description">{description}</p>{/if}
           </div>
