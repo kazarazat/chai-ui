@@ -186,7 +186,7 @@ export interface ComposerProps {
    * (pass `null`/`undefined`) once a retry succeeds or the prompt changes.
    */
   submitError?: string | null;
-  /** Overrides the built-in "empty prompt and no attachments" disabled check. Ignored while `submitError` is set — retry stays available regardless. */
+  /** Overrides the built-in "no prompt" disabled check (an edit also takes regions). Ignored while `submitError` is set — retry stays available regardless. */
   submitDisabled?: boolean;
   /**
    * True while the builder's own `onSubmit` handler has a request in

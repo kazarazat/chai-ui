@@ -110,7 +110,7 @@ const props = withDefaults(
     menuPlacement?: MenuPlacement;
     /** The last submit's failure: submit becomes retry, and the message shows inline. */
     submitError?: string | null;
-    /** Overrides the built-in "empty prompt and no attachments" check. Ignored while `submitError` is set. */
+    /** Overrides the built-in "no prompt" check (an edit also takes regions). Ignored while `submitError` is set. */
     submitDisabled?: boolean;
     /** True while a request is in flight: with `@abort`, submit becomes stop; without, it's disabled. */
     submitting?: boolean;

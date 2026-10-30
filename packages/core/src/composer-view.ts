@@ -161,11 +161,10 @@ export function composerView(props: ComposerViewInput) {
   const world = activeUseCases.some((u) => u.kind === "world");
   const audio = activeUseCases.find((u) => u.kind === "audio")?.audio;
   const hasImage = attachments.some((a) => a.kind === "image");
-  const hasContent = editing
-    ? hasImage && (value.trim().length > 0 || regions.length > 0)
-    : world
-      ? value.trim().length > 0
-      : value.trim().length > 0 || attachments.length > 0;
+  // Every submit needs a prompt: attachments alone don't say what to make,
+  // and Chai doesn't guess. An edit's regions count, since each carries its
+  // own instruction.
+  const hasContent = editing ? hasImage && (value.trim().length > 0 || regions.length > 0) : value.trim().length > 0;
   const placeholder =
     props.placeholder ??
     (editing
