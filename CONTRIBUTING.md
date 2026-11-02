@@ -22,7 +22,7 @@ Run these before opening a pull request; CI runs the same ones on React
 pnpm lint        # design-token rules and the rules of React
 pnpm typecheck
 pnpm test        # unit tests, then real-browser component and accessibility tests
-pnpm pack-test   # installs the packed packages into a sample app and builds it
+pnpm pack-test   # installs the packed packages into the sample apps (React, Vue and SvelteKit) and builds them
 pnpm check-docs  # the docs name real file paths and package exports
 ```
 
@@ -54,7 +54,7 @@ pnpm changeset
 ```
 
 Pick the bump (patch, minor or major) and write one line for the
-changelog. The four packages share one version.
+changelog. The five packages (`tokens`, `core`, `react`, `vue` and `svelte`) share one version.
 
 ## License
 
