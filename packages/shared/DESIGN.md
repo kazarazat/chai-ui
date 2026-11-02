@@ -30,7 +30,8 @@ use these names: `Results`, `Compare`, `ModelPicker`,
 ## 2. Integration rules
 
 1. **Load the CSS in order:** `@chai-ui/tokens/css` first, then
-   `@chai-ui/react/style.css` (or `@chai-ui/vue/style.css`). Component
+   `@chai-ui/react/style.css` (or `@chai-ui/vue/style.css`, or
+   `@chai-ui/svelte/style.css`). Component
    styles read the token variables.
 2. **Everything is controlled.** Every value comes in as a prop and every
    change comes out as a callback (`value` / `onChange`). Keep the state in
