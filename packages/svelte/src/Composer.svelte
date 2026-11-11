@@ -434,6 +434,7 @@
           value={view.offeredAspect}
           triggerLabel={view.selectedAspect?.label ?? "Aspect ratio"}
           menuLabel="Aspect ratio"
+          panelWidth={160}
           searchable={false}
           triggerVariant="text"
           disabled={props.disabled}

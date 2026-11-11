@@ -21,7 +21,7 @@ as five packages that share one version:
 - `packages/core` (`@chai-ui/core`): everything framework-free. The data
   model (`run.ts`), the stores and the components' derived state
   (`composer.ts`, `composer-view.ts`, `edit-card.ts`, `media-analyzer.ts`,
-  `side-panel.ts`),
+  `side-panel.ts`, `interactive-response.ts`),
   engines (`engines/fal.ts`, `engines/openrouter.ts`, `engines/vercel.ts`),
   model routing, suggested models, prompts (media analysis, the evaluation
   judge), and the server route (`src/server`, exported as
@@ -29,7 +29,7 @@ as five packages that share one version:
 - `packages/react` (`@chai-ui/react`, React 18.3 and 19) and
   `packages/vue` (`@chai-ui/vue`, Vue 3.5): thin bindings with the same
   components (`Composer`, `MediaAnalyzer`, `ResultCard`, `EditCard`,
-  `SidePanel`),
+  `SidePanel`, `InteractiveResponse`),
   `ChaiProvider`, `useComposer`, `useMediaAnalyzer` and the primitives.
 - `packages/svelte` (`@chai-ui/svelte`, Svelte 5.20 and later): the same
   components with React's prop and hook names (only `class` and a string

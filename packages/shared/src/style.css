@@ -2995,6 +2995,413 @@
   height: 16px;
 }
 
+/* --- Interactive response --------------------------------------------------
+   An agent's reply with an element in it (InteractiveResponse): the words,
+   then a card with the action, form, choice or media request. Locked once
+   answered, with a short label of what the person did. Colors are the
+   existing control and accent roles: the primary button is the accent-soft
+   fill the submit button and the side panel launcher use. */
+.chai-interactive {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-3);
+  max-width: 560px;
+  color: var(--chai-color-semantic-control-text-strong);
+  font-family: var(--chai-type-family-material);
+}
+
+.chai-interactive__text {
+  font-size: var(--chai-type-size-body-medium);
+  line-height: var(--chai-type-leading-body-medium);
+  white-space: pre-wrap;
+}
+
+.chai-interactive__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-3);
+  padding: var(--chai-space-4);
+  border: 1px solid var(--chai-color-semantic-control-border-faint);
+  border-radius: var(--chai-radius-lg);
+  background: var(--chai-color-semantic-control-surface-raised);
+}
+
+/* Actions sit at the end, sized to their labels. */
+.chai-interactive__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--chai-space-2);
+}
+
+/* Rounded rectangles, like the "Select files" chip and the submit button,
+   not the stadium shape of .chai-btn elsewhere. */
+.chai-interactive .chai-btn {
+  border-radius: var(--chai-radius-sm);
+}
+
+.chai-interactive__primary {
+  border-color: transparent;
+  background: var(--chai-color-semantic-accent-soft);
+  color: var(--chai-color-semantic-accent-text);
+}
+
+.chai-interactive__primary:hover:not(:disabled) {
+  background: var(--chai-color-semantic-accent-subtle);
+}
+
+/* Locked: every control is disabled. The one the person used keeps full
+   strength; the rest fade. */
+.chai-interactive--locked .chai-btn:disabled {
+  cursor: default;
+}
+
+.chai-interactive--locked .chai-btn.chai-interactive__picked:disabled {
+  opacity: 1;
+}
+
+.chai-interactive__answered {
+  display: flex;
+  align-items: center;
+  gap: var(--chai-space-1);
+  margin: 0;
+  font-size: var(--chai-type-size-label-large);
+  font-weight: var(--chai-type-weight-material-medium);
+  line-height: var(--chai-type-leading-label-large);
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-interactive__answered svg {
+  width: 18px;
+  height: 18px;
+  color: var(--chai-color-semantic-accent-text);
+}
+
+/* Form */
+.chai-interactive__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-3);
+  margin: 0;
+}
+
+.chai-interactive__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-1);
+}
+
+.chai-interactive__label {
+  font-size: var(--chai-type-size-label-large);
+  font-weight: var(--chai-type-weight-material-medium);
+  line-height: var(--chai-type-leading-label-large);
+  color: var(--chai-color-semantic-control-text);
+}
+
+.chai-interactive__input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--chai-color-semantic-control-border);
+  border-radius: var(--chai-radius-sm);
+  background: var(--chai-color-semantic-control-surface-raised);
+  color: var(--chai-color-semantic-control-text-strong);
+  font-family: inherit;
+  font-size: var(--chai-type-size-body-medium);
+  line-height: var(--chai-type-leading-body-medium);
+}
+
+/* A form's dropdown: the shared SearchMenu, its trigger drawn like the text
+   fields beside it (same height, border and type) with the menu chevron. */
+.chai-interactive__select .chai-search-menu {
+  width: 100%;
+}
+
+.chai-interactive__select .chai-search-menu__trigger {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  /* A text field's height, also when a locked, unanswered menu shows no label. */
+  min-height: calc(var(--chai-type-leading-body-medium) + 18px);
+  justify-content: space-between;
+  padding: 8px 8px 8px 12px;
+  border-radius: var(--chai-radius-sm);
+  border-color: var(--chai-color-semantic-control-border);
+  background: var(--chai-color-semantic-control-surface-raised);
+  color: var(--chai-color-semantic-control-text-strong);
+  font-size: var(--chai-type-size-body-medium);
+  font-weight: var(--chai-type-weight-material-regular);
+  line-height: var(--chai-type-leading-body-medium);
+  letter-spacing: normal;
+}
+
+.chai-interactive__select--empty .chai-search-menu__trigger {
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-interactive__select .chai-search-menu__trigger:disabled {
+  opacity: 1;
+  cursor: default;
+  background: var(--chai-color-semantic-control-surface);
+  color: var(--chai-color-semantic-control-text);
+}
+
+textarea.chai-interactive__input {
+  resize: vertical;
+}
+
+.chai-interactive__input::placeholder {
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-interactive__input:focus-visible {
+  outline: 2px solid var(--chai-color-semantic-accent);
+  outline-offset: -1px;
+}
+
+.chai-interactive__input:disabled {
+  background: var(--chai-color-semantic-control-surface);
+  color: var(--chai-color-semantic-control-text);
+}
+
+/* Choice: a list of radio buttons or checkboxes */
+.chai-interactive__choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-3);
+}
+
+.chai-interactive__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-1);
+}
+
+.chai-interactive__option {
+  display: flex;
+  align-items: center;
+  gap: var(--chai-space-3);
+  padding: 6px var(--chai-space-2);
+  border-radius: var(--chai-radius-sm);
+  font-size: var(--chai-type-size-body-medium);
+  line-height: var(--chai-type-leading-body-medium);
+  cursor: pointer;
+}
+
+.chai-interactive__option:hover:has(input:not(:disabled)) {
+  background: var(--chai-color-semantic-control-surface-hover);
+}
+
+.chai-interactive__option-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.chai-interactive__description {
+  font-size: var(--chai-type-size-xs);
+  font-weight: var(--chai-type-weight-material-regular);
+  line-height: 16px;
+  color: var(--chai-color-semantic-control-text-muted);
+}
+
+.chai-interactive__option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--chai-color-semantic-accent);
+  cursor: inherit;
+}
+
+/* Locked: the whole option ignores clicks, label included, since clicking a
+   label would otherwise toggle its input on screen. */
+.chai-interactive--locked .chai-interactive__option {
+  pointer-events: none;
+}
+
+/* A skipped media request has nothing left to show but its label. */
+.chai-interactive__media:empty {
+  display: none;
+}
+
+.chai-interactive--locked .chai-interactive__option:has(input:not(:checked)) {
+  opacity: 0.5;
+}
+
+.chai-interactive__other {
+  margin-left: 38px;
+  width: calc(100% - 38px);
+}
+
+/* Choice cards */
+.chai-interactive__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--chai-space-2);
+}
+
+.chai-interactive__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-1);
+  padding: var(--chai-space-3) 40px var(--chai-space-3) var(--chai-space-3);
+  border: 1px solid var(--chai-color-semantic-control-border-faint);
+  border-radius: var(--chai-radius-md);
+  background: var(--chai-color-semantic-control-surface-raised);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* With an image, the check sits over the image's corner instead. */
+.chai-interactive__card:has(.chai-interactive__card-image) {
+  padding-right: var(--chai-space-3);
+}
+
+.chai-interactive__card:hover:not(:disabled) {
+  background: var(--chai-color-semantic-control-surface-hover);
+}
+
+.chai-interactive__card--selected {
+  border-color: var(--chai-color-semantic-accent);
+  box-shadow: inset 0 0 0 1px var(--chai-color-semantic-accent);
+}
+
+.chai-interactive__card:disabled {
+  cursor: default;
+}
+
+.chai-interactive--locked .chai-interactive__card:not(.chai-interactive__card--selected) {
+  opacity: 0.5;
+}
+
+.chai-interactive__card-image {
+  display: block;
+  margin-bottom: var(--chai-space-1);
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--chai-radius-sm);
+  background: var(--chai-color-semantic-control-surface);
+}
+
+.chai-interactive__card-label {
+  font-size: var(--chai-type-size-label-large);
+  font-weight: var(--chai-type-weight-material-medium);
+  line-height: var(--chai-type-leading-label-large);
+}
+
+.chai-interactive__card-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--chai-radius-full);
+  background: var(--chai-color-semantic-accent);
+  color: var(--chai-color-semantic-text-on-accent);
+}
+
+.chai-interactive__card-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Media request: the Media analyzer's drop zone, smaller */
+.chai-interactive__media {
+  display: flex;
+  flex-direction: column;
+  gap: var(--chai-space-3);
+}
+
+.chai-interactive__dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--chai-space-2);
+  min-height: 112px;
+  padding: var(--chai-space-4);
+  border: 1.5px dashed var(--chai-color-semantic-dropzone-border);
+  border-radius: var(--chai-radius-md);
+  background: var(--chai-color-semantic-dropzone-surface);
+  text-align: center;
+  cursor: pointer;
+}
+
+.chai-interactive__dropzone--drag-active {
+  border-style: solid;
+  border-color: var(--chai-color-semantic-accent);
+  background: var(--chai-color-semantic-accent-soft);
+}
+
+.chai-interactive__dropzone:focus-visible {
+  outline: 2px solid var(--chai-color-semantic-accent);
+  outline-offset: 2px;
+}
+
+.chai-interactive__dropzone-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--chai-color-semantic-control-text);
+}
+
+.chai-interactive__dropzone-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.chai-interactive__dropzone-hint {
+  font-size: var(--chai-type-size-body-medium);
+  line-height: var(--chai-type-leading-body-medium);
+  color: var(--chai-color-semantic-control-text);
+}
+
+.chai-interactive__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--chai-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chai-interactive__file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--chai-space-1);
+  padding: 4px 6px 4px 12px;
+  border: 1px solid var(--chai-color-semantic-control-border);
+  border-radius: var(--chai-radius-sm);
+  font-size: var(--chai-type-size-label-large);
+  line-height: var(--chai-type-leading-label-large);
+  color: var(--chai-color-semantic-control-text);
+}
+
+.chai-interactive__file-remove {
+  display: flex;
+  padding: 2px;
+  border: none;
+  border-radius: var(--chai-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.chai-interactive__file-remove:hover {
+  background: var(--chai-color-semantic-control-surface-hover);
+}
+
+.chai-interactive__file-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* --- Focus rings ------------------------------------------------------------
    On by default: every CHAI control shows a visible keyboard-focus ring,
    which WCAG 2.4.7 Focus Visible requires. Buttons and menu items
@@ -3029,6 +3436,7 @@
     .chai-edit-card,
     .chai-side-panel,
     .chai-side-panel__launcher,
+    .chai-interactive,
     .chai-search-menu,
     .chai-pagination,
     .chai-switch
@@ -3046,6 +3454,7 @@
     .chai-result-card__expand-overlay,
     .chai-edit-card,
     .chai-side-panel,
+    .chai-interactive,
     .chai-search-menu,
     .chai-pagination
   ) :focus-visible,

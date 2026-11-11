@@ -159,6 +159,11 @@ into the page. Left out, it's `"auto"`: each menu goes where it fits.
   removable chip) or anything else, with prompt tips, push or overlay, and
   either side. Same props as React's, with `logo` and `footer` as snippets. See the React
   README's "A side panel" for the details.
+- **`InteractiveResponse`**: an agent's reply with a call-to-action
+  button, approve or decline, a form, single or multiple choice, choice
+  cards, or a file request, locked once answered (`onAnswer`). Same props as
+  React's. See the React README's "Questions in a reply" for wiring it to
+  your model.
 - **`useComposer`**, **`ChaiProvider`**, and the `Toggle`, `SearchMenu`
   and `Pagination` building blocks.
 - The engines and types from `@chai-ui/core`, re-exported.

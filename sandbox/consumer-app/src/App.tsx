@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Composer, ResultCard, SidePanel, useComposer, type ComposerAttachment } from "@chai-ui/react";
+import { Composer, InteractiveResponse, ResultCard, SidePanel, useComposer, type ComposerAttachment } from "@chai-ui/react";
 
 /**
  * Not a demo of CHAI's design — a packaging smoke test. If this renders a
@@ -33,6 +33,7 @@ export function App() {
       />
       {run && <ResultCard results={run.results} prompt={run.request.prompt} onAction={() => {}} />}
       <SidePanel title="Assistant" mode="overlay" promptTips={["Draft a reply"]} />
+      <InteractiveResponse text="Create the table?" element={{ type: "action", label: "Create table", confirm: true }} onAnswer={() => {}} />
     </main>
   );
 }

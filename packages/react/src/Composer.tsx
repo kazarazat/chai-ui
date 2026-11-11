@@ -612,6 +612,8 @@ export function Composer({
               value={offeredAspect}
               triggerLabel={view.selectedAspect?.label ?? "Aspect ratio"}
               menuLabel="Aspect ratio"
+              // Ratios are short: a narrow menu, not the 280px default.
+              panelWidth={160}
               onSelect={(opt) => {
                 onEvent?.(composerEvents.optionPicked("aspect_ratio", opt.id));
                 onAspectRatioChange?.(opt.id);

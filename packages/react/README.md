@@ -251,6 +251,7 @@ const track = (e: ChaiEvent) => posthog.capture(e.name, e.properties);
 <Composer onEvent={track} … />
 <ResultCard onEvent={track} … />
 <SidePanel onEvent={track} … />
+<InteractiveResponse onEvent={track} … />
 <MediaAnalyzer onEvent={track} … />
 <EditCard onEvent={track} … />
 ```
@@ -258,7 +259,8 @@ const track = (e: ChaiEvent) => posthog.capture(e.name, e.properties);
 Events cover submits, Stop, use case, model and option picks, attachments,
 Enhance, voice input, results shown (once each), result actions, paging,
 the details side; the side panel opening, closing, New chat, prompt tips
-(by position) and its page chip; the media analyzer's attach and remove,
+(by position) and its page chip; an interactive element shown and
+answered (its kind and counts only); the media analyzer's attach and remove,
 model, auto-select and prompt length picks, submit, Stop and each analysis
 finishing (done or error); and the edit card's regions added, confirmed and
 removed, zoom, paging through versions, download and share. Moving and
@@ -323,6 +325,8 @@ themselves are in the
 - **`SidePanel`** — a panel beside your page with a Composer and its
   answers, with opt-in page context and prompt tips. See "A side panel"
   below.
+- **`InteractiveResponse`** — an agent's reply with something to click or
+  fill in, locked once answered. See "Questions in a reply" below.
 - **Primitives** (`src/primitives/`) — `Toggle` (an MD3 switch),
   `SearchMenu` (the model/option menu behind every picker — Chai's own rather than Material's `<md-menu>`; DESIGN.md §3 says why), and
   `Pagination` (a progress-style pager any paginated surface can reuse).
@@ -593,3 +597,77 @@ import { SidePanel } from "@chai-ui/react";
   (by position) and the page chip, plus the Composer's and the answers'
   own events.
 
+
+## Questions in a reply: `InteractiveResponse`
+
+When your agent needs a decision or details before it can act, it can put
+something to click or fill in inside its reply instead of asking in plain
+text. `InteractiveResponse` draws it and locks it once answered:
+
+```tsx
+import { InteractiveResponse } from "@chai-ui/react";
+
+<InteractiveResponse
+  text="Here's the plan. It costs about $4 a month. Create the table?"
+  element={{ type: "action", label: "Create table", confirm: true, declineLabel: "Cancel" }}
+  onAnswer={(answer) => sendToAgent(answer)}
+/>
+```
+
+- **Seven patterns, four types.** `type: "action"`: a call-to-action
+  button, or approve or decline with `confirm`. `type: "choice"`: radio
+  buttons, checkboxes with `multiple`, `allowOther` for an "Other" text
+  field, and `display: "cards"` for cards with a `description` or an
+  `image`. `type: "form"`: text, long text, email, number, date or a
+  dropdown, each optionally `required`. `type: "media"`: a drop zone with
+  `accept` (image, video, audio), `max` and an optional `skipLabel`.
+- **Locked once answered.** `onAnswer` is called once; the controls lock
+  and a label says what the person did ("You clicked Cancel"). It locks
+  itself in the moment. To show it locked after a reload, store the answer
+  with the message and pass it back as `answer`.
+- **The person's message**: `interactiveAnswerText(element, answer)` turns
+  the answer into plain words ("Encryption at rest and Private network
+  only"), for the thread and for your model.
+- **Analytics**: `onEvent` reports it shown and answered, with kinds and
+  counts only, never what was typed, chosen or uploaded.
+
+### Wiring it to your model
+
+Chai never calls your model. Your model decides when to ask, through a
+tool: offer it `ask_user` on your server, draw what it sends, and send the
+answer back as the tool's result.
+
+```ts
+// Server: offer the tool with every request.
+import { interactiveResponseTool } from "@chai-ui/core";
+
+const completion = await openai.chat.completions.create({
+  model,
+  messages,
+  tools: [interactiveResponseTool()], // interactiveResponseTool("anthropic") for the Messages API
+});
+const call = completion.choices[0].message.tool_calls?.find((c) => c.function.name === "ask_user");
+// Send call.id and call.function.arguments to the browser with the reply.
+```
+
+```tsx
+// Browser: check the call, draw it, and answer the tool call.
+import { InteractiveResponse, interactiveAnswerText, parseInteractiveResponse } from "@chai-ui/react";
+
+const reply = parseInteractiveResponse(call.arguments); // null if it can't be drawn
+reply ? (
+  <InteractiveResponse
+    {...reply}
+    answer={saved}
+    onAnswer={(answer) => sendToolResult(call.id, interactiveAnswerText(reply.element, answer))}
+  />
+) : (
+  <p>{text}</p>
+);
+```
+
+`parseInteractiveResponse` drops unknown fields, caps lists at 12 and
+accepts https images only, so a malformed call falls back to text instead
+of breaking the page. Your own code can return an element too, with no
+model involved, such as an approve or decline step before anything
+destructive.

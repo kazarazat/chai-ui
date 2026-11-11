@@ -8,6 +8,7 @@ import EditCard from "./EditCard.svelte";
 import MediaAnalyzer from "./MediaAnalyzer.svelte";
 import ResultCard from "./ResultCard.svelte";
 import SidePanel from "./SidePanel.svelte";
+import InteractiveResponse from "./InteractiveResponse.svelte";
 import Setup from "./__tests__/fixtures/Setup.svelte";
 import { useComposer } from "./useComposer.svelte.js";
 import { useMediaAnalyzer } from "./useMediaAnalyzer.svelte.js";
@@ -102,6 +103,28 @@ describe("server render", () => {
     expect(open.body).toContain("Summarize this page");
     const closed = await render(SidePanel, { props: { title: "Assistant" } });
     expect(closed.body).toContain("chai-side-panel__launcher");
+  });
+
+  it("renders every InteractiveResponse element, and a saved answer locked", async () => {
+    const form = await render(InteractiveResponse, {
+      props: {
+        text: "Where should it live?",
+        element: { type: "form", fields: [{ id: "p", label: "Cloud provider", kind: "select", options: ["AWS"] }, { id: "t", label: "Table name" }] },
+      },
+    });
+    expect(form.body).toContain("Where should it live?");
+    expect(form.body).toContain("Cloud provider");
+    const media = await render(InteractiveResponse, { props: { element: { type: "media", skipLabel: "Skip" } } });
+    expect(media.body).toContain("chai-interactive__dropzone");
+    const cards = await render(InteractiveResponse, {
+      props: { element: { type: "choice", display: "cards", options: [{ id: "a", label: "Strict" }, { id: "b", label: "Relaxed" }] } },
+    });
+    expect(cards.body).toContain("chai-interactive__card");
+    const saved = await render(InteractiveResponse, {
+      props: { element: { type: "action", label: "Create table", confirm: true }, answer: { type: "action", decision: "declined" } },
+    });
+    expect(saved.body).toContain("chai-interactive--locked");
+    expect(saved.body).toContain("You clicked Decline");
   });
 
   it("runs the hooks inside a ChaiProvider", async () => {

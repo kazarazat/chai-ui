@@ -4,6 +4,7 @@ export { default as EditCard } from "./EditCard.svelte";
 export { default as ResultCard } from "./ResultCard.svelte";
 export { default as MediaAnalyzer } from "./MediaAnalyzer.svelte";
 export { default as SidePanel } from "./SidePanel.svelte";
+export { default as InteractiveResponse } from "./InteractiveResponse.svelte";
 export { default as Pagination } from "./primitives/Pagination.svelte";
 export { default as SearchMenu } from "./primitives/SearchMenu.svelte";
 export { default as Toggle } from "./primitives/Toggle.svelte";
@@ -61,6 +62,10 @@ export {
   editCardEvents,
   readPageContext,
   buildSidePanelPrompt,
+  interactiveAnswerLabel,
+  interactiveAnswerText,
+  interactiveResponseEvents,
+  parseInteractiveResponse,
 } from "@chai-ui/core";
 export type {
   AudioUseCase,
@@ -107,4 +112,13 @@ export type {
   PageContext,
   ReadPageContextOptions,
   SidePanelTurn,
+  InteractiveAction,
+  InteractiveAnswer,
+  InteractiveChoice,
+  InteractiveChoiceOption,
+  InteractiveElement,
+  InteractiveFieldKind,
+  InteractiveForm,
+  InteractiveFormField,
+  InteractiveMediaRequest,
 } from "@chai-ui/core";

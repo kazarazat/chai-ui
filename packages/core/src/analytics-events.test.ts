@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { composerEvents, editCardEvents, mediaAnalyzerEvents, resultCardEvents, sidePanelEvents, useCaseId } from "./analytics-events.js";
+import {
+  composerEvents,
+  editCardEvents,
+  interactiveResponseEvents,
+  mediaAnalyzerEvents,
+  resultCardEvents,
+  sidePanelEvents,
+  useCaseId,
+} from "./analytics-events.js";
+import { INTERACTIVE_OTHER_ID } from "./interactive-response.js";
 import { CREATE_MUSIC_USE_CASE, EDIT_IMAGE_USE_CASE, type ComposerSubmitPayload } from "./composer.js";
 
 describe("analytics events", () => {
@@ -110,5 +119,33 @@ describe("analytics events", () => {
       { name: "chai_edit_version_paged", properties: { index: 1, count: 3 } },
       { name: "chai_edit_action", properties: { action: "share" } },
     ]);
+  });
+
+  it("reports interactive elements by kind and count, never by content", () => {
+    const choice = { type: "choice" as const, options: [{ id: "a", label: "Secret A" }, { id: "b", label: "B" }], multiple: true };
+    const form = { type: "form" as const, fields: [{ id: "name", label: "Name" }, { id: "key", label: "Key" }] };
+    expect(interactiveResponseEvents.shown(form)).toEqual({ name: "chai_interactive_shown", properties: { element_type: "form" } });
+    expect(
+      interactiveResponseEvents.answered({ type: "action", label: "Go", confirm: true }, { type: "action", decision: "declined" })
+    ).toEqual({ name: "chai_interactive_answered", properties: { element_type: "action", decision: "declined" } });
+    expect(
+      interactiveResponseEvents.answered(choice, { type: "choice", selected: ["a", INTERACTIVE_OTHER_ID], other: "private text" })
+    ).toEqual({
+      name: "chai_interactive_answered",
+      properties: { element_type: "choice", picked_count: 2, other: true, multiple: true, display: "list" },
+    });
+    expect(interactiveResponseEvents.answered({ ...choice, multiple: undefined, display: "cards" }, { type: "choice", selected: ["b"] }).properties).toMatchObject({
+      multiple: false,
+      display: "cards",
+      other: false,
+    });
+    expect(interactiveResponseEvents.answered(form, { type: "form", values: { name: "users", key: " " } })).toEqual({
+      name: "chai_interactive_answered",
+      properties: { element_type: "form", field_count: 2, filled_count: 1 },
+    });
+    expect(interactiveResponseEvents.answered({ type: "media" }, { type: "media", files: [] })).toEqual({
+      name: "chai_interactive_answered",
+      properties: { element_type: "media", file_count: 0 },
+    });
   });
 });

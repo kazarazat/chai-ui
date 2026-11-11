@@ -36,6 +36,8 @@ const props = withDefaults(
     triggerVariant?: "outlined" | "text";
     /** Panel width in px; longer labels ellipsize. */
     panelWidth?: number;
+    /** An id for the trigger button, so a form's `<label for>` can name it. */
+    triggerId?: string;
     /** Which way the panel opens: "auto" (default) below when it fits, else above when that fits, else toward the side with more room. */
     placement?: MenuPlacement;
   }>(),
@@ -90,6 +92,7 @@ function pick(option: T) {
 <template>
   <div ref="root" class="chai-search-menu">
     <button
+      :id="triggerId"
       type="button"
       :class="[
         triggerVariant === 'outlined' ? 'chai-btn chai-btn--outlined' : 'chai-search-menu__trigger--text',

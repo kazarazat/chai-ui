@@ -39,6 +39,7 @@ option.
 | `ResultCard` | Shows one prompt's results from one or several models in a single card, paging between them, as image, video, audio or streaming text with like, retry, download, share, a details flip and pass or fail quality checks. |
 | `EditCard` | Edits an image through regions drawn on it, each with its own instruction, then pages from the original through every edited version. |
 | `SidePanel` | A panel on the left or right of your page holding a Composer and its answers, for quick questions about the page or anything else, with opt-in page context, prompt tips, and push or overlay layouts. |
+| `InteractiveResponse` | An agent's reply with something to click or fill in: a call-to-action button, approve or decline, a form, single or multiple choice, choice cards, or a file request. It locks once answered, and ships the `ask_user` tool so your model can ask for one. |
 
 ## Install
 

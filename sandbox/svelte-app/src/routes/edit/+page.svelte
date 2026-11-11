@@ -1,7 +1,16 @@
 <script lang="ts">
   // The README's `<EditCard {...composer.edit} />` and the other components,
   // type-checked and server-rendered against the installed package.
-  import { Composer, EditCard, MediaAnalyzer, SidePanel, useComposer, useMediaAnalyzer, type MediaAnalysisPromptLength } from "@chai-ui/svelte";
+  import {
+    Composer,
+    EditCard,
+    InteractiveResponse,
+    MediaAnalyzer,
+    SidePanel,
+    useComposer,
+    useMediaAnalyzer,
+    type MediaAnalysisPromptLength,
+  } from "@chai-ui/svelte";
   import type { ComposerAttachment, MediaAnalyzerAttachment } from "@chai-ui/svelte";
 
   let value = $state("");
@@ -42,3 +51,4 @@
 />
 
 <SidePanel title="Assistant" mode="overlay" pageContext promptTips={["Summarize this page", "Draft a reply"]} />
+<InteractiveResponse text="Create the table?" element={{ type: "action", label: "Create table", confirm: true }} />

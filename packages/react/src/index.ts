@@ -4,6 +4,7 @@ export * from "./MediaAnalyzer.js";
 export * from "./ResultCard.js";
 export * from "./EditCard.js";
 export * from "./SidePanel.js";
+export * from "./InteractiveResponse.js";
 export * from "./useComposer.js";
 export * from "./ChaiProvider.js";
 export * from "./useMediaAnalyzer.js";
@@ -44,6 +45,10 @@ export {
   sidePanelEvents,
   mediaAnalyzerEvents,
   editCardEvents,
+  interactiveAnswerLabel,
+  interactiveAnswerText,
+  interactiveResponseEvents,
+  parseInteractiveResponse,
 } from "@chai-ui/core";
 export type {
   DroppedMedia,
@@ -79,4 +84,13 @@ export type {
   PageContext,
   ReadPageContextOptions,
   SidePanelTurn,
+  InteractiveAction,
+  InteractiveAnswer,
+  InteractiveChoice,
+  InteractiveChoiceOption,
+  InteractiveElement,
+  InteractiveFieldKind,
+  InteractiveForm,
+  InteractiveFormField,
+  InteractiveMediaRequest,
 } from "@chai-ui/core";

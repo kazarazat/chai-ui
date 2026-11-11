@@ -29,6 +29,7 @@
     triggerVariant = "outlined",
     panelWidth = 280,
     placement = "auto",
+    triggerId,
   }: {
     /** A flat option list. Ignored if `sections` is given. */
     options?: T[];
@@ -53,6 +54,8 @@
     panelWidth?: number;
     /** Which way the panel opens: "auto" (default) below when it fits, else above when that fits, else toward the side with more room. */
     placement?: MenuPlacement;
+    /** An id for the trigger button, so a form's `<label for>` can name it. */
+    triggerId?: string;
   } = $props();
 
   let open = $state(false);
@@ -105,6 +108,7 @@
 
 <div bind:this={root} class="chai-search-menu">
   <button
+    id={triggerId}
     type="button"
     class={[
       triggerVariant === "outlined" ? "chai-btn chai-btn--outlined" : "chai-search-menu__trigger--text",

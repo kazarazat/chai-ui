@@ -432,6 +432,7 @@ function pickOption(option: "aspect_ratio" | "voice" | "genre" | "frame_rate", i
           :value="view.offeredAspect"
           :trigger-label="view.selectedAspect?.label ?? 'Aspect ratio'"
           menu-label="Aspect ratio"
+          :panel-width="160"
           :searchable="false"
           trigger-variant="text"
           :disabled="disabled"
