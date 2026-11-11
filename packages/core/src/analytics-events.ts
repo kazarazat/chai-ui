@@ -8,6 +8,7 @@
  * sent: only lengths, counts and Chai's own ids. Properties are flat, so any
  * analytics tool takes them as they are: `onEvent={(e) => posthog.capture(e.name, e.properties)}`.
  */
+import { INTERACTIVE_OTHER_ID, type InteractiveAnswer, type InteractiveElement } from "./interactive-response.js";
 import type { ComposerAttachMenuAction, ComposerPromptField } from "./composer-view.js";
 import type { ComposerSubmitPayload, ComposerUseCase } from "./composer.js";
 import type { MediaAnalysisPromptLength } from "./media-analysis-prompts.js";
@@ -51,6 +52,25 @@ export type ChaiEvent =
   | { name: "chai_side_panel_new_chat"; properties: { turn_count: number } }
   | { name: "chai_side_panel_tip_used"; properties: { index: number } }
   | { name: "chai_side_panel_page_context_toggled"; properties: { on: boolean } }
+  | { name: "chai_interactive_shown"; properties: { element_type: InteractiveElement["type"] } }
+  | {
+      name: "chai_interactive_answered";
+      properties: {
+        element_type: InteractiveElement["type"];
+        /** action: which button. */
+        decision?: "accepted" | "declined";
+        /** choice: how many options were picked, whether Other was one, and the layout. */
+        picked_count?: number;
+        other?: boolean;
+        multiple?: boolean;
+        display?: "list" | "cards";
+        /** form: how many fields, and how many were filled in. */
+        field_count?: number;
+        filled_count?: number;
+        /** media: how many files; 0 means skipped. */
+        file_count?: number;
+      };
+    }
   | { name: "chai_media_analyzer_media_attached"; properties: { count: number; unsupported_count: number } }
   | { name: "chai_media_analyzer_media_removed"; properties: { remaining: number } }
   | { name: "chai_media_analyzer_model_picked"; properties: { media_kind?: MediaKind; model_id: string } }
@@ -142,6 +162,30 @@ export const sidePanelEvents = {
   /** Which prompt tip, by position: never its text. */
   tipUsed: (index: number): ChaiEvent => ({ name: "chai_side_panel_tip_used", properties: { index } }),
   pageContextToggled: (on: boolean): ChaiEvent => ({ name: "chai_side_panel_page_context_toggled", properties: { on } }),
+};
+
+/**
+ * The events `InteractiveResponse` reports: an element shown, and answered.
+ * Only kinds and counts, never what the person typed, chose or uploaded.
+ */
+export const interactiveResponseEvents = {
+  shown: (element: InteractiveElement): ChaiEvent => ({ name: "chai_interactive_shown", properties: { element_type: element.type } }),
+  answered: (element: InteractiveElement, answer: InteractiveAnswer): ChaiEvent => {
+    const properties: Extract<ChaiEvent, { name: "chai_interactive_answered" }>["properties"] = { element_type: element.type };
+    if (answer.type === "action") properties.decision = answer.decision;
+    if (element.type === "choice" && answer.type === "choice") {
+      properties.picked_count = answer.selected.length;
+      properties.other = answer.selected.includes(INTERACTIVE_OTHER_ID);
+      properties.multiple = Boolean(element.multiple);
+      properties.display = element.display ?? "list";
+    }
+    if (element.type === "form" && answer.type === "form") {
+      properties.field_count = element.fields.length;
+      properties.filled_count = element.fields.filter((f) => answer.values[f.id]?.trim()).length;
+    }
+    if (answer.type === "media") properties.file_count = answer.files.length;
+    return { name: "chai_interactive_answered", properties };
+  },
 };
 
 /** The events `MediaAnalyzer` reports. Where its prompt goes next is the app's, and so are that component's events (e.g. the Composer's). */

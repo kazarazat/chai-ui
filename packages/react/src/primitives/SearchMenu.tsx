@@ -85,6 +85,8 @@ interface SearchMenuProps<T extends SearchMenuOption> {
   triggerVariant?: "outlined" | "text";
   /** Panel width in px (default 280) — widen for a menu whose option labels run long; anything still too long past that ellipsizes rather than wrapping or overflowing. */
   panelWidth?: number;
+  /** An id for the trigger button, so a form's `<label htmlFor>` can name it. */
+  triggerId?: string;
   /** Which way the panel opens: `"auto"` (default) below when it fits, else above when that fits, else toward the side with more room. */
   placement?: MenuPlacement;
 }
@@ -112,6 +114,7 @@ export function SearchMenu<T extends SearchMenuOption>({
   searchable = true,
   triggerVariant = "outlined",
   panelWidth = 280,
+  triggerId,
   placement = "auto",
 }: SearchMenuProps<T>) {
   const [open, setOpen] = useState(false);
@@ -175,6 +178,7 @@ export function SearchMenu<T extends SearchMenuOption>({
   return (
     <div className="chai-search-menu" ref={rootRef}>
       <button
+        id={triggerId}
         type="button"
         className={`${triggerVariant === "outlined" ? "chai-btn chai-btn--outlined" : "chai-search-menu__trigger--text"} chai-search-menu__trigger${
           open ? " chai-search-menu__trigger--open" : ""

@@ -4,6 +4,7 @@ export { default as EditCard } from "./EditCard.vue";
 export { default as ResultCard } from "./ResultCard.vue";
 export { default as MediaAnalyzer } from "./MediaAnalyzer.vue";
 export { default as SidePanel } from "./SidePanel.vue";
+export { default as InteractiveResponse } from "./InteractiveResponse.vue";
 export { default as Pagination } from "./primitives/Pagination.vue";
 export { default as SearchMenu } from "./primitives/SearchMenu.vue";
 export { default as Toggle } from "./primitives/Toggle.vue";
@@ -61,6 +62,10 @@ export {
   editCardEvents,
   readPageContext,
   buildSidePanelPrompt,
+  interactiveAnswerLabel,
+  interactiveAnswerText,
+  interactiveResponseEvents,
+  parseInteractiveResponse,
 } from "@chai-ui/core";
 export type {
   AudioUseCase,
@@ -107,4 +112,13 @@ export type {
   PageContext,
   ReadPageContextOptions,
   SidePanelTurn,
+  InteractiveAction,
+  InteractiveAnswer,
+  InteractiveChoice,
+  InteractiveChoiceOption,
+  InteractiveElement,
+  InteractiveFieldKind,
+  InteractiveForm,
+  InteractiveFormField,
+  InteractiveMediaRequest,
 } from "@chai-ui/core";
